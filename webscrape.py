@@ -6,7 +6,7 @@ from string import whitespace
 import sys
 from sqlstuff import SqlStuff
 from neuralnetworks import NeuralNetwork
-    
+import os.path    
             
 class HrefStuff:
     def __init__(self):
@@ -17,6 +17,29 @@ class HrefStuff:
        # self.horseName=[]
        # self.jockey=[]
     
+
+    def webscrapePolite(self, href):
+
+        href_replace = href.replace("http://www.","")
+        href_replace = href_replace.replace(".", "_")
+        href_replace = href_replace.replace("/", "_")
+        if os.path.isfile("horses_local/"+href_replace+".txt"):
+            #        self.soup=urllib2.urlopen("file://~/horses_local/"+href_replace+".txt").read()
+            f=open("horses_local/"+href_replace+".txt", 'r').read()
+            self.soup = BeautifulSoup(f)
+            print "from file"
+        else:
+            opener = urllib2.build_opener()
+            opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+            content = opener.open(href).read()
+            f=open("horses_local/"+href_replace+".txt", 'w')
+            f.write(content)
+            self.soup = BeautifulSoup(content)
+            print "from web and writing file"
+            
+        return self.soup
+
+
     def getTestCardHref(self, date):
         """ get todays test card link"""
         self.date=date #time.strftime("%Y-%m-%d")
@@ -27,8 +50,7 @@ class HrefStuff:
 
     def getTodaysRaces(self, href):
         """ get the hrefs for the races, exclude the terrestrial tv and worldwide stakes"""
-        self.webpage=urllib2.urlopen(href)
-        self.soup=BeautifulSoup(self.webpage)
+        self.soup=self.webscrapePolite(href)
         self.divBody=self.soup.body
         self.racesList=self.divBody.find("div", {"class":"tabContent tabNoTB tabSelected"})
         """ here can find the race names"""
@@ -68,9 +90,8 @@ class HrefStuff:
         jockey=[]
         weight=[]
         self.url="http://www.racingpost.com" + href + "&raceTabs=lc_"
-#        print self.url
-        self.webpage=urllib2.urlopen(self.url)
-        self.soup=BeautifulSoup(self.webpage)
+        #print self.url
+        self.soup=self.webscrapePolite(self.url)
         self.divBody=self.soup.body
         self.cardGridWrapper=self.divBody.find("div", {"class":"cardGridWrapper"})
         self.tr=self.cardGridWrapper.findAll("tr", {"class":"cr"})
@@ -102,8 +123,7 @@ class HrefStuff:
         self.date=date
         """add the date to the base url"""
         self.url="http://www.racingpost.com/horses2/results/home.sd?r_date=" + self.date
-        self.webpage=urllib2.urlopen(self.url)
-        self.soup=BeautifulSoup(self.webpage)
+        self.soup=self.webscrapePolite(self.url)
         self.divBody=self.soup.body
         self.divTabBlock=self.divBody.find("div", {"class":"tabBlock"})        
         self.tableResultGrids=self.divTabBlock.findAll("table", {"class":"resultGrid"})
@@ -117,8 +137,7 @@ class HrefStuff:
     def getFullResults(self, href):
         """function to get the full results from the specified href"""
         self.href="http://www.racingpost.com/" + href
-        self.webpage=urllib2.urlopen(self.href)
-        self.soup=BeautifulSoup(self.webpage)
+        self.soup=self.webscrapePolite(self.href)
         self.divBody=self.soup.body
         self.mainWrapper=self.divBody.find("div", {"id":"mainwrapper"})
         self.popUpCenter=self.mainWrapper.find("div", {"class":"popUpCenter"})

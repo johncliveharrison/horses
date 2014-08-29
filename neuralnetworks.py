@@ -65,7 +65,7 @@ class NeuralNetwork:
         ctr=0
         Error=0.5
         self.allInputs=self.NeuralNetworkStuffInst.subNormaliseInputs(horses)
-        while (ctr<10000 and Error > 0.4): #0.001):
+        while (ctr<10000 and Error > 0.001):
             #print "iteration = " + str(ctr)
 
             #loop through all the results for this horse

@@ -216,7 +216,10 @@ class NeuralNetworkStuff:
     def meanStdWeight(self, horses):
         self.weights=[]        
         for horse in horses:
-            self.weights.append(self.convertWeightKilos(horse[3]))
+            if horse[3] != ' ':
+                self.weights.append(self.convertWeightKilos(horse[3]))
+            else:
+                self.weights.append(10.0)
         self.weightMean=array(self.weights).mean()
         self.weightStd=array(self.weights).std()
 
@@ -232,7 +235,10 @@ class NeuralNetworkStuff:
 
     def normaliseTestWeight(self, testWeight):
         """normalise the test weight using the precalculated mean and std"""
-        weight=self.convertWeightKilos(testWeight)
+        if testWeight == ' ':
+            weight=self.weightMean
+        else:
+            weight=self.convertWeightKilos(testWeight)
         if self.weightStd < 0.001:
             return 0.0
         else:
