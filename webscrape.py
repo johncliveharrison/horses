@@ -597,7 +597,7 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
                 sortDecimal, sortList=sortResult(float(0.0), str(horse), str(basedOn[idx]), str(error), sortList, sortDecimal);
            # print sortList
         #position.sort()
-        f = open(str(date)+str(filenameAppend),'a')
+        f = open("results/"+str(date)+str(filenameAppend),'a')
         original = sys.stdout
         sys.stdout = Tee(sys.stdout, f)
         
