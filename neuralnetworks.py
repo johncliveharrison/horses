@@ -1,11 +1,11 @@
 from neuralnetworkstuff import NeuralNetworkStuff
-from sqlstuff import SqlStuff
+from sqlstuff2 import SqlStuff2
 import random
 from math import exp
 
 class NeuralNetwork:
 
-    def __init__(self, numInput=5, numHidden=6, numOutput=1):
+    def __init__(self, numInput=6, numHidden=6, numOutput=1):
         """initialise some variables and arrays"""
         
         self.numInput=numInput
@@ -39,7 +39,7 @@ class NeuralNetwork:
 
     def NeuralNetwork(self, horseName, horseLimit):
         """blah"""
-        SqlStuffInst=SqlStuff()
+        SqlStuffInst=SqlStuff2()
         
         # get all the results for this horseName
         horses=SqlStuffInst.getHorse(horseName)
@@ -211,16 +211,16 @@ class NeuralNetwork:
             return 1.0
         return 1.0 / (1.0 + exp(-x))
 
-    def testFunction(self, jockeyName, numberHorses, raceLength, weight):
+    def testFunction(self, jockeyName, numberHorses, raceLength, weight, going):
         """blah"""
-        testn=[None]*5
+        testn=[None]*6
         testn[0]=self.NeuralNetworkStuffInst.normaliseTestRaceLength(raceLength)
         testn[1]=self.NeuralNetworkStuffInst.normaliseTestNumberOfHorses(numberHorses)
         #testn[2]=self.normaliseTestPastPosition(horses[len(horses)-1][4])
         testn[2]=self.NeuralNetworkStuffInst.normaliseTestJockey(jockeyName)
         testn[3]=self.NeuralNetworkStuffInst.normaliseTestWeight(weight)
-        #testn[5]=self.normaliseTestGoing(test[8])
-        testn[4]=1.0
+        testn[4]=self.NeuralNetworkStuffInst.normaliseTestGoing(going)
+        testn[5]=1.0
         yValues=self.ComputeOutputs(testn)
         #print "yValue = " + str(yValues)
         #print "predicted finish = " + str(yValues[0]*float(numberHorses))

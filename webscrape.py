@@ -4,9 +4,10 @@ from BeautifulSoup import BeautifulSoup
 import datetime
 from string import whitespace
 import sys
-from sqlstuff import SqlStuff
+from sqlstuff2 import SqlStuff2
 from neuralnetworks import NeuralNetwork
 import os.path    
+from random import randint
             
 class HrefStuff:
     def __init__(self):
@@ -19,16 +20,19 @@ class HrefStuff:
     
 
     def webscrapePolite(self, href):
-
+        """ check to see if this page already has been collected and is in the results folder
+        if it hasn't been read previously then insert a wait between 10s and a minute to
+        avoid bombarding the website with requests"""
         href_replace = href.replace("http://www.","")
         href_replace = href_replace.replace(".", "_")
         href_replace = href_replace.replace("/", "_")
         if os.path.isfile("horses_local/"+href_replace+".txt"):
-            #        self.soup=urllib2.urlopen("file://~/horses_local/"+href_replace+".txt").read()
             f=open("horses_local/"+href_replace+".txt", 'r').read()
             self.soup = BeautifulSoup(f)
             print "from file"
         else:
+            waitint=randint(10,15)
+            time.sleep(waitint)
             opener = urllib2.build_opener()
             opener.addheaders = [('User-agent', 'Mozilla/5.0')]
             content = opener.open(href).read()
@@ -115,8 +119,10 @@ class HrefStuff:
         """get rid of the strange unicode half symbols"""
         s=self.length.split()[0].encode('unicode_escape')
         self.raceLength = s.replace('\\xbd', '.5')
+        self.li=self.ul.findAll("li")[3]
+        self.going=self.li.find("strong").find(text=True)
 
-        return (horseName, jockey, self.raceLength, weight)
+        return (horseName, jockey, self.raceLength, weight, self.going)
 
     def getFullResultHrefs(self, date):
         """function to get the hrefs for the specified date"""
@@ -174,6 +180,18 @@ class ResultStuff:
             self.raceName=self.raceNameDate[0]
         except AttributeError:
             print "no RaceName found"
+
+    def getRaceTime(self):
+        """ get the time of the race"""
+        try:
+            self.h3=self.fullHeader.find("h3")
+            self.span=self.h3.find("span", {"class":"timeNavigation"})
+            spanStr=unicode.join(u'\n',map(unicode,self.span))
+            colonPos=spanStr.index(':')
+            self.raceTime=spanStr[colonPos-1:colonPos+3]
+            #print self.raceTime
+        except AttributeError:
+            print "no race time found"
 
     def getRaceDate(self):
         """get the date of the race"""
@@ -356,6 +374,7 @@ class ResultStuff:
     def getAllResultInfo(self):
         """ function to get all of the sql info"""
         self.getRaceName()
+        self.getRaceTime()
         self.getHorseNames()
         self.getNumberOfHorses()
         self.getHorseWeightJockeyNameAge()        
@@ -365,287 +384,3 @@ class ResultStuff:
             print self.jockeys
             print self.horseNames
             print self.raceName
-            
-
-def daterange(start_date, end_date):
-    for n in range(int ((end_date - start_date).days)):
-        yield start_date + datetime.timedelta(n)
-               
-def makeATestcard(date):
-    """ extract the information from the days cards"""
-    HrefStuffInst=HrefStuff()
-    horseName=[]
-    jockeyName=[]
-    raceLength=[]
-    weights=[]
-    """ get the href for the days test card"""
-    todaysTestCardHref=HrefStuffInst.getTestCardHref(date)
-    """ extract all of the links for the races from the days card"""
-    todaysRaces, todaysRaceTimes, todaysRaceVenues=HrefStuffInst.getTodaysRaces(todaysTestCardHref)
-    for todaysRace in todaysRaces:
-        horse, jockey, length, weight=HrefStuffInst.getCardContents(todaysRace)
-        horseName.append(horse)
-        jockeyName.append(jockey)
-        raceLength.append(length)
-        weights.append(weight)
-    return (horseName, jockeyName, raceLength, weights, todaysRaceTimes, todaysRaceVenues)    
-
-def makeADatabase(dateStart, dateEnd, test = "false"):
-    dateStartSplit=dateStart.split('-')
-    dateEndSplit=dateEnd.split('-')
-    SqlStuffInst=SqlStuff()        
-    SqlStuffInst.createResultTable()
-    """ user enters the date """
-    #date=raw_input("enter the required date yyyy-mm-dd")
-    for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2]))):
-        date=time.strftime("%Y-%m-%d", single_date.timetuple())       
-        #date="2014-07-{}".format(day)
-        print date
-        time.sleep(1)
-        ResultStuffInsts=[]       
-        """
-        for fullResultHref in fullResultHrefs:
-            webpage=urllib2.urlopen(fullResultHref.get("href"))"""
-
-        HrefStuffInst=HrefStuff()
-        """ get the hrefs that must be appended to http://www.racingpost.com/"""
-        fullResultHrefs=HrefStuffInst.getFullResultHrefs(date)
-
-        """loop through the number of races and make a ResultStuff object for each"""
-        for fullResultHref in fullResultHrefs:
-            HrefStuffInst.getFullResults(fullResultHref)
-            #print "got full results webpage for..."
-            fullResult=HrefStuffInst.getFullResultsGrid()
-            fullHeader=HrefStuffInst.getFullResultsHeader()
-            ResultStuffInst=ResultStuff(fullResult, fullHeader, date)
-            ResultStuffInst.getAllResultInfo()            
-            """ResultStuffInst.getRaceDate()
-            ResultStuffInst.getHorseNames()
-            ResultStuffInst.getNumberOfHorses()
-            ResultStuffInst.getRaceLength()
-            ResultStuffInst.getHorseAge()
-            ResultStuffInst.getHorseWeight()
-            ResultStuffInst.getJockeyName()
-            ResultStuffInst.getGoing()"""
-            ResultStuffInsts.append(ResultStuffInst)
-        """loop through the ResultStuff class objects and add them to the database"""        
-        for ResultStuffInst in ResultStuffInsts:
-            if test == "false":
-                SqlStuffInst.addResultStuffToTable(ResultStuffInst)
-            else:
-                for idx, horseName in enumerate(ResultStuffInst.horseNames):
-                    """create a string with this horses values"""
-                    val_str="'{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}'".format(\
-                    ResultStuffInst.horseNames[idx].replace("'", "''"),\
-                    ResultStuffInst.horseAges[idx], ResultStuffInst.horseWeights[idx], idx+1, \
-                    ResultStuffInst.raceLength, ResultStuffInst.numberOfHorses, ResultStuffInst.jockeys[idx].replace("'", "''"), \
-                    ResultStuffInst.going, ResultStuffInst.raceDate) 
-                    print val_str
-        
-def makeAResult(date):
-    """ make an array of all the result infos for the day"""
-    #date=time.strftime("%Y-%m-%d")
-    #date="2014-07-{}".format(day)
-    print date
-    time.sleep(1)
-    ResultStuffInsts=[]       
-    """
-    for fullResultHref in fullResultHrefs:
-    webpage=urllib2.urlopen(fullResultHref.get("href"))"""
-
-    HrefStuffInst=HrefStuff()
-    """ get the hrefs that must be appended to http://www.racingpost.com/"""
-    fullResultHrefs=HrefStuffInst.getFullResultHrefs(date)
-
-    """loop through the number of races and make a ResultStuff object for each"""
-    for fullResultHref in fullResultHrefs:
-        HrefStuffInst.getFullResults(fullResultHref)
-        #print "got full results webpage for..."
-        fullResult=HrefStuffInst.getFullResultsGrid()
-        fullHeader=HrefStuffInst.getFullResultsHeader()
-        ResultStuffInst=ResultStuff(fullResult, fullHeader, date)
-        ResultStuffInst.getAllResultInfo()            
-        """ResultStuffInst.getRaceDate()
-        ResultStuffInst.getHorseNames()
-        ResultStuffInst.getNumberOfHorses()
-        ResultStuffInst.getRaceLength()
-        ResultStuffInst.getHorseAge()
-        ResultStuffInst.getHorseWeight()
-        ResultStuffInst.getJockeyName()
-        ResultStuffInst.getGoing()"""
-        ResultStuffInsts.append(ResultStuffInst)
-    return ResultStuffInsts
-
-def writeAResult(date, filenameAppend):
-    """write the dates result to a file"""
-    todaysResults=makeAResult(date)
-    f = open(str(date)+str(filenameAppend),'a')
-    original = sys.stdout
-    sys.stdout = Tee(sys.stdout, f)
-    for idx, ii in enumerate(todaysResults):
-        print "race number " + str(idx) 
-        for jdx, jj in enumerate(todaysResults[idx].horseNames):
-            print str(jj)
-    sys.stdout = original
-
-def viewADatabase():
-    SqlStuffInst=SqlStuff()
-    SqlStuffInst.viewAllTable()
-
-def viewHorse(horseName):
-    print "ID,  HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE"
-    SqlStuffInst=SqlStuff()
-    SqlStuffInst.viewHorse(horseName)
-
-def viewJockey(jockeyName):
-    print "ID,  HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE"
-    SqlStuffInst=SqlStuff()
-    SqlStuffInst.viewJockey(jockeyName)
-
-def delDate(date):
-    SqlStuffInst=SqlStuff()
-    SqlStuffInst.delDate(date)
-
-def delDateRange(dateStart, dateStop):
-    dateStartSplit=dateStart.split("-")
-    dateStopSplit=dateStop.split("-")
-    for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateStopSplit[0]),int(dateStopSplit[1]),int(dateStopSplit[2]))):
-        print single_date
-        delDate(single_date)
-
-class Tee(object):
-    def __init__(self, *files):
-        self.files = files
-    def write(self, obj):
-        for f in self.files:
-            f.write(obj)
-
-def sortResult(decimalResult, horse, basedOn, error, sortList, sortDecimal):
-    """ sort the results by date and return the most recent x"""
-    if len(sortList)==0:
-        sortList.append(str(horse) + '('+str(decimalResult)+')('+str(basedOn)+')('+str(error)+')')  # appemd the first horse
-        sortDecimal.append(decimalResult)
-        return sortDecimal, sortList
-    
-    iterations = len(sortList)
-    decimal1=decimalResult
-    for idx in range(0, iterations):
-
-        decimal0=sortDecimal[idx]
-
-        if decimal1==0.0:
-            sortList.append(str(horse) + '('+str(decimal1)+')('+str(basedOn)+')('+str(error)+')')
-            sortDecimal.append(decimal1)
-            break
-        elif decimal0==0.0:
-            sortList.insert(idx, str(horse) + '('+str(decimal1)+')('+str(basedOn)+')('+str(error)+')')
-            sortDecimal.insert(idx,decimal1)
-            break
-        elif decimal1 < decimal0:
-            sortList.insert(idx, str(horse) + '('+str(decimal1)+')('+str(basedOn)+')('+str(error)+')')
-            sortDecimal.insert(idx,decimal1)
-            break
-        elif idx == (iterations-1):
-            sortList.append(str(horse) + '('+str(decimal1)+')('+str(basedOn)+')('+str(error)+')')
-            sortDecimal.append(decimal1)
-
-    return sortDecimal, sortList
-
-
-
-def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.strftime("%Y-%m-%d")):
-    horseName=[]
-    jockeyName=[]
-    lengths=[]
-    
-    in_loop = True
-    #while in_loop == True:
-    #    horseName.append(raw_input("Horse name?"))
-    #    jockeyName.append(raw_input("Jockey name?"))
-    #    again = raw_input("exit loop y/n?")
-    #    if again == 'y':
-    #        in_loop=False
-    horses, jockeys, lengths, weights, todaysRaceTimes, todaysRaceVenues=makeATestcard(date)
-    if afterResult != "noResult":
-        todaysResults=makeAResult(date)
-    print todaysRaceVenues
-    #numberHorses=raw_input("Number of Horses?")
-    #raceLength=raw_input("race length?")
-    #for ii in range(0,startRace):
-    #    horses.pop(ii)
-    #    jockeys.pop(ii)
-    #    lengths.pop(ii)
-    #    print "remove race" + str(ii) + "from list"
-  
-    venuesRaceNo=0
-    venueNumber=0
-    for raceNo, race in enumerate(horses):
-        
-        numberHorses=len(horses[raceNo])
-        position=[0.0]*numberHorses
-        basedOn=[]
-        sortList=[]
-        sortDecimal=[]
-
-        for idx, horse in enumerate(race):
-            NeuralNetworkInst=NeuralNetwork()
-            bO, error = NeuralNetworkInst.NeuralNetwork(horse, int(horseLimit))
-            basedOn.append(bO)
-            if basedOn[idx] != 0:
-                sortDecimal, sortList=sortResult(float(NeuralNetworkInst.testFunction(jockeys[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx])), str(horse), str(basedOn[idx]), str(error), sortList, sortDecimal)
-            else:
-                sortDecimal, sortList=sortResult(float(0.0), str(horse), str(basedOn[idx]), str(error), sortList, sortDecimal);
-           # print sortList
-        #position.sort()
-        f = open("results/"+str(date)+str(filenameAppend),'a')
-        original = sys.stdout
-        sys.stdout = Tee(sys.stdout, f)
-        
-        print str(raceNo) + ' ' + str(todaysRaceVenues[venueNumber]) + ' ' + str(todaysRaceTimes[venueNumber][venuesRaceNo]) 
-        for ii, pos in enumerate(sortList):
-            #splitpos=re.split(r'(\d+)', pos)
-            try:
-                if afterResult == "noResult":
-                    print str(ii+1) + pos
-                else:
-                    print str(ii+1) + pos + '                  ' + str(todaysResults[raceNo].horseNames[ii])
-            except IndexError:
-                """if there are none finishers this will be the exception"""
-        venuesRaceNo+=1
-        if venuesRaceNo==len(todaysRaceTimes[venueNumber]):
-            venuesRaceNo=0
-            venueNumber+=1
-            #todaysRaceVenues.pop(0)
-#' ' + str(splitpos[4]) + ' (' + str(splitpos[1]) + str(splitpos[2]) + str(splitpos[3]) + ')('+str(splitpos[5])+')('+str(splitpos[6])+str(splitpos[7])+')'
-
-        
-        #use the original
-        sys.stdout = original
-        print "This won't appear on file"  # Only on stdout
-        f.close()
-
-
-
-
-
-
-#makeADatabase()
-#SqlStuffInst=SqlStuff()
-#SqlStuffInst.viewAllTable()
-#SqlStuffInst.viewHorse("Parlour Games")
-#rows=cursor.fetchall()
-#print rows
-
-#    fullResults.append(HrefStuffInst.getFullResults(fullResultHref))  
-#print fullResultHrefs
-
-
-#divBlock=divContainer.findAll("div", {"class":"block"})
-#divSep=divBlock[3].findAll("div", {"class":"separator"})
-#members=divSep[3].findAll("a")
-
-#for member in members:
-#    print member.find(text=True)
-#    print member.get("title")
-#    print member.get("href")
-   

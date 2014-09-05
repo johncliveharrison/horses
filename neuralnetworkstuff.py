@@ -244,29 +244,71 @@ class NeuralNetworkStuff:
         else:
             return (weight-self.weightMean)/self.weightStd
 
-    def normaliseGoing(self, horses, idx):
-        """normalise going"""
-        goings=[]
-        self.possibleGoings=["Slow", "Yielding", "Standard", "Firm", "Good"]        
+    def meanStdGoing(self, horses):
+        return 1.0
+        self.goings=[]
+        self.possibleGoings=self.gatherGoing()#["Slow", "Yielding", "Standard", "Firm", "Good"]        
         for jj, horse in enumerate(horses):
             for ii, possibleGoing in enumerate(self.possibleGoings):
                 if possibleGoing==horse[8]:
-                    goings.append(float(ii))                    
-            if len(goings)!=jj+1:
+                    self.goings.append(float(ii))                    
+            if len(self.goings)!=jj+1:
                 print "unrecognised going " + horse[8]
-        self.goingMean=array(goings).mean()
-        self.goingStd=array(goings).std()
-        goingn=(goings[idx]-self.goingMean)/self.goingStd
+#        print self.goings
+        self.goingMean=array(self.goings).mean()
+        self.goingStd=array(self.goings).std()
+
+
+    def gatherGoing(self):
+        """gather all of the going terms that have been used in previous races"""
+        wordList=[]
+        SqlStuffInst=SqlStuff()
+        allGoing=SqlStuffInst.getAllGoing()
+        # sort the going into a list
+        for idx, going in enumerate(allGoing):
+            goingstr=str(going).replace('(u\'','').replace('\',)','')
+            if idx==0:
+                wordList.append(goingstr)
+            else:
+                for idz, word in enumerate(wordList):
+                    if goingstr=="Very":
+                        break
+                    if word==goingstr:
+                        break;
+
+                    if idz==len(wordList)-1:
+                        if word!=goingstr:
+                            wordList.append(goingstr)
+#        for idx, word in enumerate(wordList):
+#            print str(word)
+        return wordList
+
+    def normaliseGoing(self, horses, idx):
+        """normalise going"""
+        return 1.0
+#        print "mean = " + str(self.goingMean)
+#        print "std = " + str(self.goingStd)
+        return self.goings[idx]
+        if self.goingStd < 0.001:
+            return 0.0
+        goingn=(self.goings[idx]-self.goingMean)/self.goingStd
         return goingn
 
     def normaliseTestGoing(self, testGoing):
         """normalise the testGoing using the precalculated mean and std"""
+        return 1.0
         goings=[]
         for ii, possibleGoing in enumerate(self.possibleGoings):
-            if possibleGoing==testGoing:
+            if possibleGoing==testGoing.split(' ')[0]:
                 goings.append(float(ii))                    
         if len(goings)!=1:
-            print "unrecognised going " + testGoing
+            if testGoing=="Very":
+                print "going was very which is due to a mistake - counts as 0"
+                return 0
+            print "unrecognised going " + testGoing.split(' ')[0]
+        return goings[0]
+        if self.goingStd < 0.001:
+            return 0.0
         return (goings[0]-self.goingMean)/self.goingStd
         
     def subSortReduce(self, horses, x):
@@ -299,11 +341,12 @@ class NeuralNetworkStuff:
         horse under analysis has been in.  The function called for normalising
         take all of these races into consideration in comparison to a particular
         race idx.  This way each race gets normalised in turn"""        
-        horsesn=[[0 for x in xrange(5)] for x in xrange(len(horses))]
+        horsesn=[[0 for x in xrange(6)] for x in xrange(len(horses))]
         self.meanStdRaceLength(horses)
         self.meanStdJockey(horses)
         self.meanStdNumberOfHorses(horses)
         self.meanStdWeight(horses)
+        self.meanStdGoing(horses)
         for idx in range(0, len(horses)):
             horsesn[idx][0]=self.normaliseRaceLength(idx)
             #print "done"
@@ -315,9 +358,9 @@ class NeuralNetworkStuff:
             #print "done" + str(horsesn[idx][3])
             horsesn[idx][3]=self.normaliseWeight(idx)
             #print "done"
-            #horsesn[idx][5]=self.normaliseGoing(horses, idx)
+            horsesn[idx][4]=self.normaliseGoing(horses, idx)
             #print "done"
-            horsesn[idx][4]=1.0
+            horsesn[idx][5]=1.0
            # age                      
        
         return horsesn
