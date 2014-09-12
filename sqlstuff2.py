@@ -30,7 +30,7 @@ class SqlStuff2:
                 ResultStuff.horseNames[idx].replace("'", "''"),\
                 ResultStuff.horseAges[idx], ResultStuff.horseWeights[idx], idx+1, \
                 ResultStuff.raceLength, ResultStuff.numberOfHorses, ResultStuff.jockeys[idx].replace("'", "''"), \
-                ResultStuff.going, ResultStuff.raceDate, ResultStuff.raceTime, ResultStuff.raceName) 
+                ResultStuff.going, ResultStuff.raceDate, ResultStuff.raceTime, ResultStuff.raceName.replace("'", "''")) 
             #print self.val_str
             """create a string for the sql command"""
             self.sql_str="INSERT INTO RESULTS_INFO \

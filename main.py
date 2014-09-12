@@ -4,6 +4,8 @@ from neuralnetworks import NeuralNetwork
 from pastperf import pastPerf
 import sys
 from common import Tee
+from common import daterange
+import datetime
 
 def sortResult(decimalResult, horse, basedOn, error, sortList, sortDecimal, sortHorse):
     """ sort the results by date and return the most recent x"""
@@ -71,6 +73,9 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
 
     venuesRaceNo=0
     venueNumber=0
+    returnSortHorse=[]
+    returnPastPerf=[]
+    returnResults=[]
     for raceNo, race in enumerate(horses):
         
         numberHorses=len(horses[raceNo])
@@ -79,42 +84,121 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
         sortList=[]
         sortDecimal=[]
         sortHorse=[]
+        skipFileWrite=0
         for idx, horse in enumerate(race):
+            if len(race) > 9:
+                skipFileWrite=1
+                break;
             NeuralNetworkInst=NeuralNetwork()
             bO, error = NeuralNetworkInst.NeuralNetwork(horse, int(horseLimit))
             basedOn.append(bO)
             if basedOn[idx] != 0:
                 sortDecimal, sortList, sortHorse=sortResult(float(NeuralNetworkInst.testFunction(jockeys[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo])), str(horse), str(basedOn[idx]), str(error), sortList, sortDecimal, sortHorse)
             else:
+                skipFileWrite=1
+                break;
                 sortDecimal, sortList, sortHorse=sortResult(float(0.0), str(horse), str(basedOn[idx]), str(error), sortList, sortDecimal, sortHorse);
+        if skipFileWrite==0:
+            pastPerfOrder=pastPerf(sortHorse)
+            returnSortHorse.append(sortHorse)
+            returnPastPerf.append(pastPerfOrder)
+            if afterResult != "noResult":
+                returnResults.append(todaysResults[raceNo])
 
-        pastPerfOrder=pastPerf(sortHorse)
-        
-           # print sortList
-        #position.sort()
-        f = open("results/"+str(date)+str(filenameAppend),'a')
-        original = sys.stdout
-        sys.stdout = Tee(sys.stdout, f)
-        
-        print str(raceNo) + ' ' + str(todaysRaceVenues[venueNumber]) + ' ' + str(todaysRaceTimes[venueNumber][venuesRaceNo]) 
-        for ii, pos in enumerate(sortList):
-            #splitpos=re.split(r'(\d+)', pos)
-            try:
-                if afterResult == "noResult":
-                    print str(ii+1) + pos + '         '  + str(pastPerfOrder[ii])
-                else:
-                    print str(ii+1) + pos + '       ' + str(pastPerfOrder[ii]) + '           ' + str(todaysResults[raceNo].horseNames[ii])
-            except IndexError:
-                """if there are none finishers this will be the exception"""
+            # print sortList
+            #position.sort()
+            f = open("results/"+str(date)+str(filenameAppend),'a')
+            original = sys.stdout
+            sys.stdout = Tee(sys.stdout, f)
+            
+            print str(raceNo) + ' ' + str(todaysRaceVenues[venueNumber]) + ' ' + str(todaysRaceTimes[venueNumber][venuesRaceNo]) 
+            for ii, pos in enumerate(sortList):
+                #splitpos=re.split(r'(\d+)', pos)
+                try:
+                    if afterResult == "noResult":
+                        print str(ii+1) + pos + '         '  + str(pastPerfOrder[ii])
+                    else:
+                        print str(ii+1) + pos + '       ' + str(pastPerfOrder[ii]) + '           ' + str(todaysResults[raceNo].horseNames[ii])
+                except IndexError:
+                    """if there are none finishers this will be the exception"""
+            #use the original
+            sys.stdout = original
+            print "This won't appear on file"  # Only on stdout
+            f.close()
+
         venuesRaceNo+=1
         if venuesRaceNo==len(todaysRaceTimes[venueNumber]):
             venuesRaceNo=0
             venueNumber+=1
-            #todaysRaceVenues.pop(0)
-#' ' + str(splitpos[4]) + ' (' + str(splitpos[1]) + str(splitpos[2]) + str(splitpos[3]) + ')('+str(splitpos[5])+')('+str(splitpos[6])+str(splitpos[7])+')'
-
         
-        #use the original
-        sys.stdout = original
-        print "This won't appear on file"  # Only on stdout
-        f.close()
+       
+    return returnSortHorse, returnResults, returnPastPerf
+
+def runNeuralNet(date, number, horseLimit=20):
+    for idx in range (0, number):
+        horseLimitStr = "horseLimit"+str(idx)
+        neuralNet(horseLimit, horseLimitStr, "noResult", date)
+
+
+
+def runTestDateRange(dateStart, dateEnd):
+    """ run neuralNet for this daterange.  Get the actual results.  Compare them
+    How many times did the winner win, second place win and third place win.  If 
+    we add faveourite to the database then we can see how often the favorite wins
+    and also use this as a parameter to the neuralNet"""
+    dateStartSplit=dateStart.split('-')
+    dateEndSplit=dateEnd.split('-')
+
+    for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2]))):
+        date=time.strftime("%Y-%m-%d", single_date.timetuple())       
+    
+        print date
+        winnerWon=0
+        secondWon=0
+        thirdWon=0
+
+        predicteds, actuals, pastperfs = neuralNet("20","testDate", "Result", date)
+        numberOfRaces=len(predicteds)
+        for idx, predicted in enumerate(predicteds):
+            try:
+                if predicted[0] == actuals[idx].horseNames[0]:
+                    #this means the predicted winner was the winner
+                    winnerWon+=1
+                    
+                if predicted[1] == actuals[idx].horseNames[0]:
+                    #this means the predicted second place horse won
+                    secondWon+=1
+
+                if predicted[2] == actuals[idx].horseNames[0]:
+                    #this means the predicted third place horse won
+                    thirdWon+=1
+            except IndexError:
+                """ this will happen if there were not at least three horses"""
+            print "winnerWon = " + str(winnerWon)
+            print "secondWon = " + str(secondWon)
+            print "thirdWon = " + str(thirdWon)
+            print "numberOfRaces = " + str(numberOfRaces)
+
+            winnerWon=0
+            secondWon=0
+            thirdWon=0
+
+        for idx, pastperf in enumerate(pastperfs):
+            try:
+                if pastperf[0] == actuals[idx].horseNames[0]:
+                    #this means the predicted winner was the winner
+                    winnerWon+=1
+                    
+                if pastperf[1] == actuals[idx].horseNames[0]:
+                    #this means the predicted second place horse won
+                    secondWon+=1
+
+                if pastperf[2] == actuals[idx].horseNames[0]:
+                    #this means the predicted third place horse won
+                    thirdWon+=1
+            except IndexError:
+                """ this will happen if there were not at least three horses"""
+            print "pastperf winnerWon = " + str(winnerWon)
+            print "pastperf secondWon = " + str(secondWon)
+            print "pastperf thirdWon = " + str(thirdWon)
+            print "numberOfRaces = " + str(numberOfRaces)

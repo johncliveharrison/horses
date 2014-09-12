@@ -66,7 +66,8 @@ class HrefStuff:
                 self.raceVenue.append(self.a.find(text=True))
             except AttributeError:
                 """ this covers the case for RACES SHOWN ON TERRESTRIAL TV"""
-                noneRaceHeaders+=1
+                if len(self.raceVenue)==0:
+                    noneRaceHeaders+=1
         self.tables=self.racesList.findAll("table", {"class":"cardsGrid"})
         self.raceTimes=[[] for _ in range(len(self.tables[noneRaceHeaders:]))]
         for idx, table in enumerate(self.tables[noneRaceHeaders:]):

@@ -11,7 +11,7 @@ import datetime
 import webscrape
 import time
 from common import daterange
-
+    
 
 def makeATestcard(date):
     """ extract the information from the days cards"""

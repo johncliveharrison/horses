@@ -11,9 +11,9 @@ def pastComp(horseA, horseB):
     horseAWins=0
     horseBWins=0
     for horseAInfo in horseAInfos:
-        print "doing something for horseA"
+#        print "doing something for horseA"
         for horseBInfo in horseBInfos:
-            print "doing something for horseB"
+#            print "doing something for horseB"
             if horseAInfo[10:12] == horseBInfo[10:12]:
                 if horseAInfo[4] < horseBInfo[4]:
                     print "horse A won"
@@ -22,8 +22,8 @@ def pastComp(horseA, horseB):
                     horseBWins+=1
                     print "horse B won"
 
-    if horseAWins == 0 and horseBWins == 0:
-        print "these horses have not raced previously"
+ #   if horseAWins == 0 and horseBWins == 0:
+ #       print "these horses have not raced previously"
     
     return horseAWins, horseBWins
 
