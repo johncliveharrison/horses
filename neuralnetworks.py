@@ -219,9 +219,10 @@ class NeuralNetwork:
         #testn[2]=self.normaliseTestPastPosition(horses[len(horses)-1][4])
         testn[2]=self.NeuralNetworkStuffInst.normaliseTestJockey(jockeyName)
         testn[3]=self.NeuralNetworkStuffInst.normaliseTestWeight(weight)
-       # testn[4]=self.NeuralNetworkStuffInst.normaliseTestGoing(going)
+        # testn[4]=self.NeuralNetworkStuffInst.normaliseTestGoing(going)
         testn[4]=1.0
-        yValues=self.ComputeOutputs(testn)
+        yValues=self.ComputeOutputs(testn)[0]
         #print "yValue = " + str(yValues)
         #print "predicted finish = " + str(yValues[0]*float(numberHorses))
-        return yValues[0]*float(numberHorses)
+
+        return yValues*float(numberHorses)

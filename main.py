@@ -45,7 +45,7 @@ def sortResult(decimalResult, horse, basedOn, error, sortList, sortDecimal, sort
 
 
 
-def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.strftime("%Y-%m-%d")):
+def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.strftime("%Y-%m-%d"), number=1):
     horseName=[]
     jockeyName=[]
     lengths=[]
@@ -80,24 +80,35 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
         
         numberHorses=len(horses[raceNo])
         position=[0.0]*numberHorses
-        basedOn=[]
+        #basedOn=[]
         sortList=[]
         sortDecimal=[]
         sortHorse=[]
         skipFileWrite=0
         for idx, horse in enumerate(race):
+            errors=0
+            yValues=0
+            bO=0
             if len(race) > 9:
                 skipFileWrite=1
                 break;
-            NeuralNetworkInst=NeuralNetwork()
-            bO, error = NeuralNetworkInst.NeuralNetwork(horse, int(horseLimit))
-            basedOn.append(bO)
-            if basedOn[idx] != 0:
-                sortDecimal, sortList, sortHorse=sortResult(float(NeuralNetworkInst.testFunction(jockeys[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo])), str(horse), str(basedOn[idx]), str(error), sortList, sortDecimal, sortHorse)
+            
+            for ii in range(0, number):
+                NeuralNetworkInst=NeuralNetwork()
+                bO, error = NeuralNetworkInst.NeuralNetwork(horse, int(horseLimit))
+                errors+=error
+                if bO != 0:
+                    yValues+=float(NeuralNetworkInst.testFunction(jockeys[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo]))
+                else:
+                    break
+            if bO != 0:    
+                yValuePos=yValues/number
+                averageError=errors/number
+                sortDecimal, sortList, sortHorse=sortResult(yValuePos, str(horse), str(bO), str(averageError), sortList, sortDecimal, sortHorse)
             else:
                 skipFileWrite=1
                 break;
-                sortDecimal, sortList, sortHorse=sortResult(float(0.0), str(horse), str(basedOn[idx]), str(error), sortList, sortDecimal, sortHorse);
+
         if skipFileWrite==0:
             pastPerfOrder=pastPerf(sortHorse)
             returnSortHorse.append(sortHorse)
@@ -134,10 +145,10 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
        
     return returnSortHorse, returnResults, returnPastPerf
 
-def runNeuralNet(date, number, horseLimit=20):
-    for idx in range (0, number):
-        horseLimitStr = "horseLimit"+str(idx)
-        neuralNet(horseLimit, horseLimitStr, "noResult", date)
+def runNeuralNet(date, number=1, horseLimit=20):
+#    for idx in range (0, number):
+    horseLimitStr = "horseLimit"#+str(idx)
+    neuralNet(horseLimit, horseLimitStr, "noResult", date, number)
 
 
 
