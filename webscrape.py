@@ -29,7 +29,7 @@ class HrefStuff:
         if os.path.isfile("horses_local/"+href_replace+".txt"):
             f=open("horses_local/"+href_replace+".txt", 'r').read()
             self.soup = BeautifulSoup(f)
-            print "from file"
+            #print "from file"
         else:
             waitint=randint(10,15)
             time.sleep(waitint)
@@ -94,6 +94,7 @@ class HrefStuff:
         horseName=[]
         jockey=[]
         weight=[]
+        draw=[]
         self.url="http://www.racingpost.com" + href + "&raceTabs=lc_"
         #print self.url
         self.soup=self.webscrapePolite(self.url)
@@ -101,6 +102,12 @@ class HrefStuff:
         self.cardGridWrapper=self.divBody.find("div", {"class":"cardGridWrapper"})
         self.tr=self.cardGridWrapper.findAll("tr", {"class":"cr"})
         for row in self.tr:
+            try:
+                draw.append(row.findAll("td")[0].find("sup").find(text=True))                
+                #print "found draw"
+            except AttributeError:
+                draw.append("255")
+                #print "did not find draw"
             self.horseNameRow=row.find("a")
             horseName.append(self.horseNameRow.find("b").find(text=True).replace('&acute;',"'"))            
             self.tdJockey=row.findAll("td")[6]
@@ -123,7 +130,7 @@ class HrefStuff:
         self.li=self.ul.findAll("li")[3]
         self.going=self.li.find("strong").find(text=True)
 
-        return (horseName, jockey, self.raceLength, weight, self.going)
+        return (horseName, jockey, self.raceLength, weight, self.going, draw)
 
     def getFullResultHrefs(self, date):
         """function to get the hrefs for the specified date"""
@@ -167,6 +174,7 @@ class ResultStuff:
         self.fullHeader=fullHeader
         self.raceDate= raceDate
         self.horseNames=[]
+        self.draw=[]
         self.horseAges=[]
         self.horseWeights=[]
         self.lengthGoingTypeTemp=[]
@@ -285,6 +293,26 @@ class ResultStuff:
         except AttributeError:
             print "no HorseNames found"
 
+    def getDraw(self):
+        """function to find all of the horse ages in the full result popup"""
+        """if there are no horse ages available then do nothing"""
+        try:
+            self.bodys=self.fullResult.findAll("tbody")
+            for self.body in self.bodys:
+               self.trs=self.body.findAll("tr")
+               for self.tr in self.trs:
+                   """use this if to get rid of the None results when class=black is not found"""
+                   if self.tr.find("td", {"class":"nowrap noPad"}):
+                       try:
+                           self.draw.append(self.tr.find("td", {"class":"nowrap noPad"}).find("span", {"class":"draw"}).find(text=True))
+                       except AttributeError:
+                           """ if a draw is not found then it was a hurdles race.  255 indicates this"""
+                           self.draw.append("255")
+                       #print "draw=" + str(self.tr.find("td", {"class":"nowrap noPad"}).find("span", {"class":"draw"}).find(text=True))
+        except AttributeError:
+            print "something went wrong finding the draw"
+
+
     def getHorseAge(self):
         """function to find all of the horse ages in the full result popup"""
         """if there are no horse ages available then do nothing"""
@@ -377,6 +405,7 @@ class ResultStuff:
         self.getRaceName()
         self.getRaceTime()
         self.getHorseNames()
+        self.getDraw()
         self.getNumberOfHorses()
         self.getHorseWeightJockeyNameAge()        
         self.getRaceLengthGoing()        

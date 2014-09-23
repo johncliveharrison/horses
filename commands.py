@@ -12,6 +12,50 @@ import webscrape
 import time
 from common import daterange
     
+def makeATestcardFromResults(date):
+    """ This function will make a test card from the results.  This is required as the actual
+    test cards on the racingpost website are only acvailable on the day and one day in advance of
+    a race"""
+    print date
+    ResultStuffInsts=[]       
+    
+    HrefStuffInst=webscrape.HrefStuff()
+    """ get the hrefs that must be appended to http://www.racingpost.com/"""
+    fullResultHrefs=HrefStuffInst.getFullResultHrefs(date)
+
+    horseName=[]       
+    jockeyName=[]       
+    raceLength=[]       
+    weights=[]       
+    goings=[]       
+    draws=[]       
+    todaysRaceTimes=[]       
+    todaysRaceVenues=[]       
+
+    """loop through the number of races and make a ResultStuff object for each"""
+    for fullResultHref in fullResultHrefs:
+        HrefStuffInst.getFullResults(fullResultHref)
+        #print "got full results webpage for..."
+        fullResult=HrefStuffInst.getFullResultsGrid()
+        fullHeader=HrefStuffInst.getFullResultsHeader()
+        ResultStuffInst=webscrape.ResultStuff(fullResult, fullHeader, date)
+        ResultStuffInst.getAllResultInfo()            
+        ResultStuffInsts.append(ResultStuffInst)
+    """loop through the ResultStuff class objects and add them to the database"""        
+    for ResultStuffInst in ResultStuffInsts:
+        horseName.append(ResultStuffInst.horseNames)
+        jockeyName.append(ResultStuffInst.jockeys)
+        raceLength.append(ResultStuffInst.raceLength)
+        weights.append(ResultStuffInst.horseWeights)
+        goings.append(ResultStuffInst.going)
+        draws.append(ResultStuffInst.draw)
+        todaysRaceTimes.append(ResultStuffInst.raceTime)
+        todaysRaceVenues.append(ResultStuffInst.raceName.replace(u'\n', ''))
+
+
+    return (horseName, jockeyName, raceLength, weights, goings, draws, todaysRaceTimes, todaysRaceVenues)    
+
+
 
 def makeATestcard(date):
     """ extract the information from the days cards"""
@@ -21,18 +65,20 @@ def makeATestcard(date):
     raceLength=[]
     weights=[]
     goings=[]
+    draws=[]
     """ get the href for the days test card"""
     todaysTestCardHref=HrefStuffInst.getTestCardHref(date)
     """ extract all of the links for the races from the days card"""
     todaysRaces, todaysRaceTimes, todaysRaceVenues=HrefStuffInst.getTodaysRaces(todaysTestCardHref)
     for todaysRace in todaysRaces:
-        horse, jockey, length, weight, going=HrefStuffInst.getCardContents(todaysRace)
+        horse, jockey, length, weight, going, draw=HrefStuffInst.getCardContents(todaysRace)
         horseName.append(horse)
         jockeyName.append(jockey)
         raceLength.append(length)
         weights.append(weight)
         goings.append(going)
-    return (horseName, jockeyName, raceLength, weights, goings, todaysRaceTimes, todaysRaceVenues)    
+        draws.append(draw)
+    return (horseName, jockeyName, raceLength, weights, goings, draws, todaysRaceTimes, todaysRaceVenues)    
 
         
 def makeAPoliteDatabase(dateStart, dateEnd, test = "false"):
@@ -84,11 +130,13 @@ def makeAPoliteDatabase(dateStart, dateEnd, test = "false"):
             else:
                 for idx, horseName in enumerate(ResultStuffInst.horseNames):
                     """create a string with this horses values"""
-                    val_str="'{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}, '{}', '{}'".format(\
+                    val_str="'{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}, '{}', '{}', '{}'".format(\
                     ResultStuffInst.horseNames[idx].replace("'", "''"),\
                     ResultStuffInst.horseAges[idx], ResultStuffInst.horseWeights[idx], idx+1, \
-                    ResultStuffInst.raceLength, ResultStuffInst.numberOfHorses, ResultStuffInst.jockeys[idx].replace("'", "''"), \
-                    ResultStuffInst.going, ResultStuffInst.raceDate, ResultStuffInst.raceTime, ResultStuffInst.raceName) 
+                    ResultStuffInst.raceLength, ResultStuffInst.numberOfHorses, \
+                    ResultStuffInst.jockeys[idx].replace("'", "''"), \
+                    ResultStuffInst.going, ResultStuffInst.raceDate, ResultStuffInst.raceTime, \
+                    ResultStuffInst.raceName, ResultStuffInst.draw[idx]) 
                     print val_str
 
 

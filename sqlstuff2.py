@@ -21,20 +21,22 @@ class SqlStuff2:
             GOING TEXT, \
             RACEDATE DATE, \
             RACETIME, \
-            RACEVENUE);")
+            RACEVENUE, \
+            DRAW INTEGER);")
 
     def addResultStuffToTable(self, ResultStuff):
         for idx, self.horseName in enumerate(ResultStuff.horseNames):
             """create a string with this horses values"""
-            self.val_str="'{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}'".format(\
+            self.val_str="'{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}'".format(\
                 ResultStuff.horseNames[idx].replace("'", "''"),\
                 ResultStuff.horseAges[idx], ResultStuff.horseWeights[idx], idx+1, \
                 ResultStuff.raceLength, ResultStuff.numberOfHorses, ResultStuff.jockeys[idx].replace("'", "''"), \
-                ResultStuff.going, ResultStuff.raceDate, ResultStuff.raceTime, ResultStuff.raceName.replace("'", "''")) 
+                ResultStuff.going, ResultStuff.raceDate, ResultStuff.raceTime, \
+                ResultStuff.raceName.replace("'", "''"), ResultStuff.draw[idx]) 
             #print self.val_str
             """create a string for the sql command"""
             self.sql_str="INSERT INTO RESULTS_INFO \
-                (HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE, RACETIME, RACEVENUE) \
+                (HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE, RACETIME, RACEVENUE, DRAW) \
                 VALUES ({});".format(self.val_str)
             #print self.sql_str
             self.conn.execute(self.sql_str)

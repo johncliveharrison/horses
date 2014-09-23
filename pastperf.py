@@ -31,13 +31,14 @@ def pastPerf(horses):
     """ loop through the horses until no more position changes occur"""
     while True:
         currentPos=horses
-        for idx, horse in enumerate(horses[1:len(horses)]):
+        localPos=horses
+        for idx, horse in enumerate(localPos[1:len(localPos)]):
             """compare horse to the previous horse"""
-            horseAWins, horseBWins = pastComp(horses[idx], horse)
+            horseAWins, horseBWins = pastComp(localPos[idx], horse)
             if horseBWins > horseAWins:
-                horses[idx+1]=horses[idx]
-                horses[idx]=horse
+                localPos[idx+1]=localPos[idx]
+                localPos[idx]=horse
 
-        if horses==currentPos:
+        if localPos==currentPos:
             break;
     return currentPos

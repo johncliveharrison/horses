@@ -1,11 +1,13 @@
 import time
-from commands import makeATestcard, makeAResult
+from commands import makeATestcard, makeAResult, makeATestcardFromResults
 from neuralnetworks import NeuralNetwork
 from pastperf import pastPerf
 import sys
 from common import Tee
 from common import daterange
 import datetime
+from sqlstuff2 import SqlStuff2
+
 
 def sortResult(decimalResult, horse, basedOn, error, sortList, sortDecimal, sortHorse):
     """ sort the results by date and return the most recent x"""
@@ -45,10 +47,11 @@ def sortResult(decimalResult, horse, basedOn, error, sortList, sortDecimal, sort
 
 
 
-def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.strftime("%Y-%m-%d"), number=1):
+def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.strftime("%Y-%m-%d"), number=1, quickTest = 0):
     horseName=[]
     jockeyName=[]
     lengths=[]
+    draws=[]
     
     in_loop = True
     #while in_loop == True:
@@ -57,7 +60,14 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
     #    again = raw_input("exit loop y/n?")
     #    if again == 'y':
     #        in_loop=False
-    horses, jockeys, lengths, weights, goings, todaysRaceTimes, todaysRaceVenues=makeATestcard(date)
+    try:
+        horses, jockeys, lengths, weights, goings, draws, todaysRaceTimes, todaysRaceVenues=makeATestcard(date)
+    except AttributeError:
+        try:
+            horses, jockeys, lengths, weights, goings, draws, todaysRaceTimes, todaysRaceVenues=makeATestcardFromResults(date)
+        except AttributeError:
+            print "making a testcard from results failed"
+
     if afterResult != "noResult":
         todaysResults=makeAResult(date)
     print todaysRaceVenues
@@ -76,6 +86,10 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
     returnSortHorse=[]
     returnPastPerf=[]
     returnResults=[]
+
+    if quickTest == 1:
+        horses=horses[0]
+
     for raceNo, race in enumerate(horses):
         
         numberHorses=len(horses[raceNo])
@@ -85,10 +99,19 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
         sortDecimal=[]
         sortHorse=[]
         skipFileWrite=0
+        # do a quick check on all of the horses in the race
+        SqlStuffInst=SqlStuff2()
+        for idx, horse in enumerate(race):
+            sqlhorses=SqlStuffInst.getHorse(horse)
+            if len(sqlhorses)==0:
+                skipFileWrite=1
+                break;
         for idx, horse in enumerate(race):
             errors=0
             yValues=0
             bO=0
+            if skipFileWrite==1:
+                break;
             if len(race) > 9:
                 skipFileWrite=1
                 break;
@@ -98,7 +121,7 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
                 bO, error = NeuralNetworkInst.NeuralNetwork(horse, int(horseLimit))
                 errors+=error
                 if bO != 0:
-                    yValues+=float(NeuralNetworkInst.testFunction(jockeys[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo]))
+                    yValues+=float(NeuralNetworkInst.testFunction(jockeys[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo], draws[raceNo][idx]))
                 else:
                     break
             if bO != 0:    
@@ -152,7 +175,7 @@ def runNeuralNet(date, number=1, horseLimit=20):
 
 
 
-def runTestDateRange(dateStart, dateEnd):
+def runTestDateRange(dateStart, dateEnd, number=1):
     """ run neuralNet for this daterange.  Get the actual results.  Compare them
     How many times did the winner win, second place win and third place win.  If 
     we add faveourite to the database then we can see how often the favorite wins
@@ -160,15 +183,78 @@ def runTestDateRange(dateStart, dateEnd):
     dateStartSplit=dateStart.split('-')
     dateEndSplit=dateEnd.split('-')
 
+
+    predictedWinner=[]
+    pastperfWinner=[]
+    numberOfRacesArray=[]
     for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2]))):
         date=time.strftime("%Y-%m-%d", single_date.timetuple())       
     
         print date
+        winner=[0]*10
+        predicteds, actuals, pastperfs = neuralNet("20","testDate", "Result", date, number)
+        numberOfRaces=len(predicteds)
+        for idx, predicted in enumerate(predicteds):
+            for jdx, predict in enumerate(predicted):
+                try:
+                    if predict == actuals[idx].horseNames[0]:
+                        #this means the predicted winner was the winner
+                        winner[jdx]+=1
+
+                except IndexError:
+                    """ this will happen if there were not at least three horses"""
+        
+        for idx, win in enumerate(winner):
+            print "predicted position " + str(idx) + " won " + str(win) + " times"
+        print "numberOfRaces = " + str(numberOfRaces)
+        
+        predictedWinner.append(winner)
+        winner=[0]*10
+
+
+        for idx, pastperf in enumerate(pastperfs):
+            for jdx, predict in enumerate(pastperf):
+                try:
+                    if predict == actuals[idx].horseNames[0]:
+                        #this means the predicted winner was the winner
+                        winner[jdx]+=1
+
+                except IndexError:
+                    """ this will happen if there were not at least three horses"""
+        
+        for idx, win in enumerate(winner):
+            print "predicted position " + str(idx) + " won " + str(win) + " times"
+        print "numberOfRaces = " + str(numberOfRaces)
+
+        pastperfWinner.append(winner)
+        numberOfRacesArray.append(numberOfRaces)
+
+    print "final summary"
+    ref=0
+    for idx, single_date in enumerate(daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2])))):
+        date=time.strftime("%Y-%m-%d", single_date.timetuple())       
+        print date
+        print "idx = " + str(idx)
+        print "number of races = " + str(numberOfRacesArray[ref])
+        for jdx, numWin in enumerate(predictedWinner[ref]):
+            print "number of times predicted place " + str(jdx) + " won was " + str(numWin)
+        for jdx, numWin in enumerate(pastperfWinner[ref]):
+            print "number of times pastperf place " + str(jdx) + " won was " + str(numWin)
+
+        ref+=1
+def runTestHistoryRange(historyStart, historyEnd, date):
+    """ run neuralNet for this range of previous results.  Get the actual results.  Compare them
+    How many times did the winner win, second place win and third place win.  If 
+    we add faveourite to the database then we can see how often the favorite wins
+    and also use this as a parameter to the neuralNet"""
+  
+    for historyNum in range(historyStart, historyEnd):
+        print historyNum
         winnerWon=0
         secondWon=0
         thirdWon=0
 
-        predicteds, actuals, pastperfs = neuralNet("20","testDate", "Result", date)
+        predicteds, actuals, pastperfs = neuralNet(str(historyNum),"testDate", "Result", date)
         numberOfRaces=len(predicteds)
         for idx, predicted in enumerate(predicteds):
             try:
@@ -185,14 +271,14 @@ def runTestDateRange(dateStart, dateEnd):
                     thirdWon+=1
             except IndexError:
                 """ this will happen if there were not at least three horses"""
-            print "winnerWon = " + str(winnerWon)
-            print "secondWon = " + str(secondWon)
-            print "thirdWon = " + str(thirdWon)
-            print "numberOfRaces = " + str(numberOfRaces)
+        print "winnerWon = " + str(winnerWon)
+        print "secondWon = " + str(secondWon)
+        print "thirdWon = " + str(thirdWon)
+        print "numberOfRaces = " + str(numberOfRaces)
 
-            winnerWon=0
-            secondWon=0
-            thirdWon=0
+        winnerWon=0
+        secondWon=0
+        thirdWon=0
 
         for idx, pastperf in enumerate(pastperfs):
             try:
@@ -209,7 +295,7 @@ def runTestDateRange(dateStart, dateEnd):
                     thirdWon+=1
             except IndexError:
                 """ this will happen if there were not at least three horses"""
-            print "pastperf winnerWon = " + str(winnerWon)
-            print "pastperf secondWon = " + str(secondWon)
-            print "pastperf thirdWon = " + str(thirdWon)
-            print "numberOfRaces = " + str(numberOfRaces)
+        print "pastperf winnerWon = " + str(winnerWon)
+        print "pastperf secondWon = " + str(secondWon)
+        print "pastperf thirdWon = " + str(thirdWon)
+        print "numberOfRaces = " + str(numberOfRaces)

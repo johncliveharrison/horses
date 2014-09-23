@@ -5,34 +5,47 @@ from math import exp
 
 class NeuralNetwork:
 
-    def __init__(self, numInput=5, numHidden=6, numOutput=1):
+    def __init__(self, numInput=6, numHidden=[5,6], numOutput=1, numHiddenLayers=2):
         """initialise some variables and arrays"""
+
+        self.numberHiddenLayers=numHiddenLayers
         
         self.numInput=numInput
         self.numHidden=numHidden
         self.numOutput=numOutput
         self.allInputs=[]
-        #input to hidden layer and input to output layer arrays
+        #input to hidden layer arrays and weights and biases
         self.inputs=[None]*numInput
-        self.ihWeights=[[0 for x in xrange(numInput)] for x in xrange(numHidden)]
-        self.cummulativeDeltaihWeights=[[0 for x in xrange(numInput)] for x in xrange(numHidden)]
-        self.ihSums=[None]*numHidden
-        self.ihBiases=[None]*numHidden
-        self.cummulativeDeltaihBiases=[0.0]*numHidden
-        self.ihOutputs=[None]*numHidden
+        self.ihWeights=[[0 for x in xrange(numInput)] for x in xrange(numHidden[0])]
+        self.cummulativeDeltaihWeights=[[0 for x in xrange(numInput)] for x in xrange(numHidden[0])]
+        self.ihSums=[None]*numHidden[0]
+        self.ihBiases=[None]*numHidden[0]
+        self.cummulativeDeltaihBiases=[0.0]*numHidden[0]
+        self.ihOutputs=[None]*numHidden[0]
+        #hidden layer to hidden layer
+        self.hiddenInputs=[None]*numHidden[0]
+        self.hhWeights=[[0 for x in xrange(numHidden[0])] for x in xrange(numHidden[1])]
+        self.cummulativeDeltahhWeights=[[0 for x in xrange(numHidden[0])] for x in xrange(numHidden[1])]
+        self.hhSums=[None]*numHidden[1]
+        self.hhBiases=[None]*numHidden[1]
+        self.cummulativeDeltahhBiases=[0.0]*numHidden[1]
+        self.hhOutputs=[None]*numHidden[1]
         #hidden layer to output layer
-        self.hoWeights=[[0 for x in xrange(numHidden)] for x in xrange(numOutput)]
-        self.cummulativeDeltahoWeights=[[0 for x in xrange(numHidden)] for x in xrange(numOutput)]
+        self.hoWeights=[[0 for x in xrange(numHidden[1])] for x in xrange(numOutput)]
+        self.cummulativeDeltahoWeights=[[0 for x in xrange(numHidden[1])] for x in xrange(numOutput)]
         self.hoSums=[None]*numOutput
         self.hoBiases=[None]*numOutput
         self.cummulativeDeltahoBiases=[0.0]*numOutput
         self.outputs=[None]*numOutput
         #back propogation
         self.oGrads=[None]*numOutput
-        self.hGrads=[None]*numHidden
-        self.ihPrevWeightsDelta=[[0 for x in xrange(numInput)] for x in xrange(numHidden)]
-        self.ihPrevBiasesDelta=[0.0]*numHidden
-        self.hoPrevWeightsDelta=[[0 for x in xrange(numHidden)] for x in xrange(numOutput)]
+        self.hoGrads=[None]*numHidden[1]
+        self.hiGrads=[None]*numHidden[0]
+        self.ihPrevWeightsDelta=[[0 for x in xrange(numInput)] for x in xrange(numHidden[0])]
+        self.ihPrevBiasesDelta=[0.0]*numHidden[0]
+        self.hhPrevWeightsDelta=[[0 for x in xrange(numHidden[0])] for x in xrange(numHidden[1])]
+        self.hhPrevBiasesDelta=[0.0]*numHidden[1]
+        self.hoPrevWeightsDelta=[[0 for x in xrange(numHidden[1])] for x in xrange(numOutput)]
         self.hoPrevBiasesDelta=[0.0]*numOutput
 
         self.NeuralNetworkStuffInst=NeuralNetworkStuff()
@@ -66,8 +79,10 @@ class NeuralNetwork:
         Error=0.5
         self.allInputs=self.NeuralNetworkStuffInst.subNormaliseInputs(horses)
         while (ctr<10000 and Error > 0.001):
-            #print "iteration = " + str(ctr)
-
+           # if ctr == 1000:
+           #     print "Error = " + str(Error)
+           #     ctr=0
+            Error=0.0
             #loop through all the results for this horse
             for resultNo, horse in enumerate(horses):
                 # get the normalised inputs for all of this horses results
@@ -76,16 +91,17 @@ class NeuralNetwork:
                 #print "Before weight update"
                 #print "desired outputs = " + str(tValue)
                 yValues=self.ComputeOutputs(self.inputs)
-                Error=self.Error(tValue,yValues[0])
+                #Error=self.Error(tValue,yValues[0])
+                Error=max(Error,self.Error(tValue,yValues[0]))
                 self.AccumulateDeltas(tValue, eta)
 
             self.UpdateWeights(alpha,len(horses))
             #print "After weight update"
-            for resultNo, horse in enumerate(horses):
-                self.inputs=self.allInputs[resultNo]
-                tValue=float(horses[resultNo][4])/float(horses[resultNo][6])
-                yValues=self.ComputeOutputs(self.inputs)
-                Error=max(Error,self.Error(tValue,yValues[0]))
+            #for resultNo, horse in enumerate(horses):
+            #    self.inputs=self.allInputs[resultNo]
+            #    tValue=float(horses[resultNo][4])/float(horses[resultNo][6])
+            #    yValues=self.ComputeOutputs(self.inputs)
+            #    Error=max(Error,self.Error(tValue,yValues[0]))
                 #print "desired output = " + str(tValue)
                 #print "outputs = " + str(yValues)
                 #print "Error = " + str(Error)
@@ -105,23 +121,38 @@ class NeuralNetwork:
         #print derivative
         self.oGrads[0]=derivative*(tValues-self.outputs[0])
         #print self.oGrads[0]
-        for ii in range(0, len(self.hGrads)):
-            derivative=(1-self.ihOutputs[ii])*self.ihOutputs[ii]
+        for ii in range(0, len(self.hoGrads)):
+            derivative=(1-self.hhOutputs[ii])*self.hhOutputs[ii]
             summ=0.0
             for oo in range(0, len(self.oGrads)):
                 summ+=self.oGrads[oo]*self.hoWeights[oo][ii]
-            self.hGrads[ii]=derivative*summ
+            self.hoGrads[ii]=derivative*summ
+
+        for ii in range(0, len(self.hiGrads)):
+            derivative=(1-self.ihOutputs[ii])*self.ihOutputs[ii]
+            summ=0.0
+            for oo in range(0, len(self.hoGrads)):
+                summ+=self.hoGrads[oo]*self.hhWeights[oo][ii]
+            self.hiGrads[ii]=derivative*summ
+
+
         for ii in range(0, len(self.ihWeights[0])):
             for jj in range(0, len(self.ihWeights)):                
-                self.cummulativeDeltaihWeights[jj][ii]+=eta*self.hGrads[jj]*self.inputs[ii]
+                self.cummulativeDeltaihWeights[jj][ii]+=eta*self.hiGrads[jj]*self.inputs[ii]
                 
         for ii in range(0, len(self.ihBiases)):
-            self.cummulativeDeltaihBiases[ii]+=eta*self.hGrads[ii]*1.0
-         
+            self.cummulativeDeltaihBiases[ii]+=eta*self.hiGrads[ii]*1.0
+
+        for ii in range(0, len(self.hhWeights[0])):
+            for jj in range(0, len(self.hhWeights)):                
+                self.cummulativeDeltahhWeights[jj][ii]+=eta*self.hoGrads[jj]*self.ihOutputs[ii]
+                
+        for ii in range(0, len(self.hhBiases)):
+            self.cummulativeDeltahhBiases[ii]+=eta*self.hoGrads[ii]*1.0
 
         for ii in range(0, len(self.hoWeights[0])):
             for jj in range(0, len(self.hoWeights)):
-                self.cummulativeDeltahoWeights[jj][ii]+=eta*self.oGrads[jj]*self.ihOutputs[ii]
+                self.cummulativeDeltahoWeights[jj][ii]+=eta*self.oGrads[jj]*self.hhOutputs[ii]
     
         for ii in range(0, len(self.hoBiases)):
             self.cummulativeDeltahoBiases[ii]+=eta*self.oGrads[ii]*1.0
@@ -147,6 +178,24 @@ class NeuralNetwork:
             self.ihBiases[ii]+=alpha*self.ihPrevBiasesDelta[ii]
             self.ihPrevBiasesDelta[ii]=delta
 
+
+        for ii in range(0, len(self.hhWeights[0])):
+            for jj in range(0, len(self.hhWeights)):                
+                delta=self.cummulativeDeltahhWeights[jj][ii]/numRaces
+                #zero this cumulatiom
+                self.cummulativeDeltahhWeights[jj][ii]=0.0
+                self.hhWeights[jj][ii]+=delta
+                self.hhWeights[jj][ii]+=alpha*self.hhPrevWeightsDelta[jj][ii]
+                self.hhPrevWeightsDelta[jj][ii]=delta
+
+        for ii in range(0, len(self.hhBiases)):
+            delta=self.cummulativeDeltahhBiases[ii]/numRaces
+            self.cummulativeDeltahhBiases[ii]=0.0
+            self.hhBiases[ii]+=delta
+            self.hhBiases[ii]+=alpha*self.hhPrevBiasesDelta[ii]
+            self.hhPrevBiasesDelta[ii]=delta
+            
+
         for ii in range(0, len(self.hoWeights[0])):
             for jj in range(0, len(self.hoWeights)):
                 delta=self.cummulativeDeltahoWeights[jj][ii]/numRaces
@@ -168,14 +217,21 @@ class NeuralNetwork:
         for hh in range(0, len(self.ihSums)):            
             for ii in range(0, len(self.inputs)-1):               
                 self.ihWeights[hh][ii]=(float(random.randrange(0, 1000, 3))-500.0)/1000.0
-                
+            
+            for h2 in range(0, len(self.hhSums)):
+                self.hhWeights[h2][hh]=(float(random.randrange(0, 1000, 3))-500.0)/1000.0
+    
+        for h2 in range(0, len(self.hhSums)):
             for oo in range(0, len(self.outputs)):
-                self.hoWeights[oo][hh]=(float(random.randrange(0, 1000, 3))-500.0)/1000.0
+                self.hoWeights[oo][h2]=(float(random.randrange(0, 1000, 3))-500.0)/1000.0
 
     def SetBiases(self):
         """Blah"""
         for hh in range(0, len(self.ihBiases)):
             self.ihBiases[hh]=(float(random.randrange(0, 1000, 3))-500.0)/1000.0
+
+        for hh in range(0, len(self.hhBiases)):
+            self.hhBiases[hh]=(float(random.randrange(0, 1000, 3))-500.0)/1000.0
 
         for oo in range(0, len(self.hoBiases)):
             self.hoBiases[oo]=(float(random.randrange(0, 1000, 3))-500.0)/1000.0
@@ -187,6 +243,8 @@ class NeuralNetwork:
         """blah"""
         for ii in range(0,len(self.ihSums)):
             self.ihSums[ii]=0.0
+        for ii in range(0,len(self.hhSums)):
+            self.hhSums[ii]=0.0
         for ii in range(0, len(self.hoSums)):
             self.hoSums[ii]=0.0
         for jj in range(0,len(self.ihSums)):
@@ -194,9 +252,14 @@ class NeuralNetwork:
                 self.ihSums[jj]+=xValues[ii]*self.ihWeights[jj][ii]
             self.ihSums[jj]+=self.ihBiases[jj]
             self.ihOutputs[jj]=self.SigmoidFunction(self.ihSums[jj])
+        for jj in range(0,len(self.hhSums)):
+            for ii in range(0, len(self.ihSums)-1):
+                self.hhSums[jj]+=self.ihOutputs[ii]*self.hhWeights[jj][ii]
+            self.hhSums[jj]+=self.hhBiases[jj]
+            self.hhOutputs[jj]=self.SigmoidFunction(self.hhSums[jj])
         for oo in range(0, len(self.hoSums)):
-            for hh in range(0, len(self.ihSums)):
-                self.hoSums[oo]+=self.ihOutputs[hh]*self.hoWeights[oo][hh]
+            for hh in range(0, len(self.hhSums)):
+                self.hoSums[oo]+=self.hhOutputs[hh]*self.hoWeights[oo][hh]
             self.hoSums[oo]+=self.hoBiases[oo]
             #print "ihOutputs = " + str(self.ihOutputs)
             #print "hoWeights = " + str(self.hoWeights)
@@ -211,16 +274,17 @@ class NeuralNetwork:
             return 1.0
         return 1.0 / (1.0 + exp(-x))
 
-    def testFunction(self, jockeyName, numberHorses, raceLength, weight, going):
+    def testFunction(self, jockeyName, numberHorses, raceLength, weight, going, draw):
         """blah"""
-        testn=[None]*5
+        testn=[None]*6
         testn[0]=self.NeuralNetworkStuffInst.normaliseTestRaceLength(raceLength)
         testn[1]=self.NeuralNetworkStuffInst.normaliseTestNumberOfHorses(numberHorses)
         #testn[2]=self.normaliseTestPastPosition(horses[len(horses)-1][4])
         testn[2]=self.NeuralNetworkStuffInst.normaliseTestJockey(jockeyName)
         testn[3]=self.NeuralNetworkStuffInst.normaliseTestWeight(weight)
-        # testn[4]=self.NeuralNetworkStuffInst.normaliseTestGoing(going)
-        testn[4]=1.0
+        #testn[4]=self.NeuralNetworkStuffInst.normaliseTestGoing(going)
+        testn[4]=self.NeuralNetworkStuffInst.normaliseTestDraw(draw, numberHorses)
+        testn[5]=1.0
         yValues=self.ComputeOutputs(testn)[0]
         #print "yValue = " + str(yValues)
         #print "predicted finish = " + str(yValues[0]*float(numberHorses))
