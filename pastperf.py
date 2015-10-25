@@ -29,9 +29,9 @@ def pastComp(horseA, horseB):
 
 def pastPerf(horses):
     """ loop through the horses until no more position changes occur"""
+    localPos=horses
     while True:
-        currentPos=horses
-        localPos=horses
+        currentPos=localPos
         for idx, horse in enumerate(localPos[1:len(localPos)]):
             """compare horse to the previous horse"""
             horseAWins, horseBWins = pastComp(localPos[idx], horse)

@@ -93,6 +93,7 @@ class HrefStuff:
         """ get the horse, jockey, number of horses and distance"""
         horseName=[]
         jockey=[]
+        trainer=[]
         weight=[]
         draw=[]
         self.url="http://www.racingpost.com" + href + "&raceTabs=lc_"
@@ -111,10 +112,15 @@ class HrefStuff:
             self.horseNameRow=row.find("a")
             horseName.append(self.horseNameRow.find("b").find(text=True).replace('&acute;',"'"))            
             self.tdJockey=row.findAll("td")[6]
+            self.tdTrainer=row.findAll("td")[5]
             try:
                 jockey.append(self.tdJockey.find("a").find(text=True))
             except AttributeError:
                 jockey.append("unknown")
+            try:
+                trainer.append(self.tdTrainer.find("a").find(text=True))
+            except AttributeError:
+                trainer.append("unknown")
             self.tdWeight=row.findAll("td")[4]
             try:
                 weight.append(self.tdWeight.find(text=True))
@@ -130,7 +136,7 @@ class HrefStuff:
         self.li=self.ul.findAll("li")[3]
         self.going=self.li.find("strong").find(text=True)
 
-        return (horseName, jockey, self.raceLength, weight, self.going, draw)
+        return (horseName, jockey, self.raceLength, weight, self.going, draw, trainer)
 
     def getFullResultHrefs(self, date):
         """function to get the hrefs for the specified date"""
@@ -167,11 +173,17 @@ class HrefStuff:
         self.grid=self.popUp.find("table", {"class":"grid resultRaceGrid"})        
         return self.grid
 
+    def getFullRaceInfo(self):
+        """returns the raceinfo with the number of finishers and time etc."""
+        self.raceInfo=self.popUp.find("div", {"class":"raceInfo"})
+        return self.raceInfo
+
 
 class ResultStuff:
-    def __init__(self, fullResult, fullHeader, raceDate):
+    def __init__(self, fullResult, fullHeader, fullInfo, raceDate):
         self.fullResult=fullResult
         self.fullHeader=fullHeader
+        self.fullInfo=fullInfo
         self.raceDate= raceDate
         self.horseNames=[]
         self.draw=[]
@@ -179,6 +191,7 @@ class ResultStuff:
         self.horseWeights=[]
         self.lengthGoingTypeTemp=[]
         self.jockeys=[]
+        self.trainers=[]
         
     def getRaceName(self):
         """ get the name of the race"""
@@ -257,7 +270,16 @@ class ResultStuff:
         except AttributeError:
             print "cound not find the going"
 
-    def getRaceLengthGoing(self):
+
+    def isNumber(self, s):
+        try:
+            float(s)
+            return True
+        except ValueError:
+            return False
+
+
+    def getRaceLengthGoingJumps(self, verbose=0):
         """function to find the race length and the going"""
         try:
             self.ul=self.fullHeader.find("ul")
@@ -272,12 +294,47 @@ class ResultStuff:
             s=self.lengthGoingTypeTemp[0].split()[0]#.encode('unicode_escape')
             self.raceLength = s.replace('\\xbd', '.5')
             self.raceLength = self.raceLength.replace('&frac12;', '.5')
-            try:
-                self.going=self.lengthGoingTypeTemp[0].split()[1]
+            try:                
+                g=self.lengthGoingTypeTemp[0].split()
+                self.going=''
+                self.jumps=0
+                for going in g[1:len(g)]:
+                    if self.isNumber(going)==True:
+                        self.jumps=int(going)
+                        break
+                    self.going=str(self.going) + ' ' + str(going)
+                if verbose != 0:
+                    print "going= " + str(self.going)
             except IndexError:
                 self.going="?unknown?"
+                self.jumps=255
         except:
             print "couldn't get raceLength or going"
+
+    def getRaceFinishingTimes(self, verbose=0):
+        """function to get the race finishing time from the result popup"""
+        ref=10000
+        minutes=0
+        seconds=0
+        self.raceInfo=str(self.fullInfo)
+        for ii, self.info in enumerate(self.raceInfo.split()):
+            if self.info=="<b>TIME</b>":
+                ref=ii
+            if ii==ref+1:
+                minutes=self.info.split("m")[0]
+                if len(self.info.split("m"))==1:
+                    minutes=float(0)
+                    seconds=float(self.info.split("s")[0])
+                    break
+            if ii==ref+2:
+                seconds=float(self.info.split("s")[0])
+        if verbose!=0:
+            print "minutes " + str(minutes)
+            print "seconds " + str(seconds)
+        time = 60*float(minutes)+seconds
+        self.finishingTime=time
+        #sys.exit(0)
+
 
     def getHorseNames(self):
         """function to find all of the horse names in the full result popup"""
@@ -342,6 +399,22 @@ class ResultStuff:
         except AttributeError:
             print "no HorseWeights found"
 
+    def getTrainerName(self):
+        """function to get all of the trainer names in the result popup"""
+        try:
+            self.bodys=self.fullResult.findAll("tbody")
+            for self.body in self.bodys:
+               self.trs=self.body.findAll("tr")
+               for self.tr in self.trs:
+                   if self.tr.findAll("td", {"class":"nowrap black"})[1]:
+                       clg=self.tr.findAll("td", {"class":"lightGray"})[1]
+                       if clg.find("a"):
+                           self.trainers.append(clg.find("a").find(text=True)) 
+        except AttributeError:
+            print "No trainers found"
+
+                    
+
     def getJockeyName(self):
         """function to find all of the jockeys in the full result popup"""
         """if there are no jockeys available then do nothing"""
@@ -367,6 +440,7 @@ class ResultStuff:
                numberOfWeights=len(self.horseWeights)
                numberOfAges=len(self.horseAges)
                numberOfJockeys=len(self.jockeys)
+               numberOfTrainers=len(self.trainers)
                if numberOfWeights==self.numberOfHorses:
                    break
                for self.tr in self.trs:                   
@@ -374,7 +448,12 @@ class ResultStuff:
                        #if self.tr.find("td", {"class":"nowrap black"}):                   
                        self.horseWeights.append(self.tr.find("td", {"class":"nowrap black"}).find(text=True).replace(u'\xa0', u' ').replace('&nbsp;',''))
                    except:
-                       """do nothing"""    
+                       """do nothing"""
+                   try:
+                       #if self.tr.find("td", {"class":"nowrap black"}):                   
+                       self.trainers.append(self.tr.findAll("td", {"class":"nowrap black"})[1].find("a").find(text=True).replace(u'\xa0', u' ').replace('&nbsp;',''))
+                   except:
+                       """do nothing"""
                    try:
                        #if self.tr.find("td", {"class":"black"}): 
                        self.horseAges.append(self.tr.find("td", {"class":"black"}).find(text=True))
@@ -395,7 +474,9 @@ class ResultStuff:
                if numberOfAges==len(self.horseAges):
                    self.horseAges.append("unknown")
                if numberOfJockeys==len(self.jockeys):
-                   self.jockeys.append("unknown")                
+                   self.jockeys.append("unknown") 
+               if numberOfTrainers==len(self.trainers):
+                   self.trainers.append("unknown")
                    
         except AttributeError:
             print "no tbody found in the full result"
@@ -408,7 +489,8 @@ class ResultStuff:
         self.getDraw()
         self.getNumberOfHorses()
         self.getHorseWeightJockeyNameAge()        
-        self.getRaceLengthGoing()        
+        self.getRaceLengthGoingJumps()
+        self.getRaceFinishingTimes()
         if self.numberOfHorses != len(self.jockeys):
             print self.numberOfHorses
             print self.jockeys

@@ -61,7 +61,7 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
     #    if again == 'y':
     #        in_loop=False
     try:
-        horses, jockeys, lengths, weights, goings, draws, todaysRaceTimes, todaysRaceVenues=makeATestcard(date)
+        horses, jockeys, lengths, weights, goings, draws, trainers, todaysRaceTimes, todaysRaceVenues=makeATestcard(date)
     except AttributeError:
         try:
             horses, jockeys, lengths, weights, goings, draws, todaysRaceTimes, todaysRaceVenues=makeATestcardFromResults(date)
@@ -115,13 +115,14 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
             if len(race) > 9:
                 skipFileWrite=1
                 break;
-            
             for ii in range(0, number):
                 NeuralNetworkInst=NeuralNetwork()
-                bO, error = NeuralNetworkInst.NeuralNetwork(horse, int(horseLimit))
+                """train a network for this horse, based on horseLimit number of past performances"""
+                bO, error = NeuralNetworkInst.NeuralNetwork(horse, int(horseLimit), date, lengths[raceNo])
                 errors+=error
                 if bO != 0:
-                    yValues+=float(NeuralNetworkInst.testFunction(jockeys[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo], draws[raceNo][idx]))
+                    """see how the trained neural network performs under this races 'test' conditions"""
+                    yValues+=float(NeuralNetworkInst.testFunction(jockeys[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo], draws[raceNo][idx]))#, trainers[raceNo][idx]))
                 else:
                     break
             if bO != 0:    
@@ -169,8 +170,15 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
     return returnSortHorse, returnResults, returnPastPerf
 
 def runNeuralNet(date, number=1, horseLimit=20):
-#    for idx in range (0, number):
-    horseLimitStr = "horseLimit"#+str(idx)
+    """ date is the date to use.  Number is the number of times to train the neural net (different
+    weightings each time may give varying results). HorseLimit is the number of past results to 
+    include in the training"""
+
+    """make a string that will be appended to the results filename"""
+    horseLimitStr = "horseLimit"
+
+    """ The noResult string means that the actual result of the race will not be included in 
+    the output file or stdout (usually used when predicting a result before the race"""
     neuralNet(horseLimit, horseLimitStr, "noResult", date, number)
 
 
@@ -192,7 +200,7 @@ def runTestDateRange(dateStart, dateEnd, number=1):
     
         print date
         winner=[0]*10
-        predicteds, actuals, pastperfs = neuralNet("20","testDate", "Result", date, number)
+        predicteds, actuals, pastperfs = neuralNet("5","testDate", "Result", date, number)
         numberOfRaces=len(predicteds)
         for idx, predicted in enumerate(predicteds):
             for jdx, predict in enumerate(predicted):

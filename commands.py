@@ -38,7 +38,8 @@ def makeATestcardFromResults(date):
         #print "got full results webpage for..."
         fullResult=HrefStuffInst.getFullResultsGrid()
         fullHeader=HrefStuffInst.getFullResultsHeader()
-        ResultStuffInst=webscrape.ResultStuff(fullResult, fullHeader, date)
+        fullInfo=HrefStuffInst.getFullRaceInfo()
+        ResultStuffInst=webscrape.ResultStuff(fullResult, fullHeader, fullInfo, date)
         ResultStuffInst.getAllResultInfo()            
         ResultStuffInsts.append(ResultStuffInst)
     """loop through the ResultStuff class objects and add them to the database"""        
@@ -66,19 +67,21 @@ def makeATestcard(date):
     weights=[]
     goings=[]
     draws=[]
+    trainers=[]
     """ get the href for the days test card"""
     todaysTestCardHref=HrefStuffInst.getTestCardHref(date)
     """ extract all of the links for the races from the days card"""
     todaysRaces, todaysRaceTimes, todaysRaceVenues=HrefStuffInst.getTodaysRaces(todaysTestCardHref)
     for todaysRace in todaysRaces:
-        horse, jockey, length, weight, going, draw=HrefStuffInst.getCardContents(todaysRace)
+        horse, jockey, length, weight, going, draw, trainer=HrefStuffInst.getCardContents(todaysRace)
         horseName.append(horse)
         jockeyName.append(jockey)
         raceLength.append(length)
         weights.append(weight)
         goings.append(going)
         draws.append(draw)
-    return (horseName, jockeyName, raceLength, weights, goings, draws, todaysRaceTimes, todaysRaceVenues)    
+        trainers.append(trainer)
+    return (horseName, jockeyName, raceLength, weights, goings, draws, trainers, todaysRaceTimes, todaysRaceVenues)    
 
         
 def makeAPoliteDatabase(dateStart, dateEnd, test = "false"):
@@ -112,7 +115,8 @@ def makeAPoliteDatabase(dateStart, dateEnd, test = "false"):
             #print "got full results webpage for..."
             fullResult=HrefStuffInst.getFullResultsGrid()
             fullHeader=HrefStuffInst.getFullResultsHeader()
-            ResultStuffInst=webscrape.ResultStuff(fullResult, fullHeader, date)
+            fullInfo=HrefStuffInst.getFullRaceInfo()
+            ResultStuffInst=webscrape.ResultStuff(fullResult, fullHeader, fullInfo, date)
             ResultStuffInst.getAllResultInfo()            
             """ResultStuffInst.getRaceDate()
             ResultStuffInst.getHorseNames()
@@ -130,13 +134,16 @@ def makeAPoliteDatabase(dateStart, dateEnd, test = "false"):
             else:
                 for idx, horseName in enumerate(ResultStuffInst.horseNames):
                     """create a string with this horses values"""
-                    val_str="'{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}, '{}', '{}', '{}'".format(\
+                    val_str="'{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}, '{}', '{}', '{}', '{}', '{}', {}".format(\
                     ResultStuffInst.horseNames[idx].replace("'", "''"),\
                     ResultStuffInst.horseAges[idx], ResultStuffInst.horseWeights[idx], idx+1, \
                     ResultStuffInst.raceLength, ResultStuffInst.numberOfHorses, \
                     ResultStuffInst.jockeys[idx].replace("'", "''"), \
                     ResultStuffInst.going, ResultStuffInst.raceDate, ResultStuffInst.raceTime, \
-                    ResultStuffInst.raceName, ResultStuffInst.draw[idx]) 
+                    ResultStuffInst.raceName, ResultStuffInst.draw[idx], \
+                    ResultStuffInst.trainers[idx].replace("'", "''"), \
+                    ResultStuffInst.jumps, \
+                    ResultStuffInst.finishingTime)
                     print val_str
 
 
@@ -163,7 +170,8 @@ def makeAResult(date):
         #print "got full results webpage for..."
         fullResult=HrefStuffInst.getFullResultsGrid()
         fullHeader=HrefStuffInst.getFullResultsHeader()
-        ResultStuffInst=webscrape.ResultStuff(fullResult, fullHeader, date)
+        fullInfo=HrefStuffInst.getFullRaceInfo()
+        ResultStuffInst=webscrape.ResultStuff(fullResult, fullHeader, fullInfo, date)
         ResultStuffInst.getAllResultInfo()            
         """ResultStuffInst.getRaceDate()
         ResultStuffInst.getHorseNames()
@@ -201,6 +209,15 @@ def viewJockey(jockeyName):
     print "ID,  HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE"
     SqlStuffInst=SqlStuff2()
     SqlStuffInst.viewJockey(jockeyName)
+
+def viewDate(date):
+    print "ID,  HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE"
+    SqlStuffInst=SqlStuff2()
+    SqlStuffInst.viewDate(date)
+
+def viewNewestDate():
+    SqlStuffInst=SqlStuff2()
+    SqlStuffInst.viewNewestDate()
 
 def delDate(date):
     SqlStuffInst=SqlStuff2()
