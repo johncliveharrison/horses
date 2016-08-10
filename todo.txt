@@ -1,0 +1,4 @@
+1. make the most recent result for a horse be excluded from test result genereration
+2. find out what all the print outs mean
+3. print out the actual values being used for the inputs, to check for normalisation
+4. print out the weights to see whether there are any consistently useless inputs (small weighting)
