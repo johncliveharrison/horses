@@ -107,6 +107,7 @@ class NeuralNetwork:
                 Error=max(Error,self.Error(tValue,yValues[0]))
                 self.AccumulateDeltas(tValue, eta)
 
+            #print 'about to update weights'
             self.UpdateWeights(alpha,len(horses))
             #print "After weight update"
             #for resultNo, horse in enumerate(horses):
@@ -261,9 +262,9 @@ class NeuralNetwork:
             self.hoSums[ii]=0.0
         for jj in range(0,len(self.ihSums)):
             for ii in range(0, len(xValues)):
-                print self.ihSums
+                #print self.ihSums
                 self.ihSums[jj]+=xValues[ii]*self.ihWeights[jj][ii]
-            sys.exit(0)
+            #sys.exit(0)
             self.ihSums[jj]+=self.ihBiases[jj]
             self.ihOutputs[jj]=self.SigmoidFunction(self.ihSums[jj])
         self.hiddenInputs[0:len(self.ihOutputs)]=self.ihOutputs

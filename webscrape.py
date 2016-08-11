@@ -21,7 +21,7 @@ class HrefStuff:
 
     def webscrapePolite(self, href):
         """ check to see if this page already has been collected and is in the results folder
-        if it hasn't been read previously then insert a wait between 10s and a minute to
+        if it hasn't been read previously then insert a wait between 1s and 5 seconds to
         avoid bombarding the website with requests"""
         href_replace = href.replace("http://www.","")
         href_replace = href_replace.replace(".", "_")
@@ -31,7 +31,7 @@ class HrefStuff:
             self.soup = BeautifulSoup(f)
             #print "from file"
         else:
-            waitint=randint(10,15)
+            waitint=randint(1,5)
             time.sleep(waitint)
             opener = urllib2.build_opener()
             opener.addheaders = [('User-agent', 'Mozilla/5.0')]
