@@ -564,7 +564,7 @@ class NeuralNetworkStuff:
         horse under analysis has been in.  The function called for normalising
         take all of these races into consideration in comparison to a particular
         race idx.  This way each race gets normalised in turn"""        
-        horsesn=[[0 for x in xrange(6)] for x in xrange(len(horses))]
+        horsesn=[[0 for x in xrange(5)] for x in xrange(len(horses))]
         self.meanStdRaceLength(horses)
         self.meanStdJockey(horses)
         self.meanStdNumberOfHorses(horses)
@@ -587,8 +587,26 @@ class NeuralNetworkStuff:
             #print "done"
             horsesn[idx][4]=self.normaliseGoing(horses, idx)
             #print "done"
-            horsesn[idx][5]=1.0
+            #horsesn[idx][5]=1.0
            # age                      
        
         return horsesn
         
+
+    def testFunction(self, jockeyName, numberHorses, raceLength, weight, going, draw, verbose=0):#, trainerName):
+        """blah"""
+        jockeyNames=[]
+        jockeyNames.append(jockeyName)
+        testn=[None]*5
+        testn[0]=self.normaliseTestRaceLength(raceLength)
+        testn[1]=self.normaliseTestNumberOfHorses(numberHorses)
+        #testn[2]=self.normaliseTestPastPosition(horses[len(horses)-1][4])
+        testn[2]=self.normaliseTestJockey(jockeyName)
+        testn[3]=self.normaliseTestWeight(weight)
+#        testn[4]=self.NeuralNetworkStuffInst.subJockeyPercentWins(jockeyNames)[0]
+ #       testn[5]=self.NeuralNetworkStuffInst.normaliseTestTrainer(trainerName)
+        testn[4]=self.normaliseTestGoing(going)
+        #testn[4]=self.NeuralNetworkStuffInst.normaliseTestDraw(draw, numberHorses)
+        #testn[5]=1.0
+        return testn
+

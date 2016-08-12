@@ -2,3 +2,21 @@
 2. find out what all the print outs mean
 3. print out the actual values being used for the inputs, to check for normalisation
 4. print out the weights to see whether there are any consistently useless inputs (small weighting)
+
+
+
+NEW
+calculate new mean and norm using the useful data
+###normalise the outputs for each horse (place-mean)/std-deviation##### -- see later point about normalisation
+un-normalise the predicted output to find the placing (result*std-deviation)+mean
+nomalise the output data using the formula (e-a)/(b-a).(d-c)+c where a and b are the old ranges and c,d are the desired ranges.
+Stop using the traintoconvergence function as it uses some of the training data for validation.
+Try not limiting the training to only 20 races.
+Or try limiting the races used to being between 5 and 10?
+
+do a git commit to mark the end of the introduction of the pybrain feature....
+Try making the normalised output have range -1 to 1 instead of 0 to 1
+Try using the gaussian normalisation on the output
+extract the odds from the results so that profit and loss can also be calculated in the runTestDateRange
+activate the trained net on some test sets to see how accurate the training is.  If error greater than 5-10% then retrain...
+The 

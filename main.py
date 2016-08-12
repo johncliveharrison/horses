@@ -8,11 +8,16 @@ from common import daterange
 import datetime
 from sqlstuff2 import SqlStuff2
 
+from pybrain.utilities import percentError
+from neuralnetworkstuff import NeuralNetworkStuff
+from pybrain.datasets import SupervisedDataSet
+from pybrain.supervised.trainers import BackpropTrainer
+from pybrain.tools.shortcuts import buildNetwork
 
 def sortResult(decimalResult, horse, basedOn, error, sortList, sortDecimal, sortHorse):
     """ sort the results by date and return the most recent x"""
     if len(sortList)==0:
-        sortList.append(str(horse) + '('+str(decimalResult)+')('+str(basedOn)+')('+str(error)+')')  # appemd the first horse
+        sortList.append(str(horse) + '('+str(decimalResult)+')('+str(basedOn)+')')  # appemd the first horse
         sortDecimal.append(decimalResult)
         sortHorse.append(str(horse))
         return sortDecimal, sortList, sortHorse
@@ -24,22 +29,22 @@ def sortResult(decimalResult, horse, basedOn, error, sortList, sortDecimal, sort
         decimal0=sortDecimal[idx]
 
         if decimal1==0.0:
-            sortList.append(str(horse) + '('+str(decimal1)+')('+str(basedOn)+')('+str(error)+')')
+            sortList.append(str(horse) + '('+str(decimal1)+')('+str(basedOn)+')')
             sortDecimal.append(decimal1)
             sortHorse.append(str(horse))
             break
         elif decimal0==0.0:
-            sortList.insert(idx, str(horse) + '('+str(decimal1)+')('+str(basedOn)+')('+str(error)+')')
+            sortList.insert(idx, str(horse) + '('+str(decimal1)+')('+str(basedOn)+')')
             sortDecimal.insert(idx,decimal1)
             sortHorse.insert(idx,str(horse))
             break
         elif decimal1 < decimal0:
-            sortList.insert(idx, str(horse) + '('+str(decimal1)+')('+str(basedOn)+')('+str(error)+')')
+            sortList.insert(idx, str(horse) + '('+str(decimal1)+')('+str(basedOn)+')')
             sortDecimal.insert(idx,decimal1)
             sortHorse.insert(idx,str(horse))
             break
         elif idx == (iterations-1):
-            sortList.append(str(horse) + '('+str(decimal1)+')('+str(basedOn)+')('+str(error)+')')
+            sortList.append(str(horse) + '('+str(decimal1)+')('+str(basedOn)+')')
             sortDecimal.append(decimal1)
             sortHorse.append(str(horse))
 
@@ -115,23 +120,52 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
             if len(race) > 9:
                 skipFileWrite=1
                 break;
-            for ii in range(0, number):
-                NeuralNetworkInst=NeuralNetwork()
-                """train a network for this horse, based on horseLimit number of past performances"""
-                bO, error = NeuralNetworkInst.NeuralNetwork(horse, int(horseLimit), date, lengths[raceNo])
-                errors+=error
-                if bO != 0:
-                    """see how the trained neural network performs under this races 'test' conditions"""
-                    yValues+=float(NeuralNetworkInst.testFunction(jockeys[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo], draws[raceNo][idx]))#, trainers[raceNo][idx]))
-                else:
-                    break
-            if bO != 0:    
-                yValuePos=yValues/number
-                averageError=errors/number
-                sortDecimal, sortList, sortHorse=sortResult(yValuePos, str(horse), str(bO), str(averageError), sortList, sortDecimal, sortHorse)
-            else:
-                skipFileWrite=1
-                break;
+            sqlhorses=SqlStuffInst.getHorse(horse)
+            NeuralNetworkStuffInst=NeuralNetworkStuff()
+            sortedHorses=NeuralNetworkStuffInst.subSortReduce(sqlhorses, int(horseLimit), date, lengths[raceNo])
+            allInputs=NeuralNetworkStuffInst.subNormaliseInputs(sortedHorses)
+            usefulInputs, usefulHorses=NeuralNetworkStuffInst.subUsefuliseInputs(allInputs, sortedHorses)
+
+            usefulInputs=NeuralNetworkStuffInst.subNormaliseInputs(usefulHorses)
+
+            DS = SupervisedDataSet( 5, 1)
+            for resultNo, inputs in enumerate(usefulInputs):
+                normalisedOutput = ((float(usefulHorses[resultNo][4])-1)/(float(usefulHorses[resultNo][6])-1))*(1-0)+0
+                DS.appendLinked(inputs, normalisedOutput)
+            #print str(DS['target'])
+            tstdata, trndata = DS.splitWithProportion( 0.25 )
+
+            net=buildNetwork(5,5,6,1, bias=True)
+            trainer=BackpropTrainer(net,trndata, momentum=0.1, learningrate=0.01)
+
+            for ii in range(0, 500):
+                aux=trainer.train() #UntilConvergence(dataset=DS)
+            #print str(aux)
+
+            testinput=NeuralNetworkStuffInst.testFunction(jockeys[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo], draws[raceNo][idx])
+            #print str(horse) + str(todaysRaceVenues[raceNo]) + str(todaysRaceTimes[raceNo])
+            result=net.activate(testinput)
+            #print str(result)
+            sortDecimal, sortList, sortHorse=sortResult(result, str(horse), str(len(DS)), 0, sortList, sortDecimal, sortHorse)
+#            sys.exit()
+#            for ii in range(0, number):
+
+#                NeuralNetworkInst=NeuralNetwork()
+#                """train a network for this horse, based on horseLimit number of past performances"""
+#                bO, error = NeuralNetworkInst.NeuralNetwork(horse, int(horseLimit), date, lengths[raceNo])
+#                errors+=error
+ #               if bO != 0:
+#                    """see how the trained neural network performs under this races 'test' conditions"""
+#                    yValues+=float(NeuralNetworkInst.testFunction(jockeys[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo], draws[raceNo][idx]))#, trainers[raceNo][idx]))
+#                else:
+#                    break
+#            if bO != 0:    
+#                yValuePos=yValues/number
+#                averageError=errors/number
+
+#            else:
+#                skipFileWrite=1
+#                break;
 
         if skipFileWrite==0:
             pastPerfOrder=pastPerf(sortHorse)
@@ -146,7 +180,7 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
             original = sys.stdout
             sys.stdout = Tee(sys.stdout, f)
             
-            print str(raceNo) + ' ' + str(todaysRaceVenues[venueNumber]) + ' ' + str(todaysRaceTimes[venueNumber][venuesRaceNo]) 
+            print str(raceNo) + ' ' + str(todaysRaceVenues[raceNo]) + ' ' + str(todaysRaceTimes[raceNo]) 
             for ii, pos in enumerate(sortList):
                 #splitpos=re.split(r'(\d+)', pos)
                 try:

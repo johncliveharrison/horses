@@ -311,6 +311,7 @@ class NeuralNetwork:
         testn[4]=self.NeuralNetworkStuffInst.normaliseTestGoing(going)
         #testn[4]=self.NeuralNetworkStuffInst.normaliseTestDraw(draw, numberHorses)
         testn[5]=1.0
+        return testn
         yValues=self.ComputeOutputs(testn)[0]
         #print "yValue = " + str(yValues)
         #print "predicted finish = " + str(yValues[0]*float(numberHorses))

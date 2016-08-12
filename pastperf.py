@@ -16,11 +16,11 @@ def pastComp(horseA, horseB):
 #            print "doing something for horseB"
             if horseAInfo[10:12] == horseBInfo[10:12]:
                 if horseAInfo[4] < horseBInfo[4]:
-                    print "horse A won"
+                   # print "horse A won"
                     horseAWins+=1
                 else:
                     horseBWins+=1
-                    print "horse B won"
+                    #print "horse B won"
 
  #   if horseAWins == 0 and horseBWins == 0:
  #       print "these horses have not raced previously"
