@@ -186,6 +186,7 @@ class ResultStuff:
         self.fullInfo=fullInfo
         self.raceDate= raceDate
         self.horseNames=[]
+        self.odds=[]
         self.draw=[]
         self.horseAges=[]
         self.horseWeights=[]
@@ -334,6 +335,48 @@ class ResultStuff:
         time = 60*float(minutes)+seconds
         self.finishingTime=time
         #sys.exit(0)
+    def remove(soup, tagname):
+        print "heeelllllo!"
+        for tag in soup.findAll(tagname):
+            print str(tag)
+            contents = tag.contents
+            parent = tag.parent
+            tag.extract()
+            for tag in contents:
+                parent.append(tag)
+
+
+    def getOdds(self):
+        """function to find all of the odds in the full result popup"""
+        """if there are no odds available then do nothing"""
+        try:
+            self.bodys=self.fullResult.findAll("tbody")
+            for self.body in self.bodys:
+
+                self.trs=self.body.findAll("tr")
+                for self.tr in self.trs:
+
+                    if self.tr.find("td", {"class":"nowrap"}):
+
+                        self.td=self.tr.find("td", {"class":"nowrap"})
+                        if self.td.find("span", {"class":"black"}):
+
+                            self.span=self.td.find("span", {"class":"black"})
+                            if self.span.find("img"):
+                                tag = self.span.find("img")
+                                contents = tag.contents
+                                parent = tag.parent
+                                tag.extract()
+                                for tag in contents:
+                                    parent.append(tag)
+#                                print str(parent.contents)
+                                self.odds.append(''.join(re.split(r'(\d+)',parent.contents[-2])[-4:-1]))
+                            else:
+                            #print str(''.join(re.split(r'(\d+)',self.span.contents[-1])[-4:-1]))
+                                self.odds.append(''.join(re.split(r'(\d+)',self.span.contents[-1])[-4:-1]))
+         #   print self.odds
+        except AttributeError:
+            print "no odds found"
 
 
     def getHorseNames(self):
@@ -486,6 +529,7 @@ class ResultStuff:
         self.getRaceName()
         self.getRaceTime()
         self.getHorseNames()
+        self.getOdds()
         self.getDraw()
         self.getNumberOfHorses()
         self.getHorseWeightJockeyNameAge()        

@@ -25,12 +25,14 @@ def makeATestcardFromResults(date):
 
     horseName=[]       
     jockeyName=[]       
+    trainerName=[]
     raceLength=[]       
     weights=[]       
     goings=[]       
     draws=[]       
     todaysRaceTimes=[]       
-    todaysRaceVenues=[]       
+    todaysRaceVenues=[]     
+    odds=[]
 
     """loop through the number of races and make a ResultStuff object for each"""
     for fullResultHref in fullResultHrefs:
@@ -46,15 +48,16 @@ def makeATestcardFromResults(date):
     for ResultStuffInst in ResultStuffInsts:
         horseName.append(ResultStuffInst.horseNames)
         jockeyName.append(ResultStuffInst.jockeys)
+        trainerName.append(ResultStuffInst.trainers)
         raceLength.append(ResultStuffInst.raceLength)
         weights.append(ResultStuffInst.horseWeights)
         goings.append(ResultStuffInst.going)
         draws.append(ResultStuffInst.draw)
         todaysRaceTimes.append(ResultStuffInst.raceTime)
         todaysRaceVenues.append(ResultStuffInst.raceName.replace(u'\n', ''))
+        odds.append(ResultStuffInst.odds)
 
-
-    return (horseName, jockeyName, raceLength, weights, goings, draws, todaysRaceTimes, todaysRaceVenues)    
+    return (horseName, jockeyName, raceLength, weights, goings, draws, trainerName, todaysRaceTimes, todaysRaceVenues, odds)    
 
 
 
@@ -134,7 +137,7 @@ def makeAPoliteDatabase(dateStart, dateEnd, test = "false"):
             else:
                 for idx, horseName in enumerate(ResultStuffInst.horseNames):
                     """create a string with this horses values"""
-                    val_str="'{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}, '{}', '{}', '{}', '{}', '{}', {}".format(\
+                    val_str="'{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}, '{}', '{}', '{}', '{}', '{}', '{}', '{}'".format(\
                     ResultStuffInst.horseNames[idx].replace("'", "''"),\
                     ResultStuffInst.horseAges[idx], ResultStuffInst.horseWeights[idx], idx+1, \
                     ResultStuffInst.raceLength, ResultStuffInst.numberOfHorses, \
@@ -143,7 +146,9 @@ def makeAPoliteDatabase(dateStart, dateEnd, test = "false"):
                     ResultStuffInst.raceName, ResultStuffInst.draw[idx], \
                     ResultStuffInst.trainers[idx].replace("'", "''"), \
                     ResultStuffInst.jumps, \
-                    ResultStuffInst.finishingTime)
+                    ResultStuffInst.finishingTime, \
+                    ResultStuffInst.odds[idx]
+                    )
                     print val_str
 
 
@@ -201,17 +206,17 @@ def viewADatabase():
     SqlStuffInst.viewAllTable()
 
 def viewHorse(horseName):
-    print "ID,  HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE"
+    print "ID,  HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE, ODDS"
     SqlStuffInst=SqlStuff2()
     SqlStuffInst.viewHorse(horseName)
 
 def viewJockey(jockeyName):
-    print "ID,  HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE"
+    print "ID,  HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE, ODDS"
     SqlStuffInst=SqlStuff2()
     SqlStuffInst.viewJockey(jockeyName)
 
 def viewDate(date):
-    print "ID,  HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE"
+    print "ID,  HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE, ODDS"
     SqlStuffInst=SqlStuff2()
     SqlStuffInst.viewDate(date)
 

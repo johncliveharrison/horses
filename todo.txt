@@ -1,22 +1,31 @@
-1. make the most recent result for a horse be excluded from test result genereration
-2. find out what all the print outs mean
-3. print out the actual values being used for the inputs, to check for normalisation
-4. print out the weights to see whether there are any consistently useless inputs (small weighting)
-
-
-
 NEW
-calculate new mean and norm using the useful data
+
 ###normalise the outputs for each horse (place-mean)/std-deviation##### -- see later point about normalisation
 un-normalise the predicted output to find the placing (result*std-deviation)+mean
-nomalise the output data using the formula (e-a)/(b-a).(d-c)+c where a and b are the old ranges and c,d are the desired ranges.
-Stop using the traintoconvergence function as it uses some of the training data for validation.
+
 Try not limiting the training to only 20 races.
 Or try limiting the races used to being between 5 and 10?
 
-do a git commit to mark the end of the introduction of the pybrain feature....
 Try making the normalised output have range -1 to 1 instead of 0 to 1
 Try using the gaussian normalisation on the output
 extract the odds from the results so that profit and loss can also be calculated in the runTestDateRange
+Try training to one race first and then two and then three etc.
+Try adding the last, last but one and last but two races to the inputs and then ignore the first three races...
+Make the jockey and trainer means and std-devs be based on races up to that date, not all races.
+Try adding the other horses average performance as input to the NN.  Have first second and third place horses as inputs.  Then in the
+prediction phase put 0.5 in as all values (the results of the other horses should be normalised to fall in the range 0 to 1 where 0 is 
+all first places.
+
+
+
+DONE
+calculate new mean and norm using the useful data
+Removed the pastperformance mod stuff as it was just making the code look a mess
+do a git commit to mark the end of the start of the introduction of the pybrain feature....
+nomalise the output data using the formula (e-a)/(b-a).(d-c)+c where a and b are the old ranges and c,d are the desired ranges.
+Stop using the traintoconvergence function as it uses some of the training data for validation.
 activate the trained net on some test sets to see how accurate the training is.  If error greater than 5-10% then retrain...
-The 
+Use the average speed instead of the position as the target in the net.
+The jockey should be represented more by form, i.e. only consider the past 10 races
+The trainer should be included as a field.  The form of the trainer is the last 10 race results for any horse trained by them.
+
