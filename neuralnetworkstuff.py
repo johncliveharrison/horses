@@ -743,7 +743,7 @@ class NeuralNetworkStuff:
         horse under analysis has been in.  The function called for normalising
         take all of these races into consideration in comparison to a particular
         race idx.  This way each race gets normalised in turn"""        
-        horsesn=[[0 for x in xrange(6)] for x in xrange(len(horses))]
+        horsesn=[[0 for x in xrange(4)] for x in xrange(len(horses))]
         self.meanStdRaceLength(horses)
       #  self.meanStdJockey(horses)
         jockeys=self.getNormalizedJockeys(horses)
@@ -756,23 +756,23 @@ class NeuralNetworkStuff:
         self.meanStdGoing(horses)
         for idx in range(0, len(horses)):
             horsesn[idx][0]=self.normaliseRaceLength(idx)
-            #print "done"
-            horsesn[idx][1]=self.normaliseNumberOfHorses(idx)
-            #print "done"
+
+            #horsesn[idx][1]=self.normaliseNumberOfHorses(idx)
+
             #horsesn[idx][2]=self.normalisePastPosition(horses, idx)
-            #print "done"
+
    #         horsesn[idx][2]=self.normaliseJockey(idx)
-            #print "done" + str(horsesn[idx][3])
-            horsesn[idx][3]=self.normaliseWeight(idx)
+
+            horsesn[idx][1]=self.normaliseWeight(idx)
  #           horsesn[idx][4]=jockeyWins[idx]
     #        horsesn[idx][5]=self.normaliseTrainer(idx)
-            #print "done"
-            horsesn[idx][4]=self.normaliseGoing(horses, idx)
-            #print "done"
+            
+            horsesn[idx][2]=self.normaliseGoing(horses, idx)
+            
             #horsesn[idx][5]=1.0
-            horsesn[idx][2] = jockeys[idx]
-            #print "subNormaliseInputs trainerName value " + str(idx) + " is " + str(trainers[idx])
-            horsesn[idx][5] = trainers[idx]
+            horsesn[idx][3] = jockeys[idx]
+            
+            #horsesn[idx][5] = trainers[idx]
             
        
         return horsesn
@@ -783,19 +783,19 @@ class NeuralNetworkStuff:
         jockeyNames=self.getNormalizedJockey(jockeyName, date)
         trainerNames=self.getNormalizedTrainer(trainerName, date)
 
-        testn=[None]*6
+        testn=[None]*4
         testn[0]=self.normaliseTestRaceLength(raceLength)
-        testn[1]=self.normaliseTestNumberOfHorses(numberHorses)
+        #testn[1]=self.normaliseTestNumberOfHorses(numberHorses)
         #testn[2]=self.normaliseTestPastPosition(horses[len(horses)-1][4])
         #testn[2]=self.normaliseTestJockey(jockeyName)
-        testn[3]=self.normaliseTestWeight(weight)
+        testn[1]=self.normaliseTestWeight(weight)
  #       testn[4]=self.NeuralNetworkStuffInst.subJockeyPercentWins(jockeyNames)[0]
  #       testn[5]=self.NeuralNetworkStuffInst.normaliseTestTrainer(trainerName)
-        testn[4]=self.normaliseTestGoing(going)
+        testn[2]=self.normaliseTestGoing(going)
         #testn[5]=self.normaliseTestTrainer(trainerName)
-        testn[2]=jockeyNames
+        testn[3]=jockeyNames
         #print "testFunction trainerName value is " + str(trainerNames)
-        testn[5]=trainerNames
+        #testn[5]=trainerNames
         
         #testn[4]=self.NeuralNetworkStuffInst.normaliseTestDraw(draw, numberHorses)
         #testn[5]=1.0

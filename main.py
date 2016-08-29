@@ -53,7 +53,7 @@ def sortResult(decimalResult, horse, basedOn, error, sortList, sortDecimal, sort
 
 
 
-def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.strftime("%Y-%m-%d"), number=1, quickTest = 0):
+def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.strftime("%Y-%m-%d"), number=1, quickTest = 0, moneystart = 0.0, moneystart2 = 0.0):
     horseName=[]
     jockeyName=[]
     lengths=[]
@@ -86,7 +86,8 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
     #    print "remove race" + str(ii) + "from list"
   
 
-    moneypot=0.0
+    moneypot=moneystart
+    moneypot2=moneystart2
     venuesRaceNo=0
     venueNumber=0
     returnSortHorse=[]
@@ -97,7 +98,7 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
         horses=horses[0]
 
     for raceNo, race in enumerate(horses):
-        
+
         numberHorses=len(horses[raceNo])
         position=[0.0]*numberHorses
         #basedOn=[]
@@ -107,19 +108,29 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
         skipFileWrite=0
         # do a quick check on all of the horses in the race
         SqlStuffInst=SqlStuff2()
+
         for idx, horse in enumerate(race):
             sqlhorses=SqlStuffInst.getHorse(horse)
             if len(sqlhorses)==0:
                 skipFileWrite=1
+                print "horse has no form so skip race"
                 break;
+
+            if len(sqlhorses)<6:
+                skipFileWrite=1
+                print "horse less than 3 races of form so skip race"
+                break;
+
+
         for idx, horse in enumerate(race):
             errors=0
             yValues=0
             bO=0
             if skipFileWrite==1:
                 break;
-            if len(race) > 9:
+            if len(race) > 6:
                 skipFileWrite=1
+
                 break;
             sqlhorses=SqlStuffInst.getHorse(horse)
             NeuralNetworkStuffInst=NeuralNetworkStuff()
@@ -131,7 +142,7 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
             if usefulInputs != 0:
                 usefulInputs=NeuralNetworkStuffInst.subNormaliseInputs(usefulHorses, date)
 
-                DS = SupervisedDataSet(6, 1)
+                DS = SupervisedDataSet(4, 1)
                 # go around the loop of useful races to find the finish times and distances
                 # need to find the fastest and the slowest for the normalisation
                 minpace=1000.00
@@ -152,7 +163,7 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
         
                     #tstdata, trndata = DS.splitWithProportion( 0.25 )
 
-                net=buildNetwork(6,8,1, bias=True) #, outclass=SigmoidLayer)
+                net=buildNetwork(4,8,1, bias=True) #, outclass=SigmoidLayer)
 
                 trainer=BackpropTrainer(net,DS, momentum=0.3, learningrate=0.3)
                 mintesterr=0
@@ -194,16 +205,70 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
                 skipFileWrite=1
 
         if skipFileWrite==0:
-            
-            returnSortHorse.append(sortHorse)
 
-            if sortHorse[0]==todaysResults[raceNo].horseNames[0]:
-                odd_split=todaysResults[raceNo].odds[0].split("/")
-                moneypot=moneypot+((float(odd_split[0])/float(odd_split[1]))*10)
-            else:
-                moneypot=moneypot-10.0
+            returnSortHorse.append(sortHorse)
+            if len(sortHorse) > 0:
+
+                if sortHorse[0]==todaysResults[raceNo].horseNames[0]:
+
+                    odd_split=todaysResults[raceNo].odds[0].split("/")
+
+                    try:
+
+                        moneypot=moneypot+((float(odd_split[0])/float(odd_split[1]))*10)
+
+                        #break
+                    except ValueError:
+                        print str(todaysResults[raceNo].odds[0]) + " odds were not split properly"
+                    except Exception:
+                        print str(todaysResults[raceNo].odds[0]) + " odds were not split properly but not ValueError"
+                else:
+                    moneypot=moneypot-10.0
+
+            temp=0.0
+            temp2=0.0
+            if len(sortHorse) > 1:
+                # go through the results to find the odds for our predicted winner
+                for idx, idxHorse in enumerate(todaysResults[raceNo].horseNames):
+                    if sortHorse[0]==idxHorse:
+
+                        odd_split=todaysResults[raceNo].odds[idx].split("/")
+
+                        try:
+                            temp=float(odd_split[0])/float(odd_split[1])
+                       
+                        except ValueError:
+                            print str(todaysResults[raceNo].odds[idx]) + " odds were not split properly"
+                        except Exception:
+                            print str(todaysResults[raceNo].odds[idx]) + " odds were not split properly but not ValueError"
+                    if sortHorse[1]==idxHorse:
+
+                        odd_split=todaysResults[raceNo].odds[idx].split("/")
+
+                        try:
+                            temp2=float(odd_split[0])/float(odd_split[1])
+                       
+                        except ValueError:
+                            print str(todaysResults[raceNo].odds[idx]) + " odds were not split properly"
+                        except Exception:
+                            print str(todaysResults[raceNo].odds[idx]) + " odds were not split properly but not ValueError"
+                    
+                if temp >= 2 and temp2 >= 2:
+
+                    if sortHorse[0]==todaysResults[raceNo].horseNames[0]:
+                        moneypot2=moneypot2+(temp*10)
+                    else:
+                        moneypot2=moneypot2-10;
+                    if sortHorse[1]==todaysResults[raceNo].horseNames[0]:
+                        moneypot2=moneypot2+(temp2*10)
+                    else:
+                        moneypot2=moneypot2-10;
+                else:
+                    print "No bet for moneypot2"
+
 
             print "The moneypot so far is " + str(moneypot) + "kr"
+            print "The moneypot2 so far is " + str(moneypot2) + "kr"
             
             if afterResult != "noResult":
                 returnResults.append(todaysResults[raceNo])
@@ -234,8 +299,8 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
             venuesRaceNo=0
             venueNumber+=1
         
-       
-    return returnSortHorse, returnResults
+
+    return returnSortHorse, returnResults, moneypot, moneypot2
 
 def runNeuralNet(date, number=1, horseLimit=20):
     """ date is the date to use.  Number is the number of times to train the neural net (different
@@ -258,7 +323,8 @@ def runTestDateRange(dateStart, dateEnd, number=1):
     and also use this as a parameter to the neuralNet"""
     dateStartSplit=dateStart.split('-')
     dateEndSplit=dateEnd.split('-')
-
+    moneypot = 0.0
+    moneypot2 = 0.0
 
     predictedWinner=[]
     numberOfRacesArray=[]
@@ -267,7 +333,7 @@ def runTestDateRange(dateStart, dateEnd, number=1):
     
         print date
         winner=[0]*10
-        predicteds, actuals = neuralNet("10","testDate", "Result", date, number)
+        predicteds, actuals, moneypot, moneypot2 = neuralNet("50","testDate", "Result", date, number, moneystart=moneypot, moneystart2=moneypot2)
         numberOfRaces=len(predicteds)
         for idx, predicted in enumerate(predicteds):
             for jdx, predict in enumerate(predicted):
@@ -280,7 +346,7 @@ def runTestDateRange(dateStart, dateEnd, number=1):
                     """ this will happen if there were not at least three horses"""
         
         for idx, win in enumerate(winner):
-            print "predicted position " + str(idx) + " won " + str(win) + " times"
+            print "predicted position " + str(idx+1) + " won " + str(win) + " times"
         print "numberOfRaces = " + str(numberOfRaces)
         
         predictedWinner.append(winner)
@@ -294,7 +360,7 @@ def runTestDateRange(dateStart, dateEnd, number=1):
         print "idx = " + str(idx)
         print "number of races = " + str(numberOfRacesArray[ref])
         for jdx, numWin in enumerate(predictedWinner[ref]):
-            print "number of times predicted place " + str(jdx) + " won was " + str(numWin)
+            print "number of times predicted place " + str(jdx+1) + " won was " + str(numWin)
 
         ref+=1
 def runTestHistoryRange(historyStart, historyEnd, date):
