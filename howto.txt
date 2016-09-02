@@ -1,0 +1,68 @@
+  1  git clone git@github.com:johncliveharrison/horses.git
+    2  sudo apt-get install git
+    3  git clone git@github.com:johncliveharrison/horses.git
+    4  ssh-keygen -t rsa -b 3096 -C "cloudhorses"
+    5  eval "$(ssh-agent -s)"
+    6  ssh-add ~/.ssh/id_rsa_cloudhorses
+    7  cat ~/.ssh/id_rsa_cloudhorses.pub 
+    8  git clone git@github.com:johncliveharrison/horses.git
+    9  ls
+   10  cd horses/
+   11  ls
+   12  ls horses_local/
+   13  cd horses_local/
+   14  tar -xzf horse_local_2015_0.tar.gz 
+   15  ls
+   16  ls horse
+   17  ls horses_local/
+   18  ls
+   19  tar -xzf horse_local_2014_1.tar.gz 
+   20  tar -xzf horse_local_2014_0.tar.gz 
+   21  tar -xzf horse_local_2013_1.tar.gz 
+   22  tar -xzf horse_local_2013_0.tar.gz 
+   23  tar -xzf horse_local_2012_1.tar.gz 
+   24  tar -xzf horse_local_2012_0.tar.gz 
+   25  ls
+   26  cd ..
+   27  ls
+   28  cd ..
+   29  git clone git://github.com/pybrain/pybrain.git
+   30  sudo apt-get install python-pip
+   31  sudo apt-get update
+   32  sudo apt-get install python-pip
+   33  pip install numpy-1.11.1+mkl-cp35-cp35m-win_amd64.whl
+   34  sudopip install numpy-1.11.1+mkl-cp35-cp35m-win_amd64.whl
+   35  sudo pip install numpy-1.11.1+mkl-cp35-cp35m-win_amd64.whl
+   36  sudo apt-get install python-numpy python-scipy python-matplotlib ipython ipython-notebook python-pandas python-sympy python-nose
+   37  pip install scipy
+   38  pip install matplotlib
+   39  cd pybrain/
+   40  python setup.py install
+   41  sudo python setup.py install
+   42  python
+   43  echo $PYTHONPATH
+   44  export PYTHONPATH=~/pybrain
+   45  echo $PYTHONPATH
+   46  ls
+   47  ls pybrain/
+   48  python pybrain/tests/runtests.py 
+   49  cd ../horses/
+   50  ls
+   51  ls horses_local/
+   52  rm -rf horses_local/
+   53  git checkout -b pybrain-feature origin/pybrain-feature 
+   54  git fetch -p
+   55  git merge origin/pybrain-feature 
+   56  ls
+   57  git log
+   58  cat horse_local.tar.gz.* | tar xzvf -
+   59  ls
+   60  #python -c 'from commands import makeAPoliteDatabase; makeAPoliteDatabase("2015-09-20", "2016-07-01")'
+   61  python -c 'from commands import makeAPoliteDatabase; makeAPoliteDatabase("2012-01-01", "2016-07-01")'
+   62  pip install beautifulSoup4
+   63  python -c 'from commands import makeAPoliteDatabase; makeAPoliteDatabase("2012-01-01", "2016-07-01")'
+   64  pip install beautifulSoup
+   65  sudo pip install beautifulSoup
+   66  python -c 'from commands import makeAPoliteDatabase; makeAPoliteDatabase("2012-01-01", "2016-07-01")'
+   67  python -c 'from main import runTestDateRange; runTestDateRange("2016-07-01", "2016-07-30")'
+   68  history
