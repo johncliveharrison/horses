@@ -19,7 +19,7 @@ all first places.
 check if any horse has won a race - don't be t on maiden races!
 
 Extract class and use that as an input to the NN
-Use a speed ration from the last 4 races as an input.  Divide how much the horse was slow by, by the course record.  Add the 4 and divide by 4.
+Use a speed ratio from the last 4 races as an input.  Divide how much the horse was slow by, by the course record.  Add the 4 and divide by 4.
 
 split the code into day, race, horse levels... 
 

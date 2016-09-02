@@ -51,7 +51,13 @@ def sortResult(decimalResult, horse, basedOn, error, sortList, sortDecimal, sort
 
     return sortDecimal, sortList, sortHorse
 
-
+#current Error Measure - You could add your own
+def SumSquareError(Actual, Desired):
+    error = 0.
+    for i in range(len(Desired)):
+        error = error + ((Actual[i] - Desired[i])**2)
+    error = error**0.5
+    return error
 
 def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.strftime("%Y-%m-%d"), number=1, quickTest = 0, moneystart = 0.0, moneystart2 = 0.0):
     horseName=[]
@@ -88,8 +94,6 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
 
     moneypot=moneystart
     moneypot2=moneystart2
-    venuesRaceNo=0
-    venueNumber=0
     returnSortHorse=[]
     returnPastPerf=[]
     returnResults=[]
@@ -116,10 +120,10 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
                 print "horse has no form so skip race"
                 break;
 
-            if len(sqlhorses)<6:
-                skipFileWrite=1
-                print "horse less than 3 races of form so skip race"
-                break;
+            #if len(sqlhorses)<6:
+                #skipFileWrite=1
+                #print "horse less than 6 races of form so skip race"
+                #break;
 
 
         for idx, horse in enumerate(race):
@@ -128,9 +132,8 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
             bO=0
             if skipFileWrite==1:
                 break;
-            if len(race) > 6:
+            if len(race) > 9:
                 skipFileWrite=1
-
                 break;
             sqlhorses=SqlStuffInst.getHorse(horse)
             NeuralNetworkStuffInst=NeuralNetworkStuff()
@@ -145,47 +148,66 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
                 DS = SupervisedDataSet(4, 1)
                 # go around the loop of useful races to find the finish times and distances
                 # need to find the fastest and the slowest for the normalisation
-                minpace=1000.00
-                maxpace=0.00
                 racepace=[0.0]*len(usefulHorses)
                 for resultNo, inputs in enumerate(usefulHorses):
                     racepace[resultNo] = (NeuralNetworkStuffInst.convertRaceLengthMetres(inputs[5])/(inputs[15]+(inputs[4]*0.1)))
-                    maxpace=max(racepace[resultNo], maxpace)
-                    minpace=min(racepace[resultNo], minpace)
-                
+                                    
                 for resultNo, inputs in enumerate(usefulInputs):
-                    #normalisedOutput = ((float(usefulHorses[resultNo][4])-1)/(float(usefulHorses[resultNo][6])-1))*(1-0)+0
-                    # Try calculating the average speed in each race and use that as the output after normalisation
-                    #normalisedOutput = ((racepace[resultNo]-minpace)/(maxpace-minpace))*(1-0)+0
-                    #print str(usefulHorses[resultNo])
-                    #print str(inputs)
-                    DS.appendLinked(inputs, racepace[resultNo]) #normalisedOutput) #usefulHorses[resultNo][4]) #
+                
+                    DS.appendLinked(inputs, racepace[resultNo]) 
         
-                    #tstdata, trndata = DS.splitWithProportion( 0.25 )
+                tstdata, trndata = DS.splitWithProportion( 0.25 )
+                net=buildNetwork(4,3,3,1, bias=True) #, outclass=SigmoidLayer)
 
-                net=buildNetwork(4,8,1, bias=True) #, outclass=SigmoidLayer)
-
-                trainer=BackpropTrainer(net,DS, momentum=0.3, learningrate=0.3)
+                trainer=BackpropTrainer(net,trndata, momentum=0.3, learningrate=0.3)
                 mintesterr=0
+                nonconvergence=0
                 for jj in range(0, 100):
                     prevtesterr=mintesterr
                     mintesterr=0
                     for ii in range(0, 500):
                         aux=trainer.train() #UntilConvergence(dataset=DS)
 
-                    # test to see how the trained net performs on some of the training data
-                    for testrace in range(0, len(DS)-1):
-                        result=net.activate(DS['input'][testrace])
-                        testerr = abs(result-DS['target'][testrace])
+                    trnresult = SumSquareError(net.activateOnDataset(dataset=trndata), trndata['target'])
+                    tstresult = SumSquareError(net.activateOnDataset(dataset=tstdata), tstdata['target'])
+                    if tstresult < 2.0:           
+                        break
+                    if trnresult < 0.01 and tstresult > 0.01:
+                        net.randomize()   
+                    if  jj > 15:
+                        print "skip race due to inablility to converge during training"
+                        skipFileWrite=1
+                        break
+
+                    print "epoch: %4d" % trainer.totalepochs,"  train error: %5.2f%%" % trnresult, "  test error: %5.2f%%" % tstresult
+                
+
+                    """     # test to see how the trained net performs on some of the training data
+                    for testrace in range(0, len(tstdata)-1):
+                        result=net.activate(tstdata['input'][testrace])
+                        testerr = abs(result-tstdata['target'][testrace])
                         mintesterr = testerr**2 +  mintesterr
                     mintesterr = mintesterr**0.5
                     if mintesterr==prevtesterr:
                         if mintesterr > 0.01:
                             print "randomzing weights"
                             net.randomize()
-                   
+                    if mintesterr > prevtesterr:
+                        nonconvergence=nonconvergence+1
+                        #print "adding 1 to nonconvergence"
+                        if nonconvergence == 5:
+                            nonconvergence =0
+                            tstdata, trndata = tstdata.splitWithProportion( 0.5 )
+                            net.randomize()   
+                            print "non convergence - halving training data"
+                    #print 'the final test error is ' + str(mintesterr)
+                    nonconvergence =0
+                    print "mintesterr: " + str(mintesterr)
                     if mintesterr <= 0.01:
                         break;
+                if mintesterr > 0.01:
+                    print "skip race due to inablility to converge during training"
+                    skipFileWrite=1
                 # print out the weight from the NN
                 #for mod in net.modules:
                 #    for conn in net.connections[mod]:
@@ -194,20 +216,19 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
                 #            if abs(conn.params[cc]) < 0.1:
                 #                print conn.whichBuffers(cc), conn.params[cc]
 
-
+                """
                 testinput=NeuralNetworkStuffInst.testFunction(jockeys[raceNo][idx],trainers[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo], draws[raceNo][idx], date)
 
-                result=net.activate(testinput)
-                result = NeuralNetworkStuffInst.convertRaceLengthMetres(lengths[raceNo])/float(result)
-                #result=(((result-0)/(1-0))*(maxpace-minpace))+minpace
-                sortDecimal, sortList, sortHorse=sortResult(result, str(horse), str(len(DS)), 0, sortList, sortDecimal, sortHorse)
+                nnresult=net.activate(testinput)
+                result = NeuralNetworkStuffInst.convertRaceLengthMetres(lengths[raceNo])/float(nnresult)
+                sortDecimal, sortList, sortHorse=sortResult(result, str(horse), str(len(trndata)), 0, sortList, sortDecimal, sortHorse)
             else:
                 skipFileWrite=1
 
         if skipFileWrite==0:
-
+            
             returnSortHorse.append(sortHorse)
-            if len(sortHorse) > 0:
+            if len(sortHorse) > 0 and afterResult !="noResult":
 
                 if sortHorse[0]==todaysResults[raceNo].horseNames[0]:
 
@@ -227,7 +248,7 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
 
             temp=0.0
             temp2=0.0
-            if len(sortHorse) > 1:
+            if len(sortHorse) > 1 and afterResult != "noResult":
                 # go through the results to find the odds for our predicted winner
                 for idx, idxHorse in enumerate(todaysResults[raceNo].horseNames):
                     if sortHorse[0]==idxHorse:
@@ -279,6 +300,13 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
             original = sys.stdout
             sys.stdout = Tee(sys.stdout, f)
             
+            print "the raceNo is "
+            print str(raceNo)
+            print "todaysRaceVenues are "
+            print str(todaysRaceVenues)
+            print "todaysRaceTimes are "
+            print str(todaysRaceTimes)
+
             print str(raceNo) + ' ' + str(todaysRaceVenues[raceNo]) + ' ' + str(todaysRaceTimes[raceNo]) 
             for ii, pos in enumerate(sortList):
                 #splitpos=re.split(r'(\d+)', pos)
@@ -293,12 +321,6 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
             sys.stdout = original
             print "This won't appear on file"  # Only on stdout
             f.close()
-
-        venuesRaceNo+=1
-        if venuesRaceNo==len(todaysRaceTimes[venueNumber]):
-            venuesRaceNo=0
-            venueNumber+=1
-        
 
     return returnSortHorse, returnResults, moneypot, moneypot2
 
@@ -333,7 +355,7 @@ def runTestDateRange(dateStart, dateEnd, number=1):
     
         print date
         winner=[0]*10
-        predicteds, actuals, moneypot, moneypot2 = neuralNet("50","testDate", "Result", date, number, moneystart=moneypot, moneystart2=moneypot2)
+        predicteds, actuals, moneypot, moneypot2 = neuralNet("20","testDate", "Result", date, number, moneystart=moneypot, moneystart2=moneypot2)
         numberOfRaces=len(predicteds)
         for idx, predicted in enumerate(predicteds):
             for jdx, predict in enumerate(predicted):

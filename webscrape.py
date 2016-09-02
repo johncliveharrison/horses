@@ -86,8 +86,17 @@ class HrefStuff:
 #                    print str(self.raceTime)
                 except AttributeError:
                     """ doesn't matter if there was no link"""
-#            self.raceTimes[idx]=self.raceTime
-        return self.raceHrefs, self.raceTimes, self.raceVenue
+        # get the raceTimes and raceVenue into the same format as that returned by the
+        # makeATestcardFromResults function
+        raceTimes=[]
+        raceVenue=[]
+        for idx, daysRaceTimes in enumerate(self.raceTimes):
+            for raceTime in daysRaceTimes:
+                raceTimes.append(raceTime)
+                raceVenue.append(self.raceVenue[idx])
+
+
+        return self.raceHrefs, raceTimes, raceVenue
 
     def getCardContents(self, href):
         """ get the horse, jockey, number of horses and distance"""
