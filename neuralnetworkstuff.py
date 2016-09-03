@@ -141,7 +141,7 @@ class NeuralNetworkStuff:
         self.pastPositionMean=array(pastPositions).mean()
         self.pastPositionStd=array(pastPositions).std()
         if idx==0:
-            pastPositionn=0.0
+            pastPositionn=self.pastPositionMean
         else:
             pastPositionn=(pastPositions[idx-1]-self.pastPositionMean)/self.pastPositionStd
         return pastPositionn

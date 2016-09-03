@@ -148,80 +148,54 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
                 DS = SupervisedDataSet(4, 1)
                 # go around the loop of useful races to find the finish times and distances
                 # need to find the fastest and the slowest for the normalisation
-                racepace=[0.0]*len(usefulHorses)
-                for resultNo, inputs in enumerate(usefulHorses):
-                    racepace[resultNo] = (NeuralNetworkStuffInst.convertRaceLengthMetres(inputs[5])/(inputs[15]+(inputs[4]*0.1)))
+                cummulativeResult = 0.0
+                for kk in range (1, number): 
+                    if skipFileWrite == 1:
+                        break
+                    racepace=[0.0]*len(usefulHorses)
+                    for resultNo, inputs in enumerate(usefulHorses):
+                        racepace[resultNo] = (NeuralNetworkStuffInst.convertRaceLengthMetres(inputs[5])/(inputs[15]+(inputs[4]*0.1)))
                                     
-                for resultNo, inputs in enumerate(usefulInputs):
+                    for resultNo, inputs in enumerate(usefulInputs):
                 
-                    DS.appendLinked(inputs, racepace[resultNo]) 
+                        DS.appendLinked(inputs, racepace[resultNo]) 
         
-                tstdata, trndata = DS.splitWithProportion( 0.25 )
-                net=buildNetwork(4,3,3,1, bias=True) #, outclass=SigmoidLayer)
+                    tstdata, trndata = DS.splitWithProportion( 0.25 )
+                    net=buildNetwork(4,3,3,1, bias=True) #, outclass=SigmoidLayer)
 
-                trainer=BackpropTrainer(net,trndata, momentum=0.3, learningrate=0.3)
-                mintesterr=0
-                nonconvergence=0
-                for jj in range(0, 100):
-                    prevtesterr=mintesterr
+                    trainer=BackpropTrainer(net,trndata, momentum=0.3, learningrate=0.3)
                     mintesterr=0
-                    for ii in range(0, 500):
-                        aux=trainer.train() #UntilConvergence(dataset=DS)
+                    nonconvergence=0
+                    for jj in range(0, 100):
+                        prevtesterr=mintesterr
+                        mintesterr=0
+                        for ii in range(0, 500):
+                            aux=trainer.train() #UntilConvergence(dataset=DS)
 
-                    trnresult = SumSquareError(net.activateOnDataset(dataset=trndata), trndata['target'])
-                    tstresult = SumSquareError(net.activateOnDataset(dataset=tstdata), tstdata['target'])
-                    if tstresult < 2.0:           
-                        break
-                    if trnresult < 0.01 and tstresult > 0.01:
-                        net.randomize()   
-                    if  jj > 15:
-                        print "skip race due to inablility to converge during training"
-                        skipFileWrite=1
-                        break
+                        trnresult = SumSquareError(net.activateOnDataset(dataset=trndata), trndata['target'])
+                        tstresult = SumSquareError(net.activateOnDataset(dataset=tstdata), tstdata['target'])
+                        if tstresult < 2.0:           
+                            break
+                        if trnresult < 0.01 and tstresult > 0.01:
+                            net.randomize()   
+                        if  jj > 15:
+                            print "skip race due to inablility to converge during training"
+                            skipFileWrite=1
+                            break
 
-                    print "epoch: %4d" % trainer.totalepochs,"  train error: %5.2f%%" % trnresult, "  test error: %5.2f%%" % tstresult
+                        print "epoch: %4d" % trainer.totalepochs,"  train error: %5.2f%%" % trnresult, "  test error: %5.2f%%" % tstresult
                 
 
-                    """     # test to see how the trained net performs on some of the training data
-                    for testrace in range(0, len(tstdata)-1):
-                        result=net.activate(tstdata['input'][testrace])
-                        testerr = abs(result-tstdata['target'][testrace])
-                        mintesterr = testerr**2 +  mintesterr
-                    mintesterr = mintesterr**0.5
-                    if mintesterr==prevtesterr:
-                        if mintesterr > 0.01:
-                            print "randomzing weights"
-                            net.randomize()
-                    if mintesterr > prevtesterr:
-                        nonconvergence=nonconvergence+1
-                        #print "adding 1 to nonconvergence"
-                        if nonconvergence == 5:
-                            nonconvergence =0
-                            tstdata, trndata = tstdata.splitWithProportion( 0.5 )
-                            net.randomize()   
-                            print "non convergence - halving training data"
-                    #print 'the final test error is ' + str(mintesterr)
-                    nonconvergence =0
-                    print "mintesterr: " + str(mintesterr)
-                    if mintesterr <= 0.01:
-                        break;
-                if mintesterr > 0.01:
-                    print "skip race due to inablility to converge during training"
-                    skipFileWrite=1
-                # print out the weight from the NN
-                #for mod in net.modules:
-                #    for conn in net.connections[mod]:
-                #        print conn
-                #        for cc in range(len(conn.params)):
-                #            if abs(conn.params[cc]) < 0.1:
-                #                print conn.whichBuffers(cc), conn.params[cc]
+                    testinput=NeuralNetworkStuffInst.testFunction(jockeys[raceNo][idx],trainers[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo], draws[raceNo][idx], date, usefulHorses[0][4])
 
-                """
-                testinput=NeuralNetworkStuffInst.testFunction(jockeys[raceNo][idx],trainers[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo], draws[raceNo][idx], date)
+                    nnresult=net.activate(testinput)
+                    result = NeuralNetworkStuffInst.convertRaceLengthMetres(lengths[raceNo])/float(nnresult)
+                    print "The result for " + str(horse) + " is " + str(result)
+                    cummulativeResult = (cummulativeResult+result)
+                    averageResult = cummulativeResult/kk
+                    print "The average result for " + str(horse) + " is " + str(averageResult)
 
-                nnresult=net.activate(testinput)
-                result = NeuralNetworkStuffInst.convertRaceLengthMetres(lengths[raceNo])/float(nnresult)
-                sortDecimal, sortList, sortHorse=sortResult(result, str(horse), str(len(trndata)), 0, sortList, sortDecimal, sortHorse)
+                sortDecimal, sortList, sortHorse=sortResult(averageResult, str(horse), str(len(trndata)), 0, sortList, sortDecimal, sortHorse)
             else:
                 skipFileWrite=1
 
