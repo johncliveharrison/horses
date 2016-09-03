@@ -300,13 +300,6 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
             original = sys.stdout
             sys.stdout = Tee(sys.stdout, f)
             
-            print "the raceNo is "
-            print str(raceNo)
-            print "todaysRaceVenues are "
-            print str(todaysRaceVenues)
-            print "todaysRaceTimes are "
-            print str(todaysRaceTimes)
-
             print str(raceNo) + ' ' + str(todaysRaceVenues[raceNo]) + ' ' + str(todaysRaceTimes[raceNo]) 
             for ii, pos in enumerate(sortList):
                 #splitpos=re.split(r'(\d+)', pos)
