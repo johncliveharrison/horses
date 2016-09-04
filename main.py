@@ -323,6 +323,12 @@ def runTestDateRange(dateStart, dateEnd, number=1, hiddenExplore=1):
     for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2]))):
 
         for hiddenCount in range(1, hiddenExplore):
+            # remove these when doing more than one date.
+            predictedWinner=[]
+            numberOfRacesArray=[]
+            moneypot = 0.0
+            moneypot2 = 0.0
+
             numH0 = hiddenCount%10
             if numH0 > 0:
                 print "Hidden layer 0 = " + str(numH0)
