@@ -146,11 +146,11 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
             if len(usefulInputs) != 0:
                 usefulInputs=NeuralNetworkStuffInst.subNormaliseInputs(usefulHorses, date)
 
-                DS = SupervisedDataSet(4, 1)
                 # go around the loop of useful races to find the finish times and distances
                 # need to find the fastest and the slowest for the normalisation
                 cummulativeResult = 0.0
                 for kk in range (1, number): 
+                    DS = SupervisedDataSet(4, 1)
                     if skipFileWrite == 1:
                         break
                     racepace=[0.0]*len(usefulHorses)
