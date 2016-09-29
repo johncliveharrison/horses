@@ -156,7 +156,7 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
                     for resultNo, inputs in enumerate(usefulHorses):
                         racepace[resultNo] = (NeuralNetworkStuffInst.convertRaceLengthMetres(inputs[5])/inputs[15])
                      
-                    print "the number of useful inputs is " + str(len(usefulInputs))
+                    #print "the number of useful inputs is " + str(len(usefulInputs))
                     for resultNo, inputs in enumerate(usefulInputs):
                         DS.appendLinked(inputs, racepace[resultNo]) 
         
