@@ -102,7 +102,8 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
         horses=horses[0]
 
     for raceNo, race in enumerate(horses):
-
+        if raceNo >= 6:
+            sys.exit()
         numberHorses=len(horses[raceNo])
         position=[0.0]*numberHorses
         #basedOn=[]
