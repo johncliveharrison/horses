@@ -730,6 +730,18 @@ class NeuralNetworkStuff:
                     print "removing abnormal going from dataset"
                 continue
 
+        allInputsReturn=allInputs
+        horsesReturn=horses
+        indexToRemove=[]
+        for idx, horse in enumerate(horses):
+            if (horse[4] > 4):
+                indexToRemove.append(idx)
+                if verbose != 0:
+                    print "horse name is " + str(horse[1])
+                    print "finishing position is " + str(horses[idx][4])
+                    print "removing non-first place from useful inputs"
+                continue
+        
 
         for idx in reversed(indexToRemove):
             allInputsReturn.pop(idx)

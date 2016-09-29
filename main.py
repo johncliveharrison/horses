@@ -142,7 +142,7 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
             allInputs=NeuralNetworkStuffInst.subNormaliseInputs(sortedHorses, date)
             usefulInputs, usefulHorses=NeuralNetworkStuffInst.subUsefuliseInputs(allInputs, sortedHorses)
 
-            if usefulInputs != 0:
+            if len(usefulInputs) != 0:
                 usefulInputs=NeuralNetworkStuffInst.subNormaliseInputs(usefulHorses, date)
 
                 DS = SupervisedDataSet(4, 1)
@@ -154,24 +154,24 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
                         break
                     racepace=[0.0]*len(usefulHorses)
                     for resultNo, inputs in enumerate(usefulHorses):
-                        racepace[resultNo] = (NeuralNetworkStuffInst.convertRaceLengthMetres(inputs[5])/(inputs[15]+(inputs[4]*0.1)))
-                                    
+                        racepace[resultNo] = (NeuralNetworkStuffInst.convertRaceLengthMetres(inputs[5])/inputs[15])
+                     
+                    print "the number of useful inputs is " + str(len(usefulInputs))
                     for resultNo, inputs in enumerate(usefulInputs):
-                
+                        print "adding a useful input to DS"
                         DS.appendLinked(inputs, racepace[resultNo]) 
         
-                    tstdata, trndata = DS.splitWithProportion( 0.25 )
+                    #tstdata, trndata = DS.splitWithProportion( 0.25 )
+                    tstdata=DS
+                    trndata=DS
                     if numH1 > 0:
                         net=buildNetwork(4,numH0, numH1,1, bias=True) 
                     else:
                         net=buildNetwork(4,numH0 ,1, bias=True) 
 
                     trainer=BackpropTrainer(net,trndata, momentum=0.3, learningrate=0.3)
-                    mintesterr=0
                     nonconvergence=0
                     for jj in range(0, 100):
-                        prevtesterr=mintesterr
-                        mintesterr=0
                         for ii in range(0, 500):
                             aux=trainer.train() #UntilConvergence(dataset=DS)
 
@@ -189,7 +189,7 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
                         #print "epoch: %4d" % trainer.totalepochs,"  train error: %5.2f%%" % trnresult, "  test error: %5.2f%%" % tstresult
                 
 
-                    testinput=NeuralNetworkStuffInst.testFunction(jockeys[raceNo][idx],trainers[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo], draws[raceNo][idx], date, usefulHorses[0][4])
+                    testinput=NeuralNetworkStuffInst.testFunction(jockeys[raceNo][idx],trainers[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo], draws[raceNo][idx], date)
 
                     nnresult=net.activate(testinput)
                     result = NeuralNetworkStuffInst.convertRaceLengthMetres(lengths[raceNo])/float(nnresult)
