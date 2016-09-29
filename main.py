@@ -132,7 +132,7 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
             bO=0
             if skipFileWrite==1:
                 break;
-            if len(race) > 9:
+            if len(race) > 40:
                 skipFileWrite=1
                 break;
             sqlhorses=SqlStuffInst.getHorse(horse)
