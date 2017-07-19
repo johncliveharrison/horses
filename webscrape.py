@@ -31,7 +31,7 @@ class HrefStuff:
             self.soup = BeautifulSoup(f)
             #print "from file"
         else:
-            waitint=randint(1,5)
+            waitint=randint(10,15)
             time.sleep(waitint)
             opener = urllib2.build_opener()
             opener.addheaders = [('User-agent', 'Mozilla/5.0')]
@@ -161,6 +161,8 @@ class HrefStuff:
         # loop through the race courses for the day
         for rpRaceCourseMeeting in self.rpRaceCourseMeeting:
             self.rpRaceCoursePanel=rpRaceCourseMeeting.find("div", {"class":"rp-raceCourse__panel"})
+            if not self.rpRaceCoursePanel:
+                continue
             self.rpRaceCoursePanelContainer=self.rpRaceCoursePanel.findAll("div", {"class":"rp-raceCourse__panel__container"})
             # loop through the races held at each course
             for rpRaceCoursePanelContainer in self.rpRaceCoursePanelContainer:
