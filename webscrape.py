@@ -151,16 +151,32 @@ class HrefStuff:
         """function to get the hrefs for the specified date"""
         self.date=date
         """add the date to the base url"""
-        self.url="http://www.racingpost.com/horses2/results/home.sd?r_date=" + self.date
+        self.url="http://www.racingpost.com/results/" + self.date
         self.soup=self.webscrapePolite(self.url)
         self.divBody=self.soup.body
-        self.divTabBlock=self.divBody.find("div", {"class":"tabBlock"})        
+        self.rpContainer=self.divBody.find("div", {"class":"rp-results rp-container cf js-contentWrapper"})
+        self.rpResultsWrapper=self.rpContainer.find("div", {"class":"rp-resultsWrapper__content"})
+        self.rpRaceCourse=self.rpResultsWrapper.find("div", {"class":"rp-raceCourse"})
+        self.rpRaceCourseMeeting=self.rpRaceCourse.findAll("section", {"class":"rp-raceCourse__meetingContainer"})
+        # loop through the race courses for the day
+        for rpRaceCourseMeeting in self.rpRaceCourseMeeting:
+            self.rpRaceCoursePanel=rpRaceCourseMeeting.find("div", {"class":"rp-raceCourse__panel"})
+            self.rpRaceCoursePanelContainer=self.rpRaceCoursePanel.findAll("div", {"class":"rp-raceCourse__panel__container"})
+            # loop through the races held at each course
+            for rpRaceCoursePanelContainer in self.rpRaceCoursePanelContainer:
+                self.fullResultHrefs.append(rpRaceCoursePanelContainer.get("href")) 
+                
+        """print self.rpRaceCourseMeeting
+        for self.fself.rpRaceCoursePanself.rpRaceCoursePanullResultButton in self.fullResultButtons:
+            self.fullResultHrefs.append(self.fullResultButton.get("href")) 
+            print self.fullResultButton.get("href")"""
+        """self.divTabBlock=self.divBody.find("div", {"class":"tabBlock"})        
         self.tableResultGrids=self.divTabBlock.findAll("table", {"class":"resultGrid"})
         for self.tableResultGrid in self.tableResultGrids:
             self.ulBullActiveLinks=self.tableResultGrid.findAll("ul", {"class":"bull activeLink"})
             for self.ulBullActiveLink in self.ulBullActiveLinks:
                 self.fullResultHref=self.ulBullActiveLink.find("a")
-                self.fullResultHrefs.append(self.fullResultHref.get("href"))        
+                self.fullResultHrefs.append(self.fullResultHref.get("href"))        """
         return self.fullResultHrefs
     
     def getFullResults(self, href):
@@ -168,24 +184,25 @@ class HrefStuff:
         self.href="http://www.racingpost.com/" + href
         self.soup=self.webscrapePolite(self.href)
         self.divBody=self.soup.body
-        self.mainWrapper=self.divBody.find("div", {"id":"mainwrapper"})
-        self.popUpCenter=self.mainWrapper.find("div", {"class":"popUpCenter"})
-        self.popUp=self.popUpCenter.find("div", {"class":"popUp"})        
+        self.rpResults=self.divBody.find("div", {"class":"rp-results rp-container cf js-contentWrapper"})
+        self.rpResultsWrapper=self.rpResults.find("main", {"class":"rp-resultsWrapper__content"})
+        self.rpResultsSection=self.rpResultsWrapper.find("section", {"class":"rp-resultsWrapper__section"})        
 
     def getFullResultsHeader(self):
         """returns the header containing race and date etc"""        
-        self.header=self.popUp.find("div", {"class":"leftColBig"})
-        return self.header        
+        self.rpRaceTimeCourseName=self.rpResultsSection.find("div", {"class":"rp-raceTimeCourseName"})
+        return self.rpRaceTimeCourseName        
 
     def getFullResultsGrid(self):
         """returns the grid will the placings etc"""
-        self.grid=self.popUp.find("table", {"class":"grid resultRaceGrid"})        
-        return self.grid
+        self.rpHorseTable=self.rpResultsSection.find("div", {"class":"rp-horseTable"})        
+        self.rpHorseTableContent=self.rpHorseTable.find("table", {"class":"rp-horseTable__table"})
+        return self.rpHorseTableContent
 
     def getFullRaceInfo(self):
         """returns the raceinfo with the number of finishers and time etc."""
-        self.raceInfo=self.popUp.find("div", {"class":"raceInfo"})
-        return self.raceInfo
+        self.rpRaceInfo=self.rpResultsSection.find("div", {"class":"rp-raceInfo"})
+        return self.rpRaceInfo
 
 
 class ResultStuff:
@@ -207,33 +224,38 @@ class ResultStuff:
         """ get the name of the race"""
         """ if there is no race info available then do nothing"""
         try:
-            self.h1=self.fullHeader.find("h1").find(text=True)
-            self.raceNameDate=self.h1.split('Result')
-            self.raceName=self.raceNameDate[0]
+            self.h1=self.fullHeader.find("h1")
+            if not self.h1:
+                raise ValueError("did not find h1")
+
+
+            self.classes=self.h1.findAll("a")
+            if not self.classes:
+                raise ValueError("did not find a")
+
+            for class_ in self.classes:
+                self.class_=class_.get("class").strip()
+                if self.class_.find("rp-raceTimeCourseName__name") != -1:
+                    self.raceName=class_.find(text=True).strip()
+
+            if not self.raceName:
+                raise AttributeError
+            print "raceName is " + str(self.raceName)
         except AttributeError:
             print "no RaceName found"
 
     def getRaceTime(self):
         """ get the time of the race"""
         try:
-            self.h3=self.fullHeader.find("h3")
-            self.span=self.h3.find("span", {"class":"timeNavigation"})
+            self.h1=self.fullHeader.find("h1")
+            self.span=self.h1.find("span", {"class":"rp-raceTimeCourseName__time"})
             spanStr=unicode.join(u'\n',map(unicode,self.span))
             colonPos=spanStr.index(':')
             self.raceTime=spanStr[colonPos-1:colonPos+3]
-            #print self.raceTime
+            print "race time is " + str(self.raceTime)
         except AttributeError:
             print "no race time found"
 
-    def getRaceDate(self):
-        """get the date of the race"""
-        """if the is no race info then do nothing"""
-        try:
-            self.h1=self.fullHeader.find("h1").find(text=True)
-            self.raceNameDate=self.h1.split('Result')
-            self.raceDate=self.raceNameDate[1]           
-        except AttributeError:
-            print "no RaceDate found"
 
     def getNumberOfHorses(self):
         """get the number of horses that ran in the race"""
@@ -241,44 +263,6 @@ class ResultStuff:
             self.numberOfHorses=len(self.horseNames)
         except AttributeError:
             print "no horseNames found cannot get numberOfHorses"
-
-    def getRaceLength(self):
-        """get the length of the race and convert to metres"""
-        try:
-            self.ul=self.fullHeader.find("ul")
-            self.li=self.ul.find("li")
-            self.lengthGoingType=self.li.find(text=True)
-            self.lengthGoingTypeArray=self.lengthGoingType.strip().splitlines()                 
-            for s in self.lengthGoingTypeArray:                                 
-                if not re.match(r'^\s*$', s):
-                    if '(' not in s:                      
-                        self.lengthGoingTypeTemp.append(s)
-            """get rid of the strange unicode half symbols"""
-            s=self.lengthGoingTypeTemp[0].split()[0].encode('unicode_escape')
-            self.raceLength = s.replace('\\xbd', '.5')
-            #print self.raceLength
-        except AttributeError:
-            print "cound not find the raceLength"
-
-    def getGoing(self):
-        """function to find the going conditions for the race"""
-        try:
-            self.ul=self.fullHeader.find("ul")
-            self.li=self.ul.find("li")
-            self.lengthGoingType=self.li.find(text=True)
-            self.lengthGoingTypeArray=self.lengthGoingType.strip().splitlines()          
-            for s in self.lengthGoingTypeArray:               
-                if not re.match(r'^\s*$', s):
-                    if '(' not in s:               
-                        self.lengthGoingTypeTemp.append(s)
-            try:
-                self.going=self.lengthGoingTypeTemp[0].split()[1]
-            except IndexError:
-                self.going="?unknown?"               
-            #print self.lengthGoingTypeTemp[0]
-            #print self.going
-        except AttributeError:
-            print "cound not find the going"
 
 
     def isNumber(self, s):
@@ -292,18 +276,24 @@ class ResultStuff:
     def getRaceLengthGoingJumps(self, verbose=0):
         """function to find the race length and the going"""
         try:
-            self.ul=self.fullHeader.find("ul")
-            self.li=self.ul.find("li")
-            self.lengthGoingType=self.li.find(text=True)
-            self.lengthGoingTypeArray=self.lengthGoingType.strip().splitlines()          
-            for s in self.lengthGoingTypeArray:               
-                if not re.match(r'^\s*$', s):
-                    if '(' not in s:               
-                        self.lengthGoingTypeTemp.append(s)
-            """get rid of the strange unicode half symbols"""
-            s=self.lengthGoingTypeTemp[0].split()[0]#.encode('unicode_escape')
-            self.raceLength = s.replace('\\xbd', '.5')
-            self.raceLength = self.raceLength.replace('&frac12;', '.5')
+            self.rpRaceTimeCourseNameInfo=self.fullHeader.find("div", {"class":"rp-raceTimeCourseName__info"})
+            self.rpRaceTimeCourseNameInfoContainer=self.rpRaceTimeCourseNameInfo.find("span", {"class":"rp-raceTimeCourseName__info_container"})
+            self.rpRaceTimeCourseNameCondition=self.rpRaceTimeCourseNameInfoContainer.find("span", {"class":"rp-raceTimeCourseName_condition"})
+            self.rpRaceTimeCourseNameDistance=self.rpRaceTimeCourseNameInfoContainer.find("span", {"class":"rp-raceTimeCourseName_distanceFull"})
+            # if the full distance is not found then look for the non full version of the distance
+            if not self.rpRaceTimeCourseNameDistance:
+                self.rpRaceTimeCourseNameDistance=self.rpRaceTimeCourseNameInfoContainer.find("span", {"class":"rp-raceTimeCourseName_distance"})               
+            self.goingType=self.rpRaceTimeCourseNameCondition.find(text=True)
+            self.going=self.goingType.strip()
+            print "going is " + str(self.going)
+
+            self.DistanceText=self.rpRaceTimeCourseNameDistance.find(text=True)
+            self.DistanceStrip=self.DistanceText.strip()
+            self.raceLength=re.sub('[()]', '', self.DistanceStrip)
+            print "length is " + str(self.raceLength)
+
+            """self.lengthGoingTypeArray=self.lengthGoingType.strip().splitlines()          
+
             try:                
                 g=self.lengthGoingTypeTemp[0].split()
                 self.going=''
@@ -317,7 +307,17 @@ class ResultStuff:
                     print "going= " + str(self.going)
             except IndexError:
                 self.going="?unknown?"
-                self.jumps=255
+                self.jumps=255"""
+
+            """for s in self.lengthGoingTypeArray:               
+                if not re.match(r'^\s*$', s):
+                    if '(' not in s:               
+                        self.lengthGoingTypeTemp.append(s)
+            #get rid of the strange unicode half symbols
+            s=self.lengthGoingTypeTemp[0].split()[0]#.encode('unicode_escape')
+            self.raceLength = s.replace('\\xbd', '.5')
+            self.raceLength = self.raceLength.replace('&frac12;', '.5')"""
+            
         except:
             print "couldn't get raceLength or going"
 
@@ -326,24 +326,26 @@ class ResultStuff:
         ref=10000
         minutes=0
         seconds=0
-        self.raceInfo=str(self.fullInfo)
-        for ii, self.info in enumerate(self.raceInfo.split()):
-            if self.info=="<b>TIME</b>":
-                ref=ii
-            if ii==ref+1:
+        self.ul=self.fullInfo.find("ul")
+        self.li=self.ul.find("li")
+        self.span=self.li.findAll("span", {"class":"rp-raceInfo__value"})[0].find(text=True).strip()
+        print "race finish time is " + str(self.span)
+        self.raceFinishTime=str(self.span)
+        for ii, self.info in enumerate(self.raceFinishTime.split()):
+            if ii==0:
                 minutes=self.info.split("m")[0]
                 if len(self.info.split("m"))==1:
                     minutes=float(0)
                     seconds=float(self.info.split("s")[0])
                     break
-            if ii==ref+2:
+            if ii==1:
                 seconds=float(self.info.split("s")[0])
         if verbose!=0:
             print "minutes " + str(minutes)
             print "seconds " + str(seconds)
         time = 60*float(minutes)+seconds
         self.finishingTime=time
-        #sys.exit(0)
+
     def remove(soup, tagname):
         print "heeelllllo!"
         for tag in soup.findAll(tagname):
@@ -359,31 +361,18 @@ class ResultStuff:
         """function to find all of the odds in the full result popup"""
         """if there are no odds available then do nothing"""
         try:
-            self.bodys=self.fullResult.findAll("tbody")
-            for self.body in self.bodys:
+            self.bodys=self.fullResult.find("tbody")
+            self.trs=self.bodys.findAll("tr", {"class":"rp-horseTable__mainRow"})
+            for self.tr in self.trs:
 
-                self.trs=self.body.findAll("tr")
-                for self.tr in self.trs:
+                self.td=self.tr.find("td", {"class":"rp-horseTable__horseCell"})
+                self.div=self.td.find("div", {"class":"rp-horseTable__horse"})
+                self.div=self.div.find("div")
+                self.horsePrice=self.div.find("span", {"class":"rp-horseTable__horse__price"}).find(text=True).strip()
+                self.horsePrice=re.sub('[A-Za-z]', '', self.horsePrice)
+                self.odds.append(self.horsePrice)
 
-                    if self.tr.find("td", {"class":"nowrap"}):
-
-                        self.td=self.tr.find("td", {"class":"nowrap"})
-                        if self.td.find("span", {"class":"black"}):
-
-                            self.span=self.td.find("span", {"class":"black"})
-                            if self.span.find("img"):
-                                tag = self.span.find("img")
-                                contents = tag.contents
-                                parent = tag.parent
-                                tag.extract()
-                                for tag in contents:
-                                    parent.append(tag)
-#                                print str(parent.contents)
-                                self.odds.append(''.join(re.split(r'(\d+)',parent.contents[-2])[-4:-1]))
-                            else:
-                            #print str(''.join(re.split(r'(\d+)',self.span.contents[-1])[-4:-1]))
-                                self.odds.append(''.join(re.split(r'(\d+)',self.span.contents[-1])[-4:-1]))
-         #   print self.odds
+            print self.odds
         except AttributeError:
             print "no odds found"
 
@@ -392,13 +381,17 @@ class ResultStuff:
         """function to find all of the horse names in the full result popup"""
         """if there are no horsenames available then do nothing"""
         try:
-            self.gridInfo=self.fullResult.findAll("b")
-            for self.info in self.gridInfo:
-                """use this if to get rid of the b instances that didn't have an a"""
-                if self.info.find("a"):
-                    self.horseInfo=self.info.find("a")
-                    self.horseNames.append(self.horseInfo.find(text=True))
-            #print self.horseNames
+            self.bodys=self.fullResult.find("tbody")
+            self.trs=self.bodys.findAll("tr", {"class":"rp-horseTable__mainRow"})
+            for self.tr in self.trs:
+
+                self.td=self.tr.find("td", {"class":"rp-horseTable__horseCell"})
+                self.div=self.td.find("div", {"class":"rp-horseTable__horse"})
+                self.div=self.div.find("div")
+                self.horseName=self.div.find("a").find(text=True).strip()
+                self.horseNames.append(self.horseName)
+            print self.horseNames
+                
         except AttributeError:
             print "no HorseNames found"
 
@@ -406,18 +399,31 @@ class ResultStuff:
         """function to find all of the horse ages in the full result popup"""
         """if there are no horse ages available then do nothing"""
         try:
+            self.bodys=self.fullResult.find("tbody")
+            self.trs=self.bodys.findAll("tr", {"class":"rp-horseTable__mainRow"})
+
+            for self.tr in self.trs:
+                self.td=self.tr.find("td")
+                self.div=self.td.find("div", {"class":"rp-horseTable__pos"})
+                self.span=self.div.findAll("span")
+                for span in self.span:
+                    if str(span).find('sup') != -1:
+                        self.sup=span.find('sup')
+                        self.draw.append(re.sub('[^0-9]', '', str(self.sup)).strip())
+            print "the draw is " + str(self.draw)
+            """
             self.bodys=self.fullResult.findAll("tbody")
             for self.body in self.bodys:
                self.trs=self.body.findAll("tr")
                for self.tr in self.trs:
-                   """use this if to get rid of the None results when class=black is not found"""
+                   #use this if to get rid of the None results when class=black is not found
                    if self.tr.find("td", {"class":"nowrap noPad"}):
                        try:
                            self.draw.append(self.tr.find("td", {"class":"nowrap noPad"}).find("span", {"class":"draw"}).find(text=True))
                        except AttributeError:
-                           """ if a draw is not found then it was a hurdles race.  255 indicates this"""
+                           # if a draw is not found then it was a hurdles race.  255 indicates this
                            self.draw.append("255")
-                       #print "draw=" + str(self.tr.find("td", {"class":"nowrap noPad"}).find("span", {"class":"draw"}).find(text=True))
+                       #print "draw=" + str(self.tr.find("td", {"class":"nowrap noPad"}).find("span", {"class":"draw"}).find(text=True))"""
         except AttributeError:
             print "something went wrong finding the draw"
 
@@ -483,53 +489,30 @@ class ResultStuff:
         except AttributeError:
             print "no jockeys found"
 
-    def getHorseWeightJockeyNameAge(self):
+    def getWeightAgeJockeyTrainer(self):
         """function to get the weight jockey and going"""
         try:
-            self.bodys=self.fullResult.findAll("tbody")
-            for self.body in self.bodys:
-               self.trs=self.body.findAll("tr")
-               numberOfWeights=len(self.horseWeights)
-               numberOfAges=len(self.horseAges)
-               numberOfJockeys=len(self.jockeys)
-               numberOfTrainers=len(self.trainers)
-               if numberOfWeights==self.numberOfHorses:
-                   break
-               for self.tr in self.trs:                   
-                   try:
-                       #if self.tr.find("td", {"class":"nowrap black"}):                   
-                       self.horseWeights.append(self.tr.find("td", {"class":"nowrap black"}).find(text=True).replace(u'\xa0', u' ').replace('&nbsp;',''))
-                   except:
-                       """do nothing"""
-                   try:
-                       #if self.tr.find("td", {"class":"nowrap black"}):                   
-                       self.trainers.append(self.tr.findAll("td", {"class":"nowrap black"})[1].find("a").find(text=True).replace(u'\xa0', u' ').replace('&nbsp;',''))
-                   except:
-                       """do nothing"""
-                   try:
-                       #if self.tr.find("td", {"class":"black"}): 
-                       self.horseAges.append(self.tr.find("td", {"class":"black"}).find(text=True))
-                   except:
-                       """do nothing"""                         
-                   try:
-                       #if self.tr.find("td", {"class":"lightGray"}):
-                       clg=self.tr.find("td", {"class":"lightGray"})
-                       try:
-                           #if clg.find("a"):
-                           self.jockeys.append(clg.find("a").find(text=True))
-                       except:
-                           """do nothing""" 
-                   except:
-                       """do nothing"""
-               if numberOfWeights==len(self.horseWeights):
-                   self.horseWeights.append("unknown")
-               if numberOfAges==len(self.horseAges):
-                   self.horseAges.append("unknown")
-               if numberOfJockeys==len(self.jockeys):
-                   self.jockeys.append("unknown") 
-               if numberOfTrainers==len(self.trainers):
-                   self.trainers.append("unknown")
-                   
+            self.bodys=self.fullResult.find("tbody")
+            self.trs=self.bodys.findAll("tr", {"class":"rp-horseTable__mainRow"})
+
+            for self.tr in self.trs:
+                self.humanTd=self.tr.find("td", {"class":"rp-horseTable__humanCell"})
+                self.ageTd=self.tr.find("td", {"class":"rp-horseTable__spanNarrow"})
+                self.wgtTd=self.tr.find("td", {"class":"rp-horseTable__spanNarrow rp-horseTable__wgt"})
+
+                self.humanDiv=self.humanTd.find("div", {"class": "rp-horseTable__human"})
+                self.humanSpan=self.humanDiv.findAll("span", {"class": "rp-horseTable__human__wrapper"})
+                self.jockeys.append(self.humanSpan[0].find("a").find(text=True).strip())
+                self.trainers.append(self.humanSpan[1].find("a").find(text=True).strip())
+                self.horseAges.append(self.ageTd.find(text=True).strip())
+                self.wgtSpanSt=self.wgtTd.find("span", {"class": "rp-horseTable__st"})
+                self.wgtSpanLb=self.wgtTd.find("span", {"data-ending": "lb"})
+                wgt=self.wgtSpanSt.find(text=True).strip()+"-"+re.sub('[^0-9]', '', str(self.wgtSpanLb))
+                self.horseWeights.append(wgt)
+
+            print "jockeys " + str(self.jockeys)
+            print "ages " + str(self.horseAges)
+            print "weights " + str(self.horseWeights)
         except AttributeError:
             print "no tbody found in the full result"
 
@@ -541,7 +524,7 @@ class ResultStuff:
         self.getOdds()
         self.getDraw()
         self.getNumberOfHorses()
-        self.getHorseWeightJockeyNameAge()        
+        self.getWeightAgeJockeyTrainer()
         self.getRaceLengthGoingJumps()
         self.getRaceFinishingTimes()
         if self.numberOfHorses != len(self.jockeys):

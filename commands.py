@@ -137,7 +137,7 @@ def makeAPoliteDatabase(dateStart, dateEnd, test = "false"):
             else:
                 for idx, horseName in enumerate(ResultStuffInst.horseNames):
                     """create a string with this horses values"""
-                    val_str="'{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}, '{}', '{}', '{}', '{}', '{}', '{}', '{}'".format(\
+                    val_str="'{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}, '{}', '{}', '{}', '{}', '{}', '{}'".format(\
                     ResultStuffInst.horseNames[idx].replace("'", "''"),\
                     ResultStuffInst.horseAges[idx], ResultStuffInst.horseWeights[idx], idx+1, \
                     ResultStuffInst.raceLength, ResultStuffInst.numberOfHorses, \
@@ -145,7 +145,6 @@ def makeAPoliteDatabase(dateStart, dateEnd, test = "false"):
                     ResultStuffInst.going, ResultStuffInst.raceDate, ResultStuffInst.raceTime, \
                     ResultStuffInst.raceName, ResultStuffInst.draw[idx], \
                     ResultStuffInst.trainers[idx].replace("'", "''"), \
-                    ResultStuffInst.jumps, \
                     ResultStuffInst.finishingTime, \
                     ResultStuffInst.odds[idx]
                     )

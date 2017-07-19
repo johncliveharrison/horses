@@ -3,10 +3,10 @@ import sqlite3
 class SqlStuff2:
     def __init__(self):
         """initialise the sql stuff"""
-        self.conn=sqlite3.connect('results6.db')
+        self.conn=sqlite3.connect('results_newrp.db')
     def connectDatabase(self):
         """connect to the results.db database"""
-        self.conn=sqlite3.connect('results6.db')
+        self.conn=sqlite3.connect('results_newrp.db')
     def createResultTable(self):
         """ create a table to hold all of the scraped results"""
         self.conn.execute("CREATE TABLE if not exists RESULTS_INFO( \
@@ -24,24 +24,23 @@ class SqlStuff2:
             RACEVENUE, \
             DRAW INTEGER, \
             TRAINERNAME TEXT, \
-            JUMPS INTEGER, \
             FINISHINGTIME INTEGER, \
             ODDS TEXT);")
 
     def addResultStuffToTable(self, ResultStuff):
         for idx, self.horseName in enumerate(ResultStuff.horseNames):
             """create a string with this horses values"""
-            self.val_str="'{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}'".format(\
+            self.val_str="'{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}'".format(\
                 ResultStuff.horseNames[idx].replace("'", "''"),\
                 ResultStuff.horseAges[idx], ResultStuff.horseWeights[idx], idx+1, \
                 ResultStuff.raceLength, ResultStuff.numberOfHorses, ResultStuff.jockeys[idx].replace("'", "''"), \
                 ResultStuff.going, ResultStuff.raceDate, ResultStuff.raceTime, \
                 ResultStuff.raceName.replace("'", "''"), ResultStuff.draw[idx], \
-                ResultStuff.trainers[idx].replace("'", "''"), ResultStuff.jumps, ResultStuff.finishingTime, ResultStuff.odds[idx])
+                ResultStuff.trainers[idx].replace("'", "''"), ResultStuff.finishingTime, ResultStuff.odds[idx])
             #print self.val_str
             """create a string for the sql command"""
             self.sql_str="INSERT INTO RESULTS_INFO \
-                (HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE, RACETIME, RACEVENUE, DRAW, TRAINERNAME, JUMPS, FINISHINGTIME, ODDS) \
+                (HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE, RACETIME, RACEVENUE, DRAW, TRAINERNAME, FINISHINGTIME, ODDS) \
                 VALUES ({});".format(self.val_str)
             #print self.sql_str
             self.conn.execute(self.sql_str)
