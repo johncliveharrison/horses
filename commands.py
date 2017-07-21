@@ -114,7 +114,14 @@ def makeAPoliteDatabase(dateStart, dateEnd, test = "false"):
 
         """loop through the number of races and make a ResultStuff object for each"""
         for fullResultHref in fullResultHrefs:
-            HrefStuffInst.getFullResults(fullResultHref)
+            if not fullResultHref:
+                print "skipping abandoned race"
+                continue
+            try:
+                HrefStuffInst.getFullResults(fullResultHref)
+            except Exception, e:
+                print e
+                print "makeAPoliteDatabase: skipping this result"
             #print "got full results webpage for..."
             fullResult=HrefStuffInst.getFullResultsGrid()
             fullHeader=HrefStuffInst.getFullResultsHeader()

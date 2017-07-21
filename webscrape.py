@@ -32,10 +32,26 @@ class HrefStuff:
             #print "from file"
         else:
             waitint=randint(10,15)
-            time.sleep(waitint)
+            #time.sleep(waitint)
             opener = urllib2.build_opener()
             opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-            content = opener.open(href).read()
+            while True:
+                try:
+                    content = opener.open(href).read()
+                    break
+                except Exception, e:
+                    print href
+                    print e
+                    if str(e).find('404') != -1:
+                        print "webscrapePolite: skipping this result"
+                        raise Exception(str(e))
+                    elif str(e).find('403') != -1:
+                        print "waiting for the 403 to timeout"
+                        time.sleep(120)
+                        content = opener.open(href).read()
+                    else:
+                        print e
+                        raise Exception(str(e))
             f=open("horses_local/"+href_replace+".txt", 'w')
             f.write(content)
             self.soup = BeautifulSoup(content)
@@ -49,7 +65,7 @@ class HrefStuff:
         self.date=date #time.strftime("%Y-%m-%d")
 #        self.date="2014-08-03"
         print self.date
-        self.url="http://www.racingpost.com/horses2/cards/home.sd?r_date=" + self.date
+        self.url="http://www.racingpost.com/racecards/" + self.date
         return self.url
 
     def getTodaysRaces(self, href):
@@ -184,7 +200,10 @@ class HrefStuff:
     def getFullResults(self, href):
         """function to get the full results from the specified href"""
         self.href="http://www.racingpost.com/" + href
-        self.soup=self.webscrapePolite(self.href)
+        try:
+            self.soup=self.webscrapePolite(self.href)
+        except Exception, e:
+            raise Exception(str(e))
         self.divBody=self.soup.body
         self.rpResults=self.divBody.find("div", {"class":"rp-results rp-container cf js-contentWrapper"})
         self.rpResultsWrapper=self.rpResults.find("main", {"class":"rp-resultsWrapper__content"})
