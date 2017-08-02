@@ -1,4 +1,5 @@
 import sqlite3
+import re
 
 class SqlStuff2:
     def __init__(self):
@@ -74,6 +75,34 @@ class SqlStuff2:
         allGoing=self.cursor.fetchall()
         return allGoing
 
+    def getPosition(self, position):
+        self.sql_str="SELECT * from RESULTS_INFO where POSITION='{}'".format(position)
+        self.cursor=self.conn.execute(self.sql_str)
+        self.rows=self.cursor.fetchall()
+        return self.rows
+
+    def getTopWinners(self):
+        winners=self.getPosition(1)
+        winnerList=[]
+        tally=[]
+        for winner in winners:
+            added=False
+            for idx, entry in enumerate(winnerList):
+                if winner[1]==entry[1]:
+                    tally[idx]+=1
+                    added=True
+                    break
+            if added==False:
+                winnerList.append(winner)
+                tally.append(1)
+        greatest=0
+        for idx, entry in enumerate(winnerList):
+            #print entry[1] + " has won " + str(tally[idx]) + " times"
+            if tally[idx] > greatest:
+                greatest = tally[idx]
+                greatestIdx = idx;
+        print "the most wins is " + winnerList[greatestIdx][1] + " with " + str(greatest) + "  wins"
+        return winnerList
 
     def getHorse(self, horseName):
         self.sql_str="SELECT * from RESULTS_INFO where HORSENAME='{}'".format(horseName.replace("'", "''"))
@@ -92,12 +121,45 @@ class SqlStuff2:
         self.cursor=self.conn.execute(self.sql_str)
         self.rows=self.cursor.fetchall()
         return self.rows    
+
+
+    def convertRaceLengthMetres(self, distance):
+        """convert the mixed letters and numbers of the distance to meters"""
+        ss=re.findall('\d+|\D+', distance)
+        meters=0
+        skip=0
+        number=0        
+        for idx, s in enumerate(ss):            
+            if s=="f":
+                meters=meters+(number*201)
+                number=0
+            elif s=="m":
+                meters=meters+(number*(201*8))
+                number=0
+            elif s==".":
+                number=number+(float(ss[idx+1])/10)
+                skip=1
+            elif s=="m.":
+                skip=1
+                meters=meters+(number*(201*8))
+                number=(float(ss[idx+1])/10)          
+            elif s=="y" or s=="yds":
+                meters=meters+number
+                number=0
+            elif skip==0:
+                number=number+float(s)
+            else:
+                skip=0                   
+        return meters
+
     
    
     def viewHorse(self, horseName):        
         self.rows=self.getHorse(horseName)
         for self.row in self.rows:
             print self.row
+            print str(self.convertRaceLengthMetres(self.row[5]))
+            print str(self.convertRaceLengthMetres(self.row[5])/self.row[14])
 
     def viewJockey(self, jockeyName):
         self.rows=self.getJockey(jockeyName)

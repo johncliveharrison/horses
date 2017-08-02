@@ -210,6 +210,10 @@ def writeAResult(date, filenameAppend):
 def viewADatabase():
     SqlStuffInst=SqlStuff2()
     SqlStuffInst.viewAllTable()
+    
+def viewTopWinners():
+    SqlStuffInst=SqlStuff2()
+    SqlStuffInst.getTopWinners()
 
 def viewHorse(horseName):
     print "ID,  HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE, ODDS"
