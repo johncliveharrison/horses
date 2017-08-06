@@ -3,6 +3,7 @@ from commands import makeATestcard, makeAResult, makeATestcardFromResults
 from neuralnetworks import NeuralNetwork
 from pastperf import pastPerf
 import sys
+import os.path
 from common import Tee
 from common import daterange
 import datetime
@@ -10,11 +11,15 @@ from sqlstuff2 import SqlStuff2
 
 from pybrain.utilities import percentError
 from neuralnetworkstuff import NeuralNetworkStuff
+from dataprepstuff import dataPrepStuff
 from pybrain.datasets import SupervisedDataSet
 from pybrain.supervised.trainers import BackpropTrainer
 from pybrain.tools.shortcuts import buildNetwork
 from pybrain.structure import SigmoidLayer
 from pybrain.structure import LinearLayer
+from pybrain.structure import SoftmaxLayer
+from pybrain.tools.customxml.networkwriter import NetworkWriter
+from pybrain.tools.customxml.networkreader import NetworkReader
 
 def sortResult(decimalResult, horse, basedOn, error, sortList, sortDecimal, sortHorse):
     """ sort the results by date and return the most recent x"""
@@ -40,7 +45,7 @@ def sortResult(decimalResult, horse, basedOn, error, sortList, sortDecimal, sort
             sortDecimal.insert(idx,decimal1)
             sortHorse.insert(idx,str(horse))
             break
-        elif decimal1 < decimal0:
+        elif decimal1 > decimal0:
             sortList.insert(idx, str(horse) + '('+str(decimal1)+')('+str(basedOn)+')')
             sortDecimal.insert(idx,decimal1)
             sortHorse.insert(idx,str(horse))
@@ -68,7 +73,70 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
     
     in_loop = True
 
-    """try:
+    # The first thing that we need to do is get all winners from the database
+    NeuralNetworkStuffInst=NeuralNetworkStuff()
+    SqlStuffInst=SqlStuff2()
+
+    horses=SqlStuffInst.getAllTable()#[0:1000]
+    dataPrepStuffInst=dataPrepStuff(horses)
+    # correlation checks
+    # is there a correelation between the best jockey and the winner
+    #dataPrepStuffInst.getHorsesInRaces()
+    #dataPrepStuffInst.correlateJockey()
+    #dataPrepStuffInst.correlateTrainer()
+    #dataPrepStuffInst.correlateDraw()
+
+    # next we need to get the inputs from the database
+    netInputs=dataPrepStuffInst.subNormaliseInputs()
+    netOutputs=dataPrepStuffInst.subNormaliseOutputs()
+
+    print "create the DS"
+    DS = SupervisedDataSet(len(netInputs[0]), 1)
+    for resultNo, inputs in enumerate(netInputs):
+        print str(resultNo)
+        print str(inputs)
+        print str(netOutputs[resultNo])
+        DS.appendLinked(inputs, netOutputs[resultNo]) 
+
+    tstdata, trndata = DS.splitWithProportion( 0.25 )
+    net=buildNetwork(len(trndata['input'][0]), 10, 5, 1, bias=True, outclass=SigmoidLayer)#, hiddenclass=LinearLayer) 
+    trainer=BackpropTrainer(net,trndata, momentum=0.1, verbose=True, learningrate=0.3)
+    nonconvergence=0
+    # number of attempts to get training to converge
+    for jj in range(0, 100):
+        if os.path.exists('filename.xml'):
+            print "found network training file"
+            net = NetworkReader.readFrom('filename.xml') 
+            break
+
+        trnresult = SumSquareError(net.activateOnDataset(dataset=trndata), trndata['target'])
+        tstresult = SumSquareError(net.activateOnDataset(dataset=tstdata), tstdata['target'])
+        print "training iteration " + str(jj*10)
+
+        # number of iterations in the training        
+        trained=False
+        for ii in range(0, 10):
+            aux=trainer.train() #UntilConvergence(dataset=DS)
+            if trnresult < 0.001 and tstresult < 0.001:
+                print net
+                print net.params
+                params = net.params
+                print "training successful"
+                trained=True
+                break;
+                
+            if  jj > 15:
+                print "skip race due to inablility to converge during training"
+                skipFileWrite=1
+                trained=True
+                break
+        if trained:
+            break
+
+    # save the net params
+    NetworkWriter.writeToFile(net, 'filename.xml')
+
+    try:
         horses, jockeys, lengths, weights, goings, draws, trainers, todaysRaceTimes, todaysRaceVenues=makeATestcard(date)
     except AttributeError:
         try:
@@ -79,120 +147,7 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
     if afterResult != "noResult":
         todaysResults=makeAResult(date)
     print todaysRaceVenues
-    """
-
-    # The first thing that we need to do is get all winners from the database
-    NeuralNetworkStuffInst=NeuralNetworkStuff()
-    SqlStuffInst=SqlStuff2()
-
-    #winningHorses=SqlStuffInst.getPosition(1)[0:500]
-    #if kk==0:
-    #    winningHorses=SqlStuffInst.getHorse("Winx")
-    #else:
-    winningHorses=SqlStuffInst.getPosition(1)[0:100]
-    #    winningHorses=SqlStuffInst.getHorse(topWinner[1])        
-    #    print "horse is " + str(topWinner[1])
-    # check that each winner has at least 5 past results
-    historyHorses, winningHorses=NeuralNetworkStuffInst.subReduce(winningHorses, 1, date)
     
-    # next we need to get the inputs from the database
-    netInputs=NeuralNetworkStuffInst.subNormaliseInputs(winningHorses, historyHorses)
-    netOutputs=NeuralNetworkStuffInst.subNormaliseOutputs(winningHorses, historyHorses)
-    #for idx, netInput in enumerate(netInputs):
-    #    print "calculating net output " + str(idx) + " of " + str(len(netInputs))
-        # calculate the average speed for each horse as the output from the neural net
-    #    print winningHorses[idx]
-    #    netOutputs.append(NeuralNetworkStuffInst.convertRaceLengthMetres(winningHorses[idx][5])/winningHorses[idx][14])
-    # train the network
-    print "create the DS"
-    DS = SupervisedDataSet(5, 1)
-    #print "the number of useful inputs is " + str(len(usefulInputs))
-    for resultNo, inputs in enumerate(netInputs):
-        print str(resultNo)
-        print str(inputs)
-        print str(netOutputs[resultNo])
-        DS.appendLinked(inputs, netOutputs[resultNo]) 
-    #if len(netInputs) > 4:
-    #    tstdata, trndata = DS.splitWithProportion( 0.25 )
-    #xbelse:
-    tstdata=DS
-    trndata=DS
-
-    print tstdata
-    print trndata
-    print trndata['target']
-    #tstdata=DS
-    #trndata=DS
-    #if numH1 > 0:
-    net=buildNetwork(5, 3, 1, bias=False)#, outclass=SigmoidLayer)#, hiddenclass=SigmoidLayer) 
-    print net                                                                                                                                             
-    print net.params     
-    sys.exit()
-    #else:
-    #    net=buildNetwork(4,numH0 ,1, bias=True) 
-
-    trainer=BackpropTrainer(net,trndata, momentum=0.3, learningrate=0.3)
-    #if kk!=0:
-        #print params
-        #net._setParameters(params)
-    nonconvergence=0
-    # number of attempts to get training to converge
-    for jj in range(0, 100):
-        #print net
-        #print net.params
-
-        """params=net.params
-        for idx, param in enumerate(params):
-        if idx>64:
-        break
-        if idx%8==0:
-        print "input node " + str(idx/6)
-        print param"""
-        # number of iterations in the training        
-        trained=False
-        for ii in range(0, 500):
-            aux=trainer.train() #UntilConvergence(dataset=DS)
-            
-            trnresult = SumSquareError(net.activateOnDataset(dataset=trndata), trndata['target'])
-            tstresult = SumSquareError(net.activateOnDataset(dataset=tstdata), tstdata['target'])
-            print "training iteration " + str(ii)
-
-            print net.activateOnDataset(dataset=trndata)
-            print net.params
-            print "train error is " + str(aux)
-            print "trnresult is " + str(trnresult)
-            print "tstresult is " + str(tstresult)
-            #if tstresult < 2.0:           
-            #    break
-            if trnresult < 0.001 and tstresult < 0.001:
-                print net
-                print net.params
-                params = net.params
-                print "training successful"
-                trained=True
-                break;
-                #and tstresult > 0.01:
-                #    net.randomize() 
-                
-            if  jj > 15:
-                print "skip race due to inablility to converge during training"
-                skipFileWrite=1
-                break
-        if trained:
-            break
-    net=buildNetwork(6, 6, 1, bias=True) 
-    print net.params
-    net._setParameters(params)
-    print net.params
-    # get the input for the horse in question in the race in question
-
-    # run these inputs in the net
-
-
-
-
-
-
 
     moneypot=moneystart
     moneypot2=moneystart2
@@ -236,72 +191,16 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
             if len(race) > 40:
                 skipFileWrite=1
                 break;
-            sqlhorses=SqlStuffInst.getHorse(horse)
-            NeuralNetworkStuffInst=NeuralNetworkStuff()
-            sortedHorses=NeuralNetworkStuffInst.subSortReduce(sqlhorses, int(horseLimit), date, lengths[raceNo])
-            #print str(sortedHorses)
-            allInputs=NeuralNetworkStuffInst.subNormaliseInputs(sortedHorses, date)
-            usefulInputs, usefulHorses=NeuralNetworkStuffInst.subUsefuliseInputs(allInputs, sortedHorses)
+               
+            testinput=dataPrepStuffInst.testFunction(jockeys[raceNo][idx],trainers[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo], draws[raceNo][idx], date)
 
-            if len(usefulInputs) != 0:
-                usefulInputs=NeuralNetworkStuffInst.subNormaliseInputs(usefulHorses, date)
+            result=net.activate(testinput)
+            #cummulativeResult = (cummulativeResult+result)
+            #averageResult = cummulativeResult/kk
+            #print "The average result for " + str(horse) + " is " + str(averageResult)
 
-                # go around the loop of useful races to find the finish times and distances
-                # need to find the fastest and the slowest for the normalisation
-                cummulativeResult = 0.0
-                for kk in range (1, number): 
-                    DS = SupervisedDataSet(4, 1)
-                    if skipFileWrite == 1:
-                        break
-                    racepace=[0.0]*len(usefulHorses)
-                    for resultNo, inputs in enumerate(usefulHorses):
-                        racepace[resultNo] = (NeuralNetworkStuffInst.convertRaceLengthMetres(inputs[5])/inputs[14])
-                     
-                    #print "the number of useful inputs is " + str(len(usefulInputs))
-                    for resultNo, inputs in enumerate(usefulInputs):
-                        DS.appendLinked(inputs, racepace[resultNo]) 
-        
-                    #tstdata, trndata = DS.splitWithProportion( 0.25 )
-                    tstdata=DS
-                    trndata=DS
-                    if numH1 > 0:
-                        net=buildNetwork(4,numH0, numH1,1, bias=True) 
-                    else:
-                        net=buildNetwork(4,numH0 ,1, bias=True) 
-
-                    trainer=BackpropTrainer(net,trndata, momentum=0.3, learningrate=0.3)
-                    nonconvergence=0
-                    for jj in range(0, 100):
-                        for ii in range(0, 500):
-                            aux=trainer.train() #UntilConvergence(dataset=DS)
-
-                        trnresult = SumSquareError(net.activateOnDataset(dataset=trndata), trndata['target'])
-                        tstresult = SumSquareError(net.activateOnDataset(dataset=tstdata), tstdata['target'])
-                        if tstresult < 2.0:           
-                            break
-                        if trnresult < 0.01 and tstresult > 0.01:
-                            net.randomize()   
-                        if  jj > 15:
-                            print "skip race due to inablility to converge during training"
-                            skipFileWrite=1
-                            break
-
-                        #print "epoch: %4d" % trainer.totalepochs,"  train error: %5.2f%%" % trnresult, "  test error: %5.2f%%" % tstresult
-                
-
-                    testinput=NeuralNetworkStuffInst.testFunction(jockeys[raceNo][idx],trainers[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo], draws[raceNo][idx], date)
-
-                    nnresult=net.activate(testinput)
-                    result = NeuralNetworkStuffInst.convertRaceLengthMetres(lengths[raceNo])/float(nnresult)
-                    #print "The result for " + str(horse) + " is " + str(result)
-                    cummulativeResult = (cummulativeResult+result)
-                    averageResult = cummulativeResult/kk
-                    #print "The average result for " + str(horse) + " is " + str(averageResult)
-
-                sortDecimal, sortList, sortHorse=sortResult(averageResult, str(horse), str(len(trndata)), 0, sortList, sortDecimal, sortHorse)
-            else:
-                skipFileWrite=1
-
+            sortDecimal, sortList, sortHorse=sortResult(result, str(horse), str(0), 0, sortList, sortDecimal, sortHorse)
+            
         if skipFileWrite==0:
             
             returnSortHorse.append(sortHorse)
@@ -339,26 +238,15 @@ def neuralNet(horseLimit, filenameAppend, afterResult = "noResult", date=time.st
                             print str(todaysResults[raceNo].odds[idx]) + " odds were not split properly"
                         except Exception:
                             print str(todaysResults[raceNo].odds[idx]) + " odds were not split properly but not ValueError"
-                    if sortHorse[1]==idxHorse:
-
-                        odd_split=todaysResults[raceNo].odds[idx].split("/")
-
-                        try:
-                            temp2=float(odd_split[0])/float(odd_split[1])
-                       
-                        except ValueError:
-                            print str(todaysResults[raceNo].odds[idx]) + " odds were not split properly"
-                        except Exception:
-                            print str(todaysResults[raceNo].odds[idx]) + " odds were not split properly but not ValueError"
                     
-                if temp >= 2 and temp2 >= 2:
-
+                if temp >= 2:
                     if sortHorse[0]==todaysResults[raceNo].horseNames[0]:
                         moneypot2=moneypot2+(temp*10)
                     else:
                         moneypot2=moneypot2-10;
-                    if sortHorse[1]==todaysResults[raceNo].horseNames[0]:
-                        moneypot2=moneypot2+(temp2*10)
+                    if sortHorse[0]==todaysResults[raceNo].horseNames[1]:
+                        temp=temp/2
+                        moneypot2=moneypot2+(temp*10)
                     else:
                         moneypot2=moneypot2-10;
                 else:
@@ -404,7 +292,7 @@ def runNeuralNet(date, number=1, horseLimit=20):
 
     """ The noResult string means that the actual result of the race will not be included in 
     the output file or stdout (usually used when predicting a result before the race"""
-    neuralNet(horseLimit, horseLimitStr, "noResult", date, number)
+    neuralNet(horseLimit, horseLimitStr, "Result", date, number)
 
 
 

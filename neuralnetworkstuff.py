@@ -97,16 +97,42 @@ class NeuralNetworkStuff:
         """normalise with x = (x - mean(x))/std(x)"""
         self.raceLengthMean=array(self.raceLengths).mean()
         self.raceLengthStd=array(self.raceLengths).std()
-    
 
-    def normaliseRaceLength(self, idx):
+    def normaliseRaceLengthStd(self, idx):
         """normalise the race length"""
 
         if self.raceLengthStd==0.0:
             return 0.0
         raceLengthn=(self.raceLengths[idx] - self.raceLengthMean)/self.raceLengthStd
         return raceLengthn
+   
 
+    def minMaxRaceLength(self,horses):
+        print "minMaxRaceLength"
+        self.minRaceLength=100000
+        self.maxRaceLength=0
+        for horse in horses:            
+            lengthm=self.convertRaceLengthMetres(horse[5])
+            if lengthm < self.minRaceLength:
+                self.minRaceLength=lengthm
+            if lengthm > self.maxRaceLength:
+                self.maxRaceLength=lengthm
+
+
+    def normaliseRaceLengthMinMax(self, horse):
+        """normalise the race length by mapping input to range 0 to 1"""
+        oldRange = (self.maxRaceLength - self.minRaceLength)
+        newMin=0.0
+        newMax=1.0
+        oldValue=self.convertRaceLengthMetres(horse[5])
+        if (oldRange == 0):
+            newValue = newMin
+        else:
+            newRange = (newMax - newMin)  
+            newValue = (((float(oldValue) - float(self.minRaceLength)) * newRange) / float(oldRange)) + newMin
+        return newValue
+
+   
     def normaliseTestRaceLength(self, testRaceLength):
         """normalise the test race length using precalculated mean and std"""
         if self.raceLengthStd==0.0:
@@ -190,6 +216,73 @@ class NeuralNetworkStuff:
         jockeyWins=self.subJockeyPercentWins(jockeys)
         return jockeyWins
     
+    def minMaxJockey(self, horses):
+        jockeys=[]
+        self.meanFinishes=[]
+        SqlStuffInst=SqlStuff2()
+        # first create a list where each jockey in the DS appears once
+        for horse in horses:
+            foundJockey=False
+            for jockey in jockeys:
+                if jockey==horse[7]:
+                    foundJockey=True
+                    break
+            if not foundJockey:
+                jockeys.append(horse[7])
+
+        self.minJockey=100000
+        self.maxJockey=0
+        for ii, jockey in enumerate(jockeys):
+            rides=SqlStuffInst.getJockey(jockey)
+            previousRides=rides
+            finish=0.0
+            for ride in rides:
+                OldRange = (ride[6] - 1)
+                if (OldRange == 0):
+                    NewValue = 0.0
+                else:
+                    NewRange = (1 - 0)  
+                    NewValue = (((ride[4] - 1) * NewRange) / OldRange) #+ 0
+                # the 1.0- here makes it so a better jockey has a bigger value
+                finish=finish+float(1.0-NewValue)            
+            meanFinishes=(finish/len(rides))
+            if meanFinishes > self.maxJockey:
+                self.maxJockey=meanFinishes
+            if meanFinishes < self.minJockey:
+                self.minJockey=meanFinishes
+
+    def normaliseJockeyMinMax(self, horse):
+        """ normalise the jockey performance based on min (worse)
+        max(best) values"""
+        # calculate the mean for just this Jockey
+        SqlStuffInst=SqlStuff2()
+        rides=SqlStuffInst.getJockey(horse[7])
+        finish=0.0
+        
+        # for each result translate the result range to 0 to 1
+        for ride in rides:
+            OldRange = (ride[6] - 1)
+            if OldRange == 0:
+                NewValue = 0.0
+            else:
+                NewRange = (1.0 - 0.0)  
+                NewValue = (((float(ride[4]) - 1.0) * NewRange) / float(OldRange)) #+ 0
+            
+            finish=finish+float(1.0-NewValue)            
+
+        meanFinishes=(finish/len(rides))
+
+        # Now normalise this jockeys performance next to the max and min
+        oldRange = (self.maxJockey - self.minJockey)
+        newMin=0.0
+        newMax=1.0
+        oldValue=meanFinishes
+        if (OldRange == 0):
+            newValue = newMin
+        else:
+            newRange = (newMax - newMin)  
+            newValue = (((oldValue - self.minJockey) * newRange) / oldRange) + newMin
+        return newValue
 
 
     def meanStdJockey(self, horses):
@@ -376,6 +469,79 @@ class NeuralNetworkStuff:
         returnTrainers=returnTrainers/len(sortRide)
 #        print "the number of trainer is " + str(len(sortRide)) + "so returning " + str(returnTrainers)
         return returnTrainers
+
+    def minMaxTrainer(self, horses):
+        """ find the max and min trainer performance which is the mean
+        of position in the race scaled to be between 0 and 1"""
+        trainers=[]
+        SqlStuffInst=SqlStuff2()
+        # first create a list where each trainer in the DS appears once
+        for horse in horses:
+            foundTrainer=False
+            for trainer in trainers:
+                if trainer==horse[13]:
+                    foundTrainer=True
+                    break
+            if not foundTrainer:
+                trainers.append(horse[13])
+
+        self.minTrainer=100000
+        self.maxTrainer=0
+        for ii, trainer in enumerate(trainers):
+            rides=SqlStuffInst.getTrainer(trainer)
+            finish=0.0
+            for ride in rides:
+                OldRange = (ride[6] - 1)
+                if (OldRange == 0):
+                    NewValue = 0.0
+                else:
+                    NewRange = (1 - 0)  
+                    NewValue = (((ride[4] - 1) * NewRange) / OldRange) #+ 0
+                # the 1.0- here makes it so a better trainer has a bigger value
+                finish=finish+float(1.0-NewValue)
+            try:
+                meanFinishes=(finish/len(rides))
+            except Exception, e:
+                print "The trainer " + str(trainer) + " has " + str(len(rides)) + "rides"
+            if meanFinishes > self.maxTrainer:
+                self.maxTrainer=meanFinishes
+            if meanFinishes < self.minTrainer:
+                self.minTrainer=meanFinishes
+
+
+    def normaliseTrainerMinMax(self, horse):
+        """ normalise the trainer performance based on min (worse)
+        max(best) values"""
+        # calculate the mean for just this Trainer
+        SqlStuffInst=SqlStuff2()
+        rides=SqlStuffInst.getTrainer(horse[13])
+        finish=0.0
+        
+        # for each result translate the result range to 0 to 1
+        for ride in rides:
+            OldRange = (ride[6] - 1)
+            if OldRange == 0:
+                NewValue = 0.0
+            else:
+                NewRange = (1.0 - 0.0)  
+                NewValue = (((float(ride[4]) - 1.0) * NewRange) / float(OldRange)) #+ 0
+            
+            finish=finish+float(1.0-NewValue)            
+
+        meanFinishes=(finish/len(rides))
+
+        # Now normalise this trainers performance next to the max and min
+        oldRange = (self.maxTrainer - self.minTrainer)
+        newMin=0.0
+        newMax=1.0
+        oldValue=meanFinishes
+        if (OldRange == 0):
+            newValue = newMin
+        else:
+            newRange = (newMax - newMin)  
+            newValue = (((oldValue - self.minRaceLength) * newRange) / oldRange) + newMin
+        return newValue
+
 
     
     def meanStdTrainer(self, horses):
@@ -744,7 +910,12 @@ class NeuralNetworkStuff:
             raise Exception("No sort argument was not -1")
         date=datetime.datetime.strptime(str(datestr), "%Y-%m-%d")
         sortHorse=[]
-        sortHorse.append(horses[0])
+        try:
+            sortHorse.append(horses[0])
+        except Exception, e:
+            print "A previous sort has removed all entries so cannot sort date"
+            raise Exception(str(e))
+
         for ii in horses[1:len(horses)]:
             iterations = len(sortHorse)
             date1=datetime.datetime.strptime(str(ii[9]), "%Y-%m-%d")
@@ -782,7 +953,7 @@ class NeuralNetworkStuff:
             if horse[14]==0:
                 continue
             sqlhorses=SqlStuffInst.getHorse(horse[1])
-            historyHorse=self.subSortReduce(sqlhorses, history, date, distance=-1, position=1) #horse[5])
+            historyHorse=self.subSortReduce(sqlhorses, history, date, distance=-1, position=-1) #horse[5])
             if len(historyHorse)>=history:
                 reduceHorse.append(horse)
                 historyHorses.append(historyHorse)
@@ -866,36 +1037,66 @@ class NeuralNetworkStuff:
 
         return allInputsReturn, horsesReturn
 
+    def correlateJockey(self, raceHorses, horses):
+        """ loop through the races and check to see if the 
+        best jockey won"""
+        
+        # first need to find how good each jockey is and put the result in
+        # an array that is in the same order as the horse in the races.
+        self.minMaxJockey(horses)
+        tallyBest=0
+        tallySecond=0
+        tallyOther=0
+        for raceHorse in raceHorses:
+            bestJockey=0
+            bestJockeyPos=0
+            for horse in raceHorse:
+                if bestJockey < self.normaliseJockeyMinMax(horse):
+                    bestJockey=self.normaliseJockeyMinMax(horse)
+                    bestJockeyPos=horse[4]
+            print "At " + str(horse[9]) + str(horse[10]) + str(horse[11]) + "best Jockey came " + str(bestJockeyPos)
+            
+            if bestJockeyPos == 1:
+                tallyBest=tallyBest+1
+            if bestJockeyPos == 2:
+                tallySecond=tallySecond+1
+            if bestJockeyPos > 2:
+                tallyOther=tallyOther+1
+
+        print "from " + str(len(raceHorses)) + " races, the best jockey won " + str(tallyBest) + " times"
+        print "from " + str(len(raceHorses)) + " races, the best jockey came second " + str(tallySecond) + " times"
+        print "from " + str(len(raceHorses)) + " races, the best jockey was third or worse " + str(tallyOther) + " times"
+        print "the average number of horses per race was " + str(len(horses)/len(raceHorses))
  
     def subNormaliseInputs(self, horses, historyHorses):
         """normalise the inputs.  horses is a list of all of the races that the
         horse under analysis has been in.  The function called for normalising
         take all of these races into consideration in comparison to a particular
         race idx.  This way each race gets normalised in turn"""        
-        horsesn=[[0 for x in xrange(5)] for x in xrange(len(horses))]
+        horsesn=[[0 for x in xrange(3)] for x in xrange(len(horses))]
         print "subNormaliseInputs calculating means and std devs"
-        self.meanStdRaceLength(horses)
-        self.meanStdJockey(horses)
+        self.minMaxRaceLength(horses)
+        self.minMaxJockey(horses)
         self.meanStdNumberOfHorses(horses)
         self.meanStdWeight(horses)
-        self.meanStdTrainer(horses)
+        self.minMaxTrainer(horses)
         self.meanStdGoing(horses)
         self.meanStdPosition(historyHorses)
                   
         for idx, horse in enumerate(horses):
             if idx%100==0:
                 print "subNormaliseInputs calculating inputs " + str(idx) + " of " + str(len(horses))
-            horsesn[idx][0]=self.normaliseRaceLength(idx)
+            horsesn[idx][0]=self.normaliseRaceLengthMinMax(horse)
             #horsesn[idx][1]=self.normaliseNumberOfHorses(idx)
             #horsesn[idx][1]=self.normalisePastPosition(historyHorses[idx], 0)
             #horsesn[idx][3]=self.normalisePastPosition(historyHorses[idx], 1)
             #horsesn[idx][4]=self.normalisePastPosition(historyHorses[idx], 2)
             #horsesn[idx][5]=self.normalisePastPosition(historyHorses[idx], 3)
             #horsesn[idx][6]=self.normalisePastPosition(historyHorses[idx], 4)
-            horsesn[idx][1]=self.normaliseJockey(horse[7])
-            horsesn[idx][2]=self.normaliseWeight(idx)
-            horsesn[idx][3]=self.normaliseTrainer(horse[13])
-            horsesn[idx][4]=self.normaliseGoing(horses, idx)
+            horsesn[idx][1]=self.normaliseJockeyMinMax(horse)
+            #horsesn[idx][2]=self.normaliseWeight(idx)
+            horsesn[idx][2]=self.normaliseTrainerMinMax(horse)
+            #horsesn[idx][4]=self.normaliseGoing(horses, idx)
             
        
         return horsesn
@@ -912,19 +1113,13 @@ class NeuralNetworkStuff:
         for idx, horse in enumerate(horses):
             if idx%100==0:
                 print "subNormaliseInputs calculating inputs " + str(idx) + " of " + str(len(horses))
-            #horsesn[idx][0]=self.normaliseRaceLength(idx)
-            #horsesn[idx][1]=self.normaliseNumberOfHorses(idx)
-            #horsesn[idx][1]=self.normalisePastPosition(historyHorses[idx], 0)
-            #horsesn[idx][3]=self.normalisePastPosition(historyHorses[idx], 1)
-            #horsesn[idx][4]=self.normalisePastPosition(historyHorses[idx], 2)
-            #horsesn[idx][5]=self.normalisePastPosition(historyHorses[idx], 3)
-            #horsesn[idx][6]=self.normalisePastPosition(historyHorses[idx], 4)
-            #horsesn[idx][1]=self.normaliseJockey(horse[7])
-            #horsesn[idx][2]=self.normaliseWeight(idx)
-            #horsesn[idx][3]=self.normaliseTrainer(horse[13])
-            #horsesn[idx][4]=self.normaliseGoing(horses, idx)
-            horsesn[idx][0]=self.normaliseResult(idx)
-       
+
+            #horsesn[idx][0]=self.normaliseResult(idx)
+            if horse[4]==1:
+                horsesn[idx][0]=0.9
+            else:
+                horsesn[idx][0]=0.1
+
         return horsesn
 
         
@@ -934,17 +1129,17 @@ class NeuralNetworkStuff:
         jockeyNames=self.getNormalizedJockey(jockeyName, date)
         trainerNames=self.getNormalizedTrainer(trainerName, date)
 
-        testn=[None]*4
-        testn[0]=self.normaliseTestRaceLength(raceLength)
+        testn=[None]*2
+        #testn[0]=self.normaliseTestRaceLength(raceLength)
         #testn[1]=self.normaliseTestNumberOfHorses(numberHorses)
         #testn[2]=self.normaliseTestPastPosition(horses[len(horses)-1][4])
-        #testn[2]=self.normaliseTestJockey(jockeyName)
-        testn[1]=self.normaliseTestWeight(weight)
- #       testn[4]=self.NeuralNetworkStuffInst.subJockeyPercentWins(jockeyNames)[0]
- #       testn[5]=self.NeuralNetworkStuffInst.normaliseTestTrainer(trainerName)
-        testn[2]=self.normaliseTestGoing(going)
+        testn[0]=self.normaliseTestJockeyMinMax(jockeyName)
+        #testn[1]=self.normaliseTestWeight(weight)
+        #testn[4]=self.NeuralNetworkStuffInst.subJockeyPercentWins(jockeyNames)[0]
+        testn[1]=self.normaliseTestTrainerMinMax(trainerName)
+        #testn[2]=self.normaliseTestGoing(going)
         #testn[5]=self.normaliseTestTrainer(trainerName)
-        testn[3]=jockeyNames
+        #testn[3]=jockeyNames
         #print "testFunction trainerName value is " + str(trainerNames)
         #testn[5]=trainerNames
         

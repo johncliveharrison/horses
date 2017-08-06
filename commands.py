@@ -93,6 +93,7 @@ def makeAPoliteDatabase(dateStart, dateEnd, test = "false"):
     the going variable will be corrected so that goings with several words are stored correctly.
     The webpages will be retrieved with several minutes between them so as to be polite to the
     target website"""
+    sys.exit()
     dateStartSplit=dateStart.split('-')
     dateEndSplit=dateEnd.split('-')
     SqlStuffInst=SqlStuff2()        
