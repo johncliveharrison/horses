@@ -70,7 +70,10 @@ class HrefStuff:
 
     def getTodaysRaces(self, href):
         """ get the hrefs for the races, exclude the terrestrial tv and worldwide stakes"""
-        self.soup=self.webscrapePolite(href)
+        try:
+            self.soup=self.webscrapePolite(href)
+        except Exception, e:
+            raise Exception(str(e))
         self.divBody=self.soup.body
         self.racesList=self.divBody.find("div", {"class":"tabContent tabNoTB tabSelected"})
         """ here can find the race names"""
@@ -261,7 +264,7 @@ class ResultStuff:
 
             if not self.raceName:
                 raise AttributeError
-            print "raceName is " + str(self.raceName)
+            #print "raceName is " + str(self.raceName)
         except AttributeError:
             print "no RaceName found"
 
@@ -273,7 +276,7 @@ class ResultStuff:
             spanStr=unicode.join(u'\n',map(unicode,self.span))
             colonPos=spanStr.index(':')
             self.raceTime=spanStr[colonPos-1:colonPos+3]
-            print "race time is " + str(self.raceTime)
+            #print "race time is " + str(self.raceTime)
         except AttributeError:
             print "no race time found"
 
@@ -306,12 +309,12 @@ class ResultStuff:
                 self.rpRaceTimeCourseNameDistance=self.rpRaceTimeCourseNameInfoContainer.find("span", {"class":"rp-raceTimeCourseName_distance"})               
             self.goingType=self.rpRaceTimeCourseNameCondition.find(text=True)
             self.going=self.goingType.strip()
-            print "going is " + str(self.going)
+            #print "going is " + str(self.going)
 
             self.DistanceText=self.rpRaceTimeCourseNameDistance.find(text=True)
             self.DistanceStrip=self.DistanceText.strip()
             self.raceLength=re.sub('[()]', '', self.DistanceStrip)
-            print "length is " + str(self.raceLength)
+            #print "length is " + str(self.raceLength)
 
             """self.lengthGoingTypeArray=self.lengthGoingType.strip().splitlines()          
 
@@ -350,7 +353,7 @@ class ResultStuff:
         self.ul=self.fullInfo.find("ul")
         self.li=self.ul.find("li")
         self.span=self.li.findAll("span", {"class":"rp-raceInfo__value"})[0].find(text=True).strip()
-        print "race finish time is " + str(self.span)
+        #print "race finish time is " + str(self.span)
         self.raceFinishTime=str(self.span)
         for ii, self.info in enumerate(self.raceFinishTime.split()):
             if ii==0:
@@ -361,9 +364,9 @@ class ResultStuff:
                     break
             if ii==1:
                 seconds=float(self.info.split("s")[0])
-        if verbose!=0:
-            print "minutes " + str(minutes)
-            print "seconds " + str(seconds)
+        #if verbose!=0:
+            #print "minutes " + str(minutes)
+            #print "seconds " + str(seconds)
         time = 60*float(minutes)+seconds
         self.finishingTime=time
 
@@ -393,7 +396,7 @@ class ResultStuff:
                 self.horsePrice=re.sub('[A-Za-z]', '', self.horsePrice)
                 self.odds.append(self.horsePrice)
 
-            print self.odds
+            #print self.odds
         except AttributeError:
             print "no odds found"
 
@@ -411,7 +414,7 @@ class ResultStuff:
                 self.div=self.div.find("div")
                 self.horseName=self.div.find("a").find(text=True).strip()
                 self.horseNames.append(self.horseName)
-            print self.horseNames
+            #print self.horseNames
                 
         except AttributeError:
             print "no HorseNames found"
@@ -431,7 +434,7 @@ class ResultStuff:
                     if str(span).find('sup') != -1:
                         self.sup=span.find('sup')
                         self.draw.append(re.sub('[^0-9]', '', str(self.sup)).strip())
-            print "the draw is " + str(self.draw)
+            #print "the draw is " + str(self.draw)
             """
             self.bodys=self.fullResult.findAll("tbody")
             for self.body in self.bodys:
@@ -531,9 +534,9 @@ class ResultStuff:
                 wgt=self.wgtSpanSt.find(text=True).strip()+"-"+re.sub('[^0-9]', '', str(self.wgtSpanLb))
                 self.horseWeights.append(wgt)
 
-            print "jockeys " + str(self.jockeys)
-            print "ages " + str(self.horseAges)
-            print "weights " + str(self.horseWeights)
+            #print "jockeys " + str(self.jockeys)
+            #print "ages " + str(self.horseAges)
+            #print "weights " + str(self.horseWeights)
         except AttributeError:
             print "no tbody found in the full result"
 

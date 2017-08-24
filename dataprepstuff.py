@@ -73,7 +73,7 @@ class dataPrepStuff:
     def normaliseRaceLengthMinMax(self, horse):
         """normalise the race length by mapping input to range 0 to 1"""
         oldRange = (self.maxRaceLength - self.minRaceLength)
-        newMin=0.0
+        newMin=-1.0
         newMax=1.0
         oldValue=self.convertRaceLengthMetres(horse[5])
         if (oldRange == 0):
@@ -170,7 +170,6 @@ class dataPrepStuff:
     def minMaxJockey(self):
         jockeys=[]
         self.jockeyPerf=[]
-        SqlStuffInst=SqlStuff2()
         # first create a list where each jockey in the DS appears once
         for horse in self.horses:
             foundJockey=False
@@ -184,7 +183,7 @@ class dataPrepStuff:
         self.minJockey=100000
         self.maxJockey=0
         for ii, jockey in enumerate(jockeys):
-            rides=SqlStuffInst.getJockey(jockey)
+            rides=self.getJockey(jockey)
             finish=0.0
             for ride in rides:
                 OldRange = (ride[6] - 1)
@@ -218,13 +217,14 @@ class dataPrepStuff:
 
         # Now normalise this jockeys performance next to the max and min
         oldRange = (self.maxJockey - self.minJockey)
-        newMin=0.0
+        newMin=-1.0
         newMax=1.0
         try:
             oldValue=meanFinishes
         except Exception, e:
             print "the jockey being tested was not found in the test data"
             print str(e)
+            raise Exception(str(e))
 
         if (oldRange == 0):
             newValue = newMin
@@ -238,7 +238,6 @@ class dataPrepStuff:
     def minMaxTrainer(self):
         trainers=[]
         self.trainerPerf=[]
-        SqlStuffInst=SqlStuff2()
         # first create a list where each trainer in the DS appears once
         for horse in self.horses:
             foundTrainer=False
@@ -252,7 +251,7 @@ class dataPrepStuff:
         self.minTrainer=100000
         self.maxTrainer=0
         for ii, trainer in enumerate(trainers):
-            rides=SqlStuffInst.getTrainer(trainer)
+            rides=self.getTrainer(trainer)
             finish=0.0
             for ride in rides:
                 OldRange = (ride[6] - 1)
@@ -286,7 +285,7 @@ class dataPrepStuff:
 
         # Now normalise this trainers performance next to the max and min
         oldRange = (self.maxTrainer - self.minTrainer)
-        newMin=0.0
+        newMin=-1.0
         newMax=1.0
         oldValue=meanFinishes
         if (oldRange == 0):
@@ -330,7 +329,7 @@ class dataPrepStuff:
             oldValue=drawTest
         # Now normalise this trainers performance next to the max and min
         oldRange = (self.maxDraw - self.minDraw)
-        newMin=0.0
+        newMin=-1.0
         newMax=1.0
 
         if (oldRange == 0):
@@ -340,6 +339,39 @@ class dataPrepStuff:
             newValue = (((oldValue - self.minDraw) * newRange) / oldRange) + newMin
         return newValue
 
+
+    def minMaxWeight(self):
+        self.weights=[]
+        self.minWeight=100000
+        self.maxWeight=0
+        for ii, horse in enumerate(self.horses):
+            kg=self.convertWeightKilos(horse[3])
+            self.weights.append(kg)
+            if kg > self.maxWeight:
+                print "set the maxWeight to " + str(kg)
+                self.maxWeight=kg
+            if kg < self.minWeight:
+                self.minWeight=kg
+
+
+    def normaliseWeightMinMax(self, horse=-1, weightTest=-1):
+        """ normalise the weight based on min (worse)
+        max(best) values"""
+        if horse != -1:
+            oldValue=self.convertWeightKilos(horse[3])
+        elif weightTest != -1:
+            oldValue=self.convertWeightKilos(weightTest)
+        # Now normalise this trainers performance next to the max and min
+        oldRange = (self.maxWeight - self.minWeight)
+        newMin=-1.0
+        newMax=1.0
+
+        if (oldRange == 0):
+            newValue = newMin
+        else:
+            newRange = (newMax - newMin)
+            newValue = (((oldValue - self.minWeight) * newRange) / oldRange) + newMin
+        return newValue
         
 
     def meanStdJockey(self, horses):
@@ -378,7 +410,6 @@ class dataPrepStuff:
         dates=[]
         returnJockeys=[0.0]*len(horses)            
 
-        SqlStuffInst=SqlStuff2()
         for horse in horses:
             jockeys.append(horse[7])
             dates.append(datetime.datetime.strptime(str(horse[9]), "%Y-%m-%d"))
@@ -387,10 +418,10 @@ class dataPrepStuff:
                 if jockey==jockeys[ii-1]:
                     rides=previousRides
                 else:
-                    rides=SqlStuffInst.getJockey(jockey)
+                    rides=self.getJockey(jockey)
                     previousRides=rides
             else:
-                rides=SqlStuffInst.getJockey(jockey)
+                rides=self.getJockey(jockey)
                 previousRides=rides
             
 
@@ -927,7 +958,6 @@ class dataPrepStuff:
         at least "history" wins"""
         reduceHorse=[]
         historyHorses=[]
-        SqlStuffInst=SqlStuff2()
         print "subReduce"
         #print inputHorses
         for idx, horse in enumerate(inputHorses):
@@ -936,7 +966,7 @@ class dataPrepStuff:
             # This means that the database entry had no time assosciated with it
             if horse[14]==0:
                 continue
-            sqlhorses=SqlStuffInst.getHorse(horse[1])
+            sqlhorses=self.getHorse(horse[1])
             historyHorse=self.subSortReduce(sqlhorses, history, date, distance=-1, position=-1) #horse[5])
             if len(historyHorse)>=history:
                 reduceHorse.append(horse)
@@ -944,7 +974,20 @@ class dataPrepStuff:
 
         return historyHorses, reduceHorse
 
+    def subReduceDraw(self):
+        """ remove all horses that have no draw"""
+        drawHorses=[]
+        noDrawHorses=[]
+        for horse in self.horses:
+            try:
+                tmp=horse[12]+1
+                drawHorses.append(horse)
+            except Exception, e:
+                noDrawHorses.append(horse)
+                continue
 
+        self.horses=drawHorses
+        
               
 
     def subUsefuliseInputs(self, allInputs, horses, verbose=0):
@@ -1144,13 +1187,64 @@ class dataPrepStuff:
                 drawpc = (float(drawsWins[ii])/float(draw))*100
             print "There were " + str(drawsWins[ii]) + " wins at draw " + str(ii) + " of " + str(draw) + " races = " + str(drawpc)
 
+    def correlateWeight(self):
+        """ normalise each wgt with respect to the min and max weights of
+        all horses.  Then count how many horses fall into each weight range
+        and how many winners are in each weight range"""
+        self.minMaxWeight()
+        print "the min weight was " + str(self.minWeight)
+        print "the max weight was " + str(self.maxWeight)
+        weights=[0]*11
+        weightsWins=[0]*11
+        print "the length of weights is " + str(len(self.weights))
+        for horse in self.horses:
+            nweight=round(self.normaliseWeightMinMax(horse=horse),1)*10
+            weights[int(nweight)]+=1
+            if horse[4]==1:
+                weightsWins[int(nweight)]+=1
+
+        for ii, weight in enumerate(weights):
+            #if draw == 0:
+            #    drawpc = 0
+            #else:
+            #    drawpc = (float(drawsWins[ii])/float(draw))*100
+            print "There were " + str(weightsWins[ii]) + " wins at weight " + str(ii) + " of " + str(weight) + " horses at this weight"
+
+    def getHorse(self, horseName):
+        """ return a list of entries from the loaded database for 
+        this horse """
+        returnHorse = []
+        for horse in self.horses:
+            if horse[1]==horseName:
+                returnHorse.append(horse)
+        return returnHorse
+
+    def getJockey(self, jockeyName):
+        """ return a list of entries from the loaded database for 
+        this horse """
+        returnJockey = []
+        for horse in self.horses:
+            if horse[7]==jockeyName:
+                returnJockey.append(horse)
+        return returnJockey
+
+    def getTrainer(self, trainerName):
+        """ return a list of entries from the loaded database for 
+        this horse """
+        returnTrainer = []
+        for horse in self.horses:
+            if horse[13]==trainerName:
+                returnTrainer.append(horse)
+        return returnTrainer
+
+
 
     def subNormaliseInputs(self):
         """normalise the inputs.  horses is a list of all of the races that the
         horse under analysis has been in.  The function called for normalising
         take all of these races into consideration in comparison to a particular
         race idx.  This way each race gets normalised in turn"""        
-        horsesn=[[0 for x in xrange(3)] for x in xrange(len(self.horses))]
+        horsesn=[[0 for x in xrange(4)] for x in xrange(len(self.horses))]
         print "subNormaliseInputs calculating means and std devs"
         #self.minMaxRaceLength(horses)
         self.minMaxJockey()
@@ -1158,12 +1252,13 @@ class dataPrepStuff:
         #self.meanStdWeight(horses)
         self.minMaxTrainer()
         self.minMaxDraw()
+        self.minMaxWeight()
         #self.meanStdGoing(horses)
         #self.meanStdPosition(historyHorses)
                   
         for idx, horse in enumerate(self.horses):
-            if idx%100==0:
-                print "subNormaliseInputs calculating inputs " + str(idx) + " of " + str(len(self.horses))
+            #if idx%100==0:
+            #    print "subNormaliseInputs calculating inputs " + str(idx) + " of " + str(len(self.horses))
             #horsesn[idx][0]=self.normaliseRaceLengthMinMax(horse)
             #horsesn[idx][1]=self.normaliseNumberOfHorses(idx)
             #horsesn[idx][1]=self.normalisePastPosition(historyHorses[idx], 0)
@@ -1175,7 +1270,7 @@ class dataPrepStuff:
             #horsesn[idx][2]=self.normaliseWeight(idx)
             horsesn[idx][1]=self.normaliseTrainerMinMax(horse=horse)
             horsesn[idx][2]=self.normaliseDrawMinMax(horse=horse)
-            #horsesn[idx][4]=self.normaliseGoing(horses, idx)
+            horsesn[idx][3]=self.normaliseWeightMinMax(horse=horse)
             
        
         return horsesn
@@ -1189,10 +1284,10 @@ class dataPrepStuff:
         print "subNormaliseOutputs calculating means and std devs"
                           
         for idx, horse in enumerate(self.horses):
-            if idx%100==0:
+            """if idx%100==0:
                 print "subNormaliseInputs calculating outputs " + str(idx) + " of " + str(len(self.horses))
 
-            """if horse[4]==1:
+            if horse[4]==1:
                 horsesn[idx][0]=1.0
             else:
                 horsesn[idx][0]=0.0"""
@@ -1208,16 +1303,19 @@ class dataPrepStuff:
         #jockeyNames=self.getNormalizedJockey(jockeyName, date)
         #trainerNames=self.getNormalizedTrainer(trainerName, date)
 
-        testn=[None]*3
+        testn=[None]*4
         #testn[0]=self.normaliseTestRaceLength(raceLength)
         #testn[1]=self.normaliseTestNumberOfHorses(numberHorses)
         #testn[2]=self.normaliseTestPastPosition(horses[len(horses)-1][4])
-        testn[0]=self.normaliseJockeyMinMax(jockeyTest=jockeyName)
+        try:
+            testn[0]=self.normaliseJockeyMinMax(jockeyTest=jockeyName)
+        except Exception, e:
+            raise Exception(str(e))
         #testn[1]=self.normaliseTestWeight(weight)
         #testn[4]=self.NeuralNetworkStuffInst.subJockeyPercentWins(jockeyNames)[0]
         testn[1]=self.normaliseTrainerMinMax(trainerTest=trainerName)
         testn[2]=self.normaliseDrawMinMax(drawTest=draw)
-        #testn[2]=self.normaliseTestGoing(going)
+        testn[3]=self.normaliseWeightMinMax(weightTest=weight)
         #testn[5]=self.normaliseTestTrainer(trainerName)
         #testn[3]=jockeyNames
         #print "testFunction trainerName value is " + str(trainerNames)

@@ -36,7 +36,14 @@ def makeATestcardFromResults(date):
 
     """loop through the number of races and make a ResultStuff object for each"""
     for fullResultHref in fullResultHrefs:
-        HrefStuffInst.getFullResults(fullResultHref)
+        if not fullResultHref:
+            print "skipping abandoned race"
+            continue
+        try:
+            HrefStuffInst.getFullResults(fullResultHref)
+        except Exception, e:
+            print e
+            print "makeATestcardFromResults: skipping this result"
         #print "got full results webpage for..."
         fullResult=HrefStuffInst.getFullResultsGrid()
         fullHeader=HrefStuffInst.getFullResultsHeader()
@@ -74,7 +81,9 @@ def makeATestcard(date):
     """ get the href for the days test card"""
     todaysTestCardHref=HrefStuffInst.getTestCardHref(date)
     """ extract all of the links for the races from the days card"""
+
     todaysRaces, todaysRaceTimes, todaysRaceVenues=HrefStuffInst.getTodaysRaces(todaysTestCardHref)
+    
     for todaysRace in todaysRaces:
         horse, jockey, length, weight, going, draw, trainer=HrefStuffInst.getCardContents(todaysRace)
         horseName.append(horse)
@@ -87,16 +96,16 @@ def makeATestcard(date):
     return (horseName, jockeyName, raceLength, weights, goings, draws, trainers, todaysRaceTimes, todaysRaceVenues)    
 
         
-def makeAPoliteDatabase(dateStart, dateEnd, test = "false"):
+def makeAPoliteDatabase(dateStart, dateEnd, databaseName, test = "false"):
     """ the polite database is based on the original database but has the extra fields...
     raceName, raceTime
     the going variable will be corrected so that goings with several words are stored correctly.
     The webpages will be retrieved with several minutes between them so as to be polite to the
     target website"""
-    sys.exit()
     dateStartSplit=dateStart.split('-')
     dateEndSplit=dateEnd.split('-')
-    SqlStuffInst=SqlStuff2()        
+    SqlStuffInst=SqlStuff2()
+    SqlStuffInst.connectDatabase(databaseName)        
     SqlStuffInst.createResultTable()
     """ user enters the date """
     #date=raw_input("enter the required date yyyy-mm-dd")
@@ -141,7 +150,12 @@ def makeAPoliteDatabase(dateStart, dateEnd, test = "false"):
         """loop through the ResultStuff class objects and add them to the database"""        
         for ResultStuffInst in ResultStuffInsts:
             if test == "false":
-                SqlStuffInst.addResultStuffToTable(ResultStuffInst)
+                try:
+                    SqlStuffInst.addResultStuffToTable(ResultStuffInst)
+                except Exception, e:
+                    print "could not add to database"
+                    print str(ResultStuffInst)
+                    print str(e)
             else:
                 for idx, horseName in enumerate(ResultStuffInst.horseNames):
                     """create a string with this horses values"""
@@ -158,7 +172,38 @@ def makeAPoliteDatabase(dateStart, dateEnd, test = "false"):
                     )
                     print val_str
 
+def makeAPoliteFileStash(dateStart, dateEnd, test = "false"):
+    """ the polite filestash is just to get files that may be needed sometime, without
+    adding them to the database"""
 
+    dateStartSplit=dateStart.split('-')
+    dateEndSplit=dateEnd.split('-')
+    
+    """ user enters the date """
+    #date=raw_input("enter the required date yyyy-mm-dd")
+    for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2]))):
+        date=time.strftime("%Y-%m-%d", single_date.timetuple())       
+        #date="2014-07-{}".format(day)
+        print date
+        ResultStuffInsts=[]       
+        """
+        for fullResultHref in fullResultHrefs:
+            webpage=urllib2.urlopen(fullResultHref.get("href"))"""
+
+        HrefStuffInst=webscrape.HrefStuff()
+        """ get the hrefs that must be appended to http://www.racingpost.com/"""
+        fullResultHrefs=HrefStuffInst.getFullResultHrefs(date)
+
+        """loop through the number of races and make a ResultStuff object for each"""
+        for fullResultHref in fullResultHrefs:
+            if not fullResultHref:
+                print "skipping abandoned race"
+                continue
+            try:
+                HrefStuffInst.getFullResults(fullResultHref)
+            except Exception, e:
+                print e
+                print "makeAPoliteDatabase: skipping this result"
 
 
 def makeAResult(date):
@@ -178,7 +223,14 @@ def makeAResult(date):
 
     """loop through the number of races and make a ResultStuff object for each"""
     for fullResultHref in fullResultHrefs:
-        HrefStuffInst.getFullResults(fullResultHref)
+        if not fullResultHref:
+            print "skipping abandoned race"
+            continue
+        try:
+            HrefStuffInst.getFullResults(fullResultHref)
+        except Exception, e:
+            print e
+            print "makeAResult: skipping this result"
         #print "got full results webpage for..."
         fullResult=HrefStuffInst.getFullResultsGrid()
         fullHeader=HrefStuffInst.getFullResultsHeader()
@@ -208,40 +260,53 @@ def writeAResult(date, filenameAppend):
             print str(jj)
     sys.stdout = original
 
-def viewADatabase():
+def viewADatabase(databaseName):
     SqlStuffInst=SqlStuff2()
+    SqlStuffInst.connectDatabase(databaseName)
     SqlStuffInst.viewAllTable()
     
-def viewTopWinners():
+def viewTopWinners(databaseName):
     SqlStuffInst=SqlStuff2()
+    SqlStuffInst.connectDatabase(databaseName)
     SqlStuffInst.getTopWinners()
 
-def viewHorse(horseName):
+def viewHorse(horseName, databaseName):
     print "ID,  HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE, ODDS"
     SqlStuffInst=SqlStuff2()
+    SqlStuffInst.connectDatabase(databaseName)
     SqlStuffInst.viewHorse(horseName)
 
-def viewJockey(jockeyName):
+def viewJockey(jockeyName, databaseName):
     print "ID,  HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE, ODDS"
     SqlStuffInst=SqlStuff2()
+    SqlStuffInst.connectDatabase(databaseName)
     SqlStuffInst.viewJockey(jockeyName)
 
-def viewDate(date):
+def viewDate(date, databaseName):
     print "ID,  HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE, ODDS"
     SqlStuffInst=SqlStuff2()
+    SqlStuffInst.connectDatabase(databaseName)
     SqlStuffInst.viewDate(date)
 
-def viewNewestDate():
+def viewNewestDate(databaseName):
     SqlStuffInst=SqlStuff2()
+    SqlStuffInst.connectDatabase(databaseName)
     SqlStuffInst.viewNewestDate()
 
-def delDate(date):
+def delDate(date, databaseName):
     SqlStuffInst=SqlStuff2()
+    SqlStuffInst.connectDatabase(databaseName)
     SqlStuffInst.delDate(date)
 
-def delDateRange(dateStart, dateStop):
+def delDuplicates(databaseName):
+    SqlStuffInst=SqlStuff2()
+    SqlStuffInst.connectDatabase(databaseName)
+    SqlStuffInst.delDuplicates()
+
+
+def delDateRange(dateStart, dateStop, databaseName):
     dateStartSplit=dateStart.split("-")
     dateStopSplit=dateStop.split("-")
     for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateStopSplit[0]),int(dateStopSplit[1]),int(dateStopSplit[2]))):
         print single_date
-        delDate(single_date)
+        delDate(single_date, databaseName)

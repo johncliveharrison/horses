@@ -4,10 +4,10 @@ import re
 class SqlStuff2:
     def __init__(self):
         """initialise the sql stuff"""
-        self.conn=sqlite3.connect('results_newrp.db')
-    def connectDatabase(self):
+        #self.conn=sqlite3.connect('results_2017.db')
+    def connectDatabase(self, databaseName):
         """connect to the results.db database"""
-        self.conn=sqlite3.connect('results_newrp.db')
+        self.conn=sqlite3.connect(databaseName)
     def createResultTable(self):
         """ create a table to hold all of the scraped results"""
         self.conn.execute("CREATE TABLE if not exists RESULTS_INFO( \
@@ -47,11 +47,15 @@ class SqlStuff2:
             self.conn.execute(self.sql_str)
             self.conn.commit()
 
-    def getAllTable(self):
-        self.sql_str="SELECT * from RESULTS_INFO"
+    def getAllTable(self, date=-1):
+        if date==-1:
+            self.sql_str="SELECT * from RESULTS_INFO"
+        else:
+            self.sql_str="SELECT * from RESULTS_INFO where RACEDATE<'{}'".format(date)
         self.cursor=self.conn.execute(self.sql_str)
         self.rows=self.cursor.fetchall()
         return self.rows
+
     def viewAllTable(self):
         self.getAllTable()
         for row in self.rows:
@@ -62,13 +66,19 @@ class SqlStuff2:
         self.conn.execute(self.sql_str)
         self.conn.commit()
 
+    def delDuplicates(self):
+        self.sql_str="DELETE from RESULTS_INFO where ID NOT IN (SELECT MIN(ID) ID FROM RESULTS_INFO GROUP BY HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE, RACETIME, RACEVENUE, DRAW, TRAINERNAME, FINISHINGTIME, ODDS)"
+        self.conn.execute(self.sql_str)
+        self.conn.commit()
+
+        
     def getDate(self, date):
         self.sql_str="SELECT * from RESULTS_INFO where RACEDATE='{}'".format(date)
         self.cursor=self.conn.execute(self.sql_str)
         self.rows=self.cursor.fetchall()
         return self.rows
 
-    def getAllGoing(self):
+    def getAlGloing(self):
         """get all of the going information from the database"""
         self.sql_str="SELECT GOING from RESULTS_INFO"
         self.cursor=self.conn.execute(self.sql_str)
