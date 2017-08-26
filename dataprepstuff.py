@@ -986,7 +986,7 @@ class dataPrepStuff:
                 noDrawHorses.append(horse)
                 continue
 
-        self.horses=drawHorses
+        self.horses=noDrawHorses
         
               
 
@@ -1244,14 +1244,14 @@ class dataPrepStuff:
         horse under analysis has been in.  The function called for normalising
         take all of these races into consideration in comparison to a particular
         race idx.  This way each race gets normalised in turn"""        
-        horsesn=[[0 for x in xrange(4)] for x in xrange(len(self.horses))]
+        horsesn=[[0 for x in xrange(3)] for x in xrange(len(self.horses))]
         print "subNormaliseInputs calculating means and std devs"
         #self.minMaxRaceLength(horses)
         self.minMaxJockey()
         #self.meanStdNumberOfHorses(horses)
         #self.meanStdWeight(horses)
         self.minMaxTrainer()
-        self.minMaxDraw()
+        #self.minMaxDraw()
         self.minMaxWeight()
         #self.meanStdGoing(horses)
         #self.meanStdPosition(historyHorses)
@@ -1269,8 +1269,8 @@ class dataPrepStuff:
             horsesn[idx][0]=self.normaliseJockeyMinMax(horse=horse)
             #horsesn[idx][2]=self.normaliseWeight(idx)
             horsesn[idx][1]=self.normaliseTrainerMinMax(horse=horse)
-            horsesn[idx][2]=self.normaliseDrawMinMax(horse=horse)
-            horsesn[idx][3]=self.normaliseWeightMinMax(horse=horse)
+            #horsesn[idx][2]=self.normaliseDrawMinMax(horse=horse)
+            horsesn[idx][2]=self.normaliseWeightMinMax(horse=horse)
             
        
         return horsesn
@@ -1303,7 +1303,7 @@ class dataPrepStuff:
         #jockeyNames=self.getNormalizedJockey(jockeyName, date)
         #trainerNames=self.getNormalizedTrainer(trainerName, date)
 
-        testn=[None]*4
+        testn=[None]*3
         #testn[0]=self.normaliseTestRaceLength(raceLength)
         #testn[1]=self.normaliseTestNumberOfHorses(numberHorses)
         #testn[2]=self.normaliseTestPastPosition(horses[len(horses)-1][4])
@@ -1314,8 +1314,8 @@ class dataPrepStuff:
         #testn[1]=self.normaliseTestWeight(weight)
         #testn[4]=self.NeuralNetworkStuffInst.subJockeyPercentWins(jockeyNames)[0]
         testn[1]=self.normaliseTrainerMinMax(trainerTest=trainerName)
-        testn[2]=self.normaliseDrawMinMax(drawTest=draw)
-        testn[3]=self.normaliseWeightMinMax(weightTest=weight)
+        #testn[2]=self.normaliseDrawMinMax(drawTest=draw)
+        testn[2]=self.normaliseWeightMinMax(weightTest=weight)
         #testn[5]=self.normaliseTestTrainer(trainerName)
         #testn[3]=jockeyNames
         #print "testFunction trainerName value is " + str(trainerNames)

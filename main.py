@@ -233,11 +233,13 @@ def neuralNet(net, dataPrepStuffInst, filenameAppend, afterResult = "noResult", 
         for idx, horse in enumerate(race):
             try:
                 tmp=int(draws[raceNo][idx])+1
-            except Exception, e:
-                print "no draw in this race = " + str(draws[raceNo][idx])
-                print str(e)
+                print "draw in this race = " + str(draws[raceNo][idx])
                 skipFileWrite=1
                 break
+
+            except Exception, e:
+                tmp=0
+                #print "no draw so using race/hor"
 
             dataPrepHorses=dataPrepStuffInst.getHorse(horse)
             if len(dataPrepHorses)==0:
