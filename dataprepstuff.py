@@ -97,6 +97,8 @@ class dataPrepStuff:
         self.maxHorse=0
         for ii, horseEntry in enumerate(horses):
             rides=self.getHorse(horseEntry)
+            if len(rides) < 5:
+                print "for horse " + str(horseEntry) + " there are " + str(len(rides))
             finish=0.0
             for ride in rides:
                 OldRange = (ride[6] - 1)
@@ -610,41 +612,45 @@ class dataPrepStuff:
                 if not foundHorse:
                     horses.append(horse[1])
                     
-        # create a copy of the horses list that we can remove horse from that have fewer than 5 history races
-        horsesCopy=horses
         print "There are " + str(len(horses)) + " different horses in the subReduce5s function"
 
         if os.path.exists('subReduce5sList'):
             print "reading reduceHorses from file in subReduce5s"
             with open ('subReduce5sList', 'rb') as fp:
                 reduceHorses = pickle.load(fp)
+                horseNameReduce=horses
         else:
 
             reduceHorses=[]
+            horseNameReduce=[]
             for horseName in horses:
                 horseNameCount=0
                 horseList=[]
-                for horseCheck in self.horses:
+                horseidx=[]
+                for idx, horseCheck in enumerate(self.horses):
                     if horseName==horseCheck[1]:
                         horseList.append(horseCheck)
-                        self.horses.remove(horseCheck)
+                        horseidx.append(idx-len(horseidx))
                         horseNameCount+=1
+
+                # remove the horses that have already been considered in this loop
+                for idx in horseidx:
+                    del self.horses[idx]
                 # if the history is >= 5 then add to the reduce list otherwise remove
                 # the horse from the list of horse names
                 if horseNameCount >= 5:
                     reduceHorses=reduceHorses+horseList
-                else:
-                    horsesCopy.remove(horseName)
+                    horseNameReduce.append(horseName)
 
         print "There are " + str(len(reduceHorses)) + " reduced horses in the subReduce5s function"
         
         with open('subReduceHorseList', 'wb') as fp:
-            pickle.dump(horses, fp)
+            pickle.dump(horseNameReduce, fp)
 
         with open('subReduce5sList', 'wb') as fp:
             pickle.dump(reduceHorses, fp)
 
-        self.horseList= horsesCopy
+        self.horseList= horseNameReduce
         self.horses=reduceHorses
 
 
@@ -953,11 +959,11 @@ class dataPrepStuff:
         horsesn=[[0 for x in xrange(4)] for x in xrange(len(self.horses))]
         print "subNormaliseInputs calculating means and std devs"
         #self.minMaxRaceLength(horses)
+        self.minMaxHorse()
         self.minMaxJockey()
         self.minMaxTrainer()
         #self.minMaxDraw()
         self.minMaxWeight()
-        self.minMaxHorse()
                   
         for idx, horse in enumerate(self.horses):
             #horsesn[idx][0]=self.normaliseRaceLengthMinMax(horse)
