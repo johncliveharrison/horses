@@ -40,25 +40,6 @@ class dataPrepStuff:
             else:
                 skip=0                   
         return meters
-        
-    def meanStdRaceLength(self, horses):
-        """normalise the race length"""
-        print "meanStfRaceLength"
-        self.raceLengths=[]
-        for horse in horses:            
-            self.raceLengths.append(self.convertRaceLengthMetres(horse[5]))
-        """normalise with x = (x - mean(x))/std(x)"""
-        self.raceLengthMean=array(self.raceLengths).mean()
-        self.raceLengthStd=array(self.raceLengths).std()
-
-    def normaliseRaceLengthStd(self, idx):
-        """normalise the race length"""
-
-        if self.raceLengthStd==0.0:
-            return 0.0
-        raceLengthn=(self.raceLengths[idx] - self.raceLengthMean)/self.raceLengthStd
-        return raceLengthn
-   
 
     def minMaxRaceLength(self,horses):
         print "minMaxRaceLength"
@@ -84,90 +65,6 @@ class dataPrepStuff:
             newRange = (newMax - newMin)  
             newValue = (((float(oldValue) - float(self.minRaceLength)) * newRange) / float(oldRange)) + newMin
         return newValue
-
-   
-    def normaliseTestRaceLength(self, testRaceLength):
-        """normalise the test race length using precalculated mean and std"""
-        if self.raceLengthStd==0.0:
-            return 0.0
-        return (self.convertRaceLengthMetres(testRaceLength)-self.raceLengthMean)/self.raceLengthStd
-
-    def meanStdNumberOfHorses(self,horses):
-        self.numberOfHorses=[]
-        for horse in horses:
-            self.numberOfHorses.append(float(horse[6]))
-        self.numberOfHorsesMean=array(self.numberOfHorses).mean()
-        self.numberOfHorsesStd=array(self.numberOfHorses).std()
-
-
-    def normaliseNumberOfHorses(self, idx):
-        """normalise the number of horses"""
-        if self.numberOfHorsesStd==0.0:
-            return 0.0
-        numberOfHorsesn=(self.numberOfHorses[idx]-self.numberOfHorsesMean)/self.numberOfHorsesStd
-        return numberOfHorsesn
-
-    def normaliseTestNumberOfHorses(self, testNumberOfHorses):
-        """normalise the number of horses using the precalculated mean and std"""
-        if self.numberOfHorsesStd==0.0:
-            return 0.0
-        return (float(testNumberOfHorses)-self.numberOfHorsesMean)/self.numberOfHorsesStd
-
-    def meanStdPosition(self, horses):
-        """ calculate mean and std dev over all positions in horses"""
-        pastPositions=[]
-        for horse in horses:
-            for pastpos in horse:
-                pastPositions.append(float(pastpos[4]))
-        self.pastPositionMean=array(pastPositions).mean()
-        self.pastPositionStd=array(pastPositions).std()
-        
-
-    def normalisePastPosition(self, horses, idx):
-        """normalise the position that the horse came"""
-        if self.pastPositionStd<0.001:
-            return 0.0
-        else:
-            pastPositionn=(float(horses[idx][4])-self.pastPositionMean)/self.pastPositionStd
-        return pastPositionn
-
-    def normaliseTestPastPosition(self, testPosition):
-        """normalise the testPosition using precalulate mean and std"""
-        print "previous finish pos = " + str(testPosition)
-        if self.pastPositionStd==0.0:
-            return 0.0
-        return (float(testPosition)-self.pastPositionMean)/self.pastPositionStd
-
-    def subJockeyPercentWins(self,jockeys):
-        jockeyWins=[]
-        SqlStuffInst=SqlStuff2()
-        for ii, jockey in enumerate(jockeys):
-            if ii!=0:
-                if jockey==jockeys[ii-1]:
-                    rides=previousRides
-                else:
-                    rides=SqlStuffInst.getJockey(jockey)
-                    previousRides=rides
-            else:
-                rides=SqlStuffInst.getJockey(jockey)
-                previousRides=rides
-            wins=0
-            for ride in rides:
-                if ride[4]==1:
-                    wins+=1
-            if len(rides)==0:
-                jockeyWins.append(float(0.0))
-            else:
-                jockeyWins.append(float(float(wins)/float(len(rides))))
-        return jockeyWins
-
-
-    def jockeyPercentWins(self, horses):
-        jockeys=[]
-        for horse in horses:
-            jockeys.append(horse[7])
-        jockeyWins=self.subJockeyPercentWins(jockeys)
-        return jockeyWins
     
     def minMaxHorse(self):
         horses=[]
@@ -318,8 +215,6 @@ class dataPrepStuff:
             newRange = (newMax - newMin)  
             newValue = (((oldValue - self.minJockey) * newRange) / oldRange) + newMin
         return newValue
-
-
     
     def minMaxTrainer(self):
         trainers=[]
@@ -460,325 +355,8 @@ class dataPrepStuff:
             newRange = (newMax - newMin)
             newValue = (((oldValue - self.minWeight) * newRange) / oldRange) + newMin
         return newValue
+
         
-
-    def meanStdJockey(self, horses):
-        jockeys=[]
-        self.meanFinishes=[]
-        SqlStuffInst=SqlStuff2()
-        # first create a list where each jockey in the DS appears once
-        for horse in horses:
-            foundJockey=False
-            for jockey in jockeys:
-                if jockey==horse[7]:
-                    foundJockey=True
-                    break
-            if not foundJockey:
-                jockeys.append(horse[7])
-
-        for ii, jockey in enumerate(jockeys):
-            rides=SqlStuffInst.getJockey(jockey)
-            previousRides=rides
-            finish=0.0
-            for ride in rides:
-                OldRange = (ride[6] - 1)
-                if (OldRange == 0):
-                    NewValue = 0.0
-                else:
-                    NewRange = (1 - 0)  
-                    NewValue = (((ride[4] - 1) * NewRange) / OldRange) #+ 0
-                finish=finish+float(1.0-NewValue)            
-                
-            self.meanFinishes.append(finish/len(rides))
-        self.jockeyMean=array(self.meanFinishes).mean()
-        self.jockeyStd=array(self.meanFinishes).std()
-    
-    def getNormalizedJockeys(self, horses):
-        jockeys=[]
-        dates=[]
-        returnJockeys=[0.0]*len(horses)            
-
-        for horse in horses:
-            jockeys.append(horse[7])
-            dates.append(datetime.datetime.strptime(str(horse[9]), "%Y-%m-%d"))
-        for ii, jockey in enumerate(jockeys):
-            if ii!=0:
-                if jockey==jockeys[ii-1]:
-                    rides=previousRides
-                else:
-                    rides=self.getJockey(jockey)
-                    previousRides=rides
-            else:
-                rides=self.getJockey(jockey)
-                previousRides=rides
-            
-
-            sortRide=[]
-            sortRide.append(rides[0])
-            for jj, ride in enumerate(rides[1:len(rides)]):
-                iterations = len(sortRide)
-                date1=datetime.datetime.strptime(str(ride[9]), "%Y-%m-%d")
-                """if the list date is the same as, or after, the input date then this
-                race should  not be included in the training"""
-                if date1 < dates[ii]:
-                    for idx in range(0, iterations):
-                        date0=datetime.datetime.strptime(str(sortRide[idx][9]), "%Y-%m-%d")
-                        if date1 > date0:
-                            sortRide.insert(idx, ride)
-                            break
-                        elif idx == (iterations-1):
-                            sortRide.append(ride)
-            for yy in range(0, len(sortRide)):
-                if sortRide[yy][6] == 1:
-                    returnJockeys[ii]=returnJockeys[ii]+0.5
-                else:
-                    returnJockeys[ii]=returnJockeys[ii]+(((float(sortRide[yy][4])-1)/(float(sortRide[yy][6])-1))*(1-0)+0)
-            returnJockeys[ii]=returnJockeys[ii]/len(sortRide)
-        return returnJockeys
-
-    def getNormalizedJockey(self, jockey, datestr):
-
-        returnJockeys=0.0
-        date=datetime.datetime.strptime(str(datestr), "%Y-%m-%d")
-        SqlStuffInst=SqlStuff2()
-        rides=SqlStuffInst.getJockey(jockey)
-        if len(rides) == 0:
-            return returnJockeys
-        sortRide=[]
-        sortRide.append(rides[0])
-        for jj, ride in enumerate(rides[1:len(rides)]):
-            iterations = len(sortRide)
-            date1=datetime.datetime.strptime(str(ride[9]), "%Y-%m-%d")
-            """if the list date is the same as, or after, the input date then this
-            race should  not be included in the training"""
-            if date1 < date:
-                for idx in range(0, iterations):
-                    date0=datetime.datetime.strptime(str(sortRide[idx][9]), "%Y-%m-%d")
-                    if date1 > date0:
-                        sortRide.insert(idx, ride)
-                        break
-                    elif idx == (iterations-1):
-                        sortRide.append(ride)
-        for yy in range(0, len(sortRide)):
-            if sortRide[yy][6] == 1:
-                returnJockeys=returnJockeys+0.5
-            else:                
-                returnJockeys=returnJockeys+(((float(sortRide[yy][4])-1)/(float(sortRide[yy][6])-1))*(1-0)+0)
-        returnJockeys=returnJockeys/len(sortRide)
-        return returnJockeys
-
-    def getNormalizedTrainers(self, horses):
-        trainers=[]
-        dates=[]
-        returnTrainers=[0.0]*len(horses)            
-
-        SqlStuffInst=SqlStuff2()
-        for horse in horses:
-            trainers.append(horse[13])
-            dates.append(datetime.datetime.strptime(str(horse[9]), "%Y-%m-%d"))
-        for ii, trainer in enumerate(trainers):
-            if ii!=0:
-                if trainer==trainers[ii-1]:
-                    rides=previousRides
-                else:
-                    rides=SqlStuffInst.getTrainer(trainer)
-                    previousRides=rides
-            else:
-                rides=SqlStuffInst.getTrainer(trainer)
-                previousRides=rides
-            
-
-            sortRide=[]
-            sortRide.append(rides[0])
-            for jj, ride in enumerate(rides[1:len(rides)]):
-                iterations = len(sortRide)
-                date1=datetime.datetime.strptime(str(ride[9]), "%Y-%m-%d")
-                """if the list date is the same as, or after, the input date then this
-                race should  not be included in the training"""
-                if date1 < dates[ii]:
-                    for idx in range(0, iterations):
-                        date0=datetime.datetime.strptime(str(sortRide[idx][9]), "%Y-%m-%d")
-                        if date1 > date0:
-                            sortRide.insert(idx, ride)
-                            break
-                        elif idx == (iterations-1):
-                            sortRide.append(ride)
-            for yy in range(0, len(sortRide)):
-                if sortRide[yy][6] == 1:
-                    returnTrainers[ii] = 0.5
-                else:
-                    returnTrainers[ii]=returnTrainers[ii]+(((float(sortRide[yy][4])-1)/(float(sortRide[yy][6])-1))*(1-0)+0)
-            returnTrainers[ii]=returnTrainers[ii]/len(sortRide)
-        return returnTrainers
-
-    def getNormalizedTrainer(self, trainer, datestr):
-
-        returnTrainers=0.0
-        date=datetime.datetime.strptime(str(datestr), "%Y-%m-%d")
-        SqlStuffInst=SqlStuff2()
-        rides=SqlStuffInst.getTrainer(trainer)
-        if len(rides) == 0:
-            return returnTrainers
-        sortRide=[]
-        sortRide.append(rides[0])
-        for jj, ride in enumerate(rides[1:len(rides)]):
-            iterations = len(sortRide)
-            date1=datetime.datetime.strptime(str(ride[9]), "%Y-%m-%d")
-            """if the list date is the same as, or after, the input date then this
-            race should  not be included in the training"""
-            if date1 < date:
-                for idx in range(0, iterations):
-                    date0=datetime.datetime.strptime(str(sortRide[idx][9]), "%Y-%m-%d")
-                    if date1 > date0:
-                        sortRide.insert(idx, ride)
-                        break
-                    elif idx == (iterations-1):
-                        sortRide.append(ride)
-        for yy in range(0, len(sortRide)):
-            if sortRide[yy][6] == 1:
-                returnTrainers = 0.5
-            else:
-#                print "position = " + str(sortRide[yy][4]) + " out of " + str(sortRide[yy][6]) + "horses"
-#                print "trainer value is " + str((((float(sortRide[yy][4])-1)/(float(sortRide[yy][6])-1))*(1-0)+0))
-                returnTrainers=returnTrainers+(((float(sortRide[yy][4])-1)/(float(sortRide[yy][6])-1))*(1-0)+0)
-#                print "cumulative trainer is " + str(returnTrainers)
-        returnTrainers=returnTrainers/len(sortRide)
-#        print "the number of trainer is " + str(len(sortRide)) + "so returning " + str(returnTrainers)
-        return returnTrainers
-
-    
-    def meanStdTrainer(self, horses):
-        """ normalise the trainers"""
-        #since the trainer reamains the same for the horse it contains no informaion
-        #If the trainer is given a value for average placing and this is then compared
-        #to the other trainers that have horses in the race then it contains some
-        #useful data (perhaps)
-        #getAllTrainersInRace(horses
-
-
-        trainers=[]
-        self.meanTrainerFinishes=[]
-        SqlStuffInst=SqlStuff2()
-        # first get a list where each trainer in the DS features only once
-        for horse in horses:
-            foundTrainer=False
-            for trainer in trainers:
-                if trainer==horse[13]:
-                    foundTrainer=True
-                    break
-            if not foundTrainer:
-                trainers.append(horse[13])
-
-        for ii, trainer in enumerate(trainers):
-            rides=SqlStuffInst.getTrainer(trainer)
-            previousRides=rides
-            finish=0.0
-            for ride in rides:
-                OldRange = (ride[6] - 1)
-                if (OldRange == 0):
-                    NewValue = 0.0
-                else:
-                    NewRange = (1 - 0)  
-                    NewValue = (((ride[4] - 1) * NewRange) / OldRange) #+ 0
-                finish=finish+float(1.0-NewValue)            
-            # calculate the mean for just this trainer
-            self.meanTrainerFinishes.append(finish/len(rides))
-        # calculate the mean and std dev for all the trainers in the DS
-        self.trainerMean=array(self.meanTrainerFinishes).mean()
-        self.trainerStd=array(self.meanTrainerFinishes).std()
-
-    def normaliseTrainer(self, trainer):
-        """ normalise the trainer for the idx horse"""
-        SqlStuffInst=SqlStuff2()
-        rides=SqlStuffInst.getTrainer(trainer)
-        previousRides=rides
-        finish=0.0
-        for ride in rides:
-            OldRange = (ride[6] - 1)
-            if (OldRange == 0):
-                NewValue = 0.0
-            else:
-                NewRange = (1 - 0)  
-                NewValue = (((ride[4] - 1) * NewRange) / OldRange) #+ 0
-            finish=finish+float(1.0-NewValue)            
-
-        # calculate the mean for just this trainer
-        meanTrainerFinishes=(finish/len(rides))
-        if self.trainerStd<0.001:
-            return 0.0
-        else:
-            return (meanTrainerFinishes-self.trainerMean)/self.trainerStd
-        
-    def normaliseTestTrainer(self, testTrainer):
-        """ normalise the trainer for the horse under test"""
-        SqlStuffInst=SqlStuff2()
-        rides=SqlStuffInst.getTrainer(testTrainer)
-        if len(rides)==0:
-            print "no trainer called " + str(testTrainer) + " in the database"
-            return 0.0
-        finish=0.0
-        for ride in rides:
-            OldRange = (ride[6] - 1)
-            if (OldRange == 0):
-                NewValue = 0.0
-            else:
-                NewRange = (1 - 0)  
-                NewValue = (((ride[4] - 1) * NewRange) / OldRange) #+ 0
-            finish=finish+float(1.0-NewValue)            
-
-        meanFinish=(finish/len(rides))
-        if self.trainerStd<0.001:
-            return 0.0
-            #(meanFinish-self.jockeyMean)
-        else:
-            #print "returning norm test jockey = " + str((meanFinish-self.jockeyMean)/self.jockeyStd)
-            return (meanFinish-self.trainerMean)/self.trainerStd
-       
-
-    def normaliseJockey(self, jockey):
-        """normalise the jockey"""
-        """the jockey will be represented by their average finish position"""
-        # calculate the mean for just this Jockey
-        SqlStuffInst=SqlStuff2()
-        rides=SqlStuffInst.getJockey(jockey)
-        previousRides=rides
-        finish=0.0
-        
-        # for each result translate the result range to 0 to 1
-        for ride in rides:
-            OldRange = (ride[6] - 1)
-            if (OldRange == 0):
-                NewValue = 0.0
-            else:
-                NewRange = (1 - 0)  
-                NewValue = (((ride[4] - 1) * NewRange) / OldRange) #+ 0
-            finish=finish+float(1.0-NewValue)            
-
-        meanFinishes=(finish/len(rides))
-
-        if self.jockeyStd<0.001:
-            return 0.0
-        else:
-            return (meanFinishes-self.jockeyMean)/self.jockeyStd
-            
-    def normaliseTestJockey(self, testJockey):
-        """normalise the test jockeys performance with the precalulated mean and std"""
-        
-        SqlStuffInst=SqlStuff2()
-        rides=SqlStuffInst.getJockey(testJockey)
-        if len(rides)==0:
-            print "no jockey called " + str(testJockey) + " in the database"
-            return 0.0
-        finish=0.0
-        for ride in rides:
-            finish=finish+float(ride[4])/float(ride[6])            
-        meanFinish=(finish/len(rides))
-        if self.jockeyStd<0.001:
-            return 0.0
-            #(meanFinish-self.jockeyMean)
-        else:
-            #print "returning norm test jockey = " + str((meanFinish-self.jockeyMean)/self.jockeyStd)
-            return (meanFinish-self.jockeyMean)/self.jockeyStd
 
     def convertWeightKilos(self, weight):
         """convert the stone, pounds weight to kilos"""
@@ -787,38 +365,7 @@ class dataPrepStuff:
             return 60.0
         else:
             return (float(ss[0])*6.35+float(ss[2])*0.45)
-        #for idx, s in enumerate(ss):          
-        
-    def meanStdWeight(self, horses):
-        self.weights=[]        
-        for horse in horses:
-            if horse[3] != ' ':
-                self.weights.append(self.convertWeightKilos(horse[3]))
-            else:
-                self.weights.append(60.0)
-        self.weightMean=array(self.weights).mean()
-        self.weightStd=array(self.weights).std()
-
-        
-    def normaliseWeight(self, idx):
-        """normalise the weight carried by the horse"""
-        if self.weightStd < 0.001:
-            weightn=0.0
-        else:
-            weightn=(self.weights[idx]-self.weightMean)/self.weightStd
-       
-        return weightn
-
-    def normaliseTestWeight(self, testWeight):
-        """normalise the test weight using the precalculated mean and std"""
-        if testWeight == ' ':
-            weight=self.weightMean
-        else:
-            weight=self.convertWeightKilos(testWeight)
-        if self.weightStd < 0.001:
-            return 0.0
-        else:
-            return (weight-self.weightMean)/self.weightStd
+ 
 
     def meanStdGoing(self, horses, verbose=0):
         self.goings=[]
@@ -894,24 +441,6 @@ class dataPrepStuff:
 #        for idx, word in enumerate(wordList):
 #            print str(word)
         return wordList
-
-    def meanStdResult(self, horses):
-        self.results=[]
-        for ii, horse in enumerate(horses):
-            # calculate the mean for just this trainer
-            self.results.append(self.convertRaceLengthMetres(horse[5])/horse[14])
-
-        # calculate the mean and std dev for all the trainers in the DS
-        self.resultMean=array(self.results).mean()
-        self.resultStd=array(self.results).std()
-
-    
-    def normaliseResult(self, idx):
-        """normalise the result"""
-        if self.resultStd < 0.001:
-            return 0.0
-        resultn=(self.results[idx]-self.resultMean)/self.resultStd
-        return resultn
 
 
     def normaliseGoing(self, horses, idx):
@@ -1425,27 +954,14 @@ class dataPrepStuff:
         print "subNormaliseInputs calculating means and std devs"
         #self.minMaxRaceLength(horses)
         self.minMaxJockey()
-        #self.meanStdNumberOfHorses(horses)
-        #self.meanStdWeight(horses)
         self.minMaxTrainer()
         #self.minMaxDraw()
         self.minMaxWeight()
         self.minMaxHorse()
-        #self.meanStdGoing(horses)
-        #self.meanStdPosition(historyHorses)
                   
         for idx, horse in enumerate(self.horses):
-            #if idx%100==0:
-            #    print "subNormaliseInputs calculating inputs " + str(idx) + " of " + str(len(self.horses))
             #horsesn[idx][0]=self.normaliseRaceLengthMinMax(horse)
-            #horsesn[idx][1]=self.normaliseNumberOfHorses(idx)
-            #horsesn[idx][1]=self.normalisePastPosition(historyHorses[idx], 0)
-            #horsesn[idx][3]=self.normalisePastPosition(historyHorses[idx], 1)
-            #horsesn[idx][4]=self.normalisePastPosition(historyHorses[idx], 2)
-            #horsesn[idx][5]=self.normalisePastPosition(historyHorses[idx], 3)
-            #horsesn[idx][6]=self.normalisePastPosition(historyHorses[idx], 4)
             horsesn[idx][0]=self.normaliseJockeyMinMax(horse=horse)
-            #horsesn[idx][2]=self.normaliseWeight(idx)
             horsesn[idx][1]=self.normaliseTrainerMinMax(horse=horse)
             #horsesn[idx][2]=self.normaliseDrawMinMax(horse=horse)
             horsesn[idx][2]=self.normaliseWeightMinMax(horse=horse)
