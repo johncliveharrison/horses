@@ -65,7 +65,7 @@ class HrefStuff:
         self.date=date #time.strftime("%Y-%m-%d")
 #        self.date="2014-08-03"
         print self.date
-        self.url="http://www.racingpost.com/racecards/" + self.date
+        self.url="https://www.racingpost.com/racecards/" + self.date
         return self.url
 
     def getTodaysRaces(self, href):
@@ -73,38 +73,36 @@ class HrefStuff:
         try:
             self.soup=self.webscrapePolite(href)
         except Exception, e:
+            print "unable to scrape the test card main page"
             raise Exception(str(e))
         self.divBody=self.soup.body
-        self.racesList=self.divBody.find("div", {"class":"tabContent tabNoTB tabSelected"})
-        """ here can find the race names"""
-        self.h3=self.racesList.findAll("h3")
-        noneRaceHeaders=0
-        for idx, h3 in enumerate(self.h3):
-            try:
-                self.a=h3.find("a")
-                self.raceVenue.append(self.a.find(text=True))
-            except AttributeError:
-                """ this covers the case for RACES SHOWN ON TERRESTRIAL TV"""
-                if len(self.raceVenue)==0:
-                    noneRaceHeaders+=1
-        self.tables=self.racesList.findAll("table", {"class":"cardsGrid"})
-        self.raceTimes=[[] for _ in range(len(self.tables[noneRaceHeaders:]))]
-        for idx, table in enumerate(self.tables[noneRaceHeaders:]):
-            #for every cardGrid table we need to find all the rows
-            self.tr=table.findAll("tr")
-            # Now for all the rows we need to find the first td that contains the <a href 
-            for tr in self.tr:
-                self.td=tr.find("td")
-                self.th=tr.find("th")
-                self.a=self.td.find("a")
-                try:
-                    self.raceHrefs.append(self.a.get("href"))
-                    """ here get the text as the racetime"""
-                    self.a=self.th.find("a")
-                    self.raceTimes[idx].append(self.a.find(text=True))
-#                    print str(self.raceTime)
-                except AttributeError:
-                    """ doesn't matter if there was no link"""
+        self.uiCanvas=self.divBody.find("div", {"class":"ui-canvas js-contentWrapper ui-advertising__skinsWrp ui-advertising__skinsWrp_secNav"})
+
+        self.uiContent=self.uiCanvas.find("div", {"class":"ui-content ui-content_marginless js-ui-content RC-mobile RC-desktop"})
+        self.mainContent=self.uiContent.find("main", {"class":"js-RC-mainContent RC-content-wrapper ui-mainContent"})
+        #print self.mainContent
+        self.uiAccordianRows=self.mainContent.findAll("section")#, {"class":"ui-accordion__row"})# js-accordion RC-accordion"})
+        #print self.uiAccordian
+        self.raceVenue=[]
+        self.raceTimes=[[] for _ in range(len(self.uiAccordianRows[:]))]
+        for idx, uiAccordianRow in enumerate(self.uiAccordianRows):
+            rowSection= uiAccordianRow.findAll("div")
+            header=rowSection[0]
+            table=rowSection[3]
+            h2Header=header.find("h2")
+            divH2Header=h2Header.find("div")
+            spanDivH2Header=divH2Header.find("span")
+            raceVenue=" ".join(spanDivH2Header.find(text=True).split())
+            self.raceVenue.append(raceVenue)
+
+            courseDescription=table.find("div", {"class":"RC-courseDescription__info"})
+            meetingList=table.find("div", {"class":"RC-meetingList"})
+            meetingItems=meetingList.findAll("div", {"class":"RC-meetingItem"})
+            for meetingItem in meetingItems:
+                href=meetingItem.find("a", {"class":"RC-meetingItem__link js-navigate-url"}).get("href")
+                self.raceHrefs.append(href)
+                time=meetingItem.find("div", {"class":"RC-meetingItem__time"}).find(text=True).strip()
+                self.raceTimes[idx].append(time)
         # get the raceTimes and raceVenue into the same format as that returned by the
         # makeATestcardFromResults function
         raceTimes=[]
@@ -125,44 +123,65 @@ class HrefStuff:
         weight=[]
         draw=[]
         self.url="http://www.racingpost.com" + href + "&raceTabs=lc_"
-        #print self.url
+
         self.soup=self.webscrapePolite(self.url)
         self.divBody=self.soup.body
-        self.cardGridWrapper=self.divBody.find("div", {"class":"cardGridWrapper"})
-        self.tr=self.cardGridWrapper.findAll("tr", {"class":"cr"})
-        for row in self.tr:
-            try:
-                draw.append(row.findAll("td")[0].find("sup").find(text=True))                
-                #print "found draw"
-            except AttributeError:
-                draw.append("255")
-                #print "did not find draw"
-            self.horseNameRow=row.find("a")
-            horseName.append(self.horseNameRow.find("b").find(text=True).replace('&acute;',"'"))            
-            self.tdJockey=row.findAll("td")[6]
-            self.tdTrainer=row.findAll("td")[5]
-            try:
-                jockey.append(self.tdJockey.find("a").find(text=True))
-            except AttributeError:
-                jockey.append("unknown")
-            try:
-                trainer.append(self.tdTrainer.find("a").find(text=True))
-            except AttributeError:
-                trainer.append("unknown")
-            self.tdWeight=row.findAll("td")[4]
-            try:
-                weight.append(self.tdWeight.find(text=True))
-            except AttributeError:
-                weight.append("9-0")
-                print "failed to find weight"
-        self.ul=self.divBody.find("ul", {"class":"results clearfix"})
-        self.li=self.ul.findAll("li")[2]
-        self.length=self.li.find("strong").find(text=True)
-        """get rid of the strange unicode half symbols"""
-        s=self.length.split()[0].encode('unicode_escape')
+        self.uiCanvas=self.divBody.find("div", {"class":"ui-canvas js-contentWrapper ui-advertising__skinsWrp ui-advertising__skinsWrp_secNav"})
+        self.uiContent=self.uiCanvas.find("div", {"class":"ui-content ui-content_marginless js-ui-content RC-mobile RC-desktop"})
+        main=self.uiContent.find("main")
+        section=main.find("section")
+        #raceLength
+        cardHeader=section.find("div", {"class":"RC-cardHeader"})
+        cardHeaderDetails=cardHeader.findAll("div")[-1]
+        distance=cardHeaderDetails.find("strong", {"class":"RC-cardHeader__distance"}).find(text=True).strip()
+        s=distance.strip("()")
         self.raceLength = s.replace('\\xbd', '.5')
-        self.li=self.ul.findAll("li")[3]
-        self.going=self.li.find("strong").find(text=True)
+        # try and get the rows in the table with the horse info
+        sectionDiv=section.findAll("div")
+        for card in sectionDiv:
+            if "RC-runnerRowWrapper" in card.get("class"):
+                cardTable=card
+        cardTableRows=[]
+        cardTableDiv=cardTable.findAll("div")
+        for rows in cardTableDiv:
+            if "js-RC-runnerRow" in rows.get("class"):
+                if not "js-runnerNonRunner" in rows.get("class"):
+                    cardTableRows.append(rows)
+        for cardTableRow in cardTableRows:
+            #horseName
+            runnerCardWrapper=cardTableRow.find("div",{"class":"RC-runnerCardWrapper"})
+            runnerRowHorseWrapper=runnerCardWrapper.find("div",{"class":"RC-runnerRowHorseWrapper"})
+            runnerMainWrapper=runnerRowHorseWrapper.find("div",{"class":"RC-runnerMainWrapper"})
+            a=runnerMainWrapper.find("a").find(text=True).strip()
+            horseName.append(a)
+            #jockey
+            runnerRowInfoWrapper=runnerCardWrapper.find("div",{"class":"RC-runnerRowInfoWrapper"})
+            runnerInfoWrapper=runnerRowInfoWrapper.find("div",{"class":"RC-runnerInfoWrapper"})
+            runnerInfoJockey=runnerInfoWrapper.find("div",{"class":"RC-runnerInfo RC-runnerInfo_jockey"})
+            a=runnerInfoJockey.find("a").find(text=True).strip()
+            jockey.append(a)
+            #trainer
+            runnerInfoTrainer=runnerInfoWrapper.find("div",{"class":"RC-runnerInfo RC-runnerInfo_trainer"})
+            a=runnerInfoTrainer.find("a").find(text=True).strip()
+            trainer.append(a)
+            #weight
+            runnerWgtOrWrapper=runnerRowInfoWrapper.find("div",{"class":"RC-runnerWgtorWrapper"})
+            runnerWgt=runnerWgtOrWrapper.find("div",{"class":"RC-runnerWgt"})
+            runnerWgtCarried=runnerWgt.find("span",{"class":"RC-runnerWgt__carried"})
+            runnerWgtCarriedSt=runnerWgtCarried.find("span",{"class":"RC-runnerWgt__carried_st"}).find(text=True).strip()
+            runnerWgtCarriedLb=runnerWgtCarried.find("span",{"class":"RC-runnerWgt__carried_lb"}).find(text=True).strip()
+            Wgt=str(runnerWgtCarriedSt)+"-"+str(runnerWgtCarriedLb)
+            weight.append(Wgt)            
+            #draw
+            runnerNumber=runnerRowHorseWrapper.find("div",{"class":"RC-runnerNumber"})
+            s=runnerNumber.find("span",{"class":"RC-runnerNumber__draw"}).find(text=True).strip().strip("()")
+            draw.append(s)
+        #going
+        keyInfo=cardHeader.find("div",{"class":"RC-cardHeader__keyInfo"})
+        headerBox=keyInfo.find("div",{"class":"RC-headerBox"})
+        infoRow=headerBox.findAll("div",{"class":"RC-headerBox__infoRow"})
+        going=infoRow[2].find("div",{"class":"RC-headerBox__infoRow__content"}).find(text=True).split()
+        self.going=" ".join(going)
 
         return (horseName, jockey, self.raceLength, weight, self.going, draw, trainer)
 

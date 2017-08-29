@@ -192,8 +192,10 @@ def neuralNet(net, dataPrepStuffInst, filenameAppend, afterResult = "noResult", 
 
     try:
         if date >= datetime.datetime.today().strftime('%Y-%m-%d'):
+            print "trying to make a test card from the days test card as date is today or later"
             horses, jockeys, lengths, weights, goings, draws, trainers, todaysRaceTimes, todaysRaceVenues=makeATestcard(date)
         else:
+            print "tring to make a test card from past results"
             horses, jockeys, lengths, weights, goings, draws, trainers, todaysRaceTimes, todaysRaceVenues, odds=makeATestcardFromResults(date)
     except Exception:
         print "making a testcard from results failed"
@@ -382,9 +384,8 @@ def runNeuralNet(date, databaseNames, number=1, horseLimit=20):
     """ The noResult string means that the actual result of the race will not be included in 
     the output file or stdout (usually used when predicting a result before the race"""
     net, dataPrepStuffInst=neuralNetPrepTrain(databaseNames)
-    neuralNet(net, dataPrepStuffInst, horseLimitStr, "Result", date)
-
-
+    neuralNet(net, dataPrepStuffInst, horseLimitStr, "noResult", date)
+    
 
 def runTestDateRange(dateStart, dateEnd, databaseNames, hiddenExplore=1):
     """ run neuralNet for this daterange.  Get the actual results.  Compare them

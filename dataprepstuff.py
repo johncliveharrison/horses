@@ -987,6 +987,14 @@ class dataPrepStuff:
                 horsesn[idx][0]=0.0"""
             
             horsesn[idx][0]=1.0 - float(horse[4])/float(horse[6])
+            
+            posDiff = 0.5/float(horse[6])
+            newValue = 0.5-((float(horse[4])-2.0)*posDiff)
+            if horse[4]==1:
+                newValue=1.0
+            
+            horsesn[idx]=newValue
+
 
         return horsesn
 
