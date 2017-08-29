@@ -1,6 +1,8 @@
 import datetime, re
 import sys
+import os.path
 import random
+import pickle
 from numpy import mean, std, array
 from sqlstuff2 import SqlStuff2
 
@@ -167,6 +169,88 @@ class dataPrepStuff:
         jockeyWins=self.subJockeyPercentWins(jockeys)
         return jockeyWins
     
+    def minMaxHorse(self):
+        horses=[]
+        self.horsePerf=[]
+        print "There are " + str(len(self.horses)) + "horses in self.horses in the minMaxHorse funtion"
+        # first create a list where each horse in the DS appears once
+        # check to see if this list already exists in self.horseList
+        try:
+            horses=self.horseList            
+        except Exception:
+            print "self.horseList not found, looking for file"
+            if os.path.exists('subReduceHorseList'):
+                print "reading horses from file in minmaxHorse"
+                with open ('subReduceHorseList', 'rb') as fp:
+                    horses = pickle.load(fp)
+        if not horses:
+            print "subReduceHorseList file not found so create horses in minmaxHorse"
+            for horse in self.horses:
+                foundHorse=False
+                for horseEntry in horses:
+                    if horseEntry==horse[1]:
+                        foundHorse=True
+                        break
+                if not foundHorse:
+                    horses.append(horse[1])
+
+        print "There are " + str(len(horses)) + " different horses in the minMaxHorse function"
+
+        self.minHorse=100000
+        self.maxHorse=0
+        for ii, horseEntry in enumerate(horses):
+            rides=self.getHorse(horseEntry)
+            finish=0.0
+            for ride in rides:
+                OldRange = (ride[6] - 1)
+                if (OldRange == 0):
+                    NewValue = 0.0
+                else:
+                    NewRange = (1.0 - 0.0)  
+                    NewValue = (((float(ride[4]) - 1.0) * NewRange) / float(OldRange)) #+ 0
+                # the 1.0- here makes it so a better horse has a bigger value
+                finish=finish+float(1.0-NewValue)            
+            meanFinishes=(finish/len(rides))
+            self.horsePerf.append([horseEntry, meanFinishes])
+            if meanFinishes > self.maxHorse:
+                self.maxHorse=meanFinishes
+            if meanFinishes < self.minHorse:
+                self.minHorse=meanFinishes
+
+    def normaliseHorseMinMax(self, horse=-1, horseTest=-1):
+        """ normalise the horse performance based on min (worse)
+        max(best) values"""
+        if horse != -1:
+            for horseEntry in self.horsePerf:
+                if horseEntry[0]==horse[1]:
+                    meanFinishes=horseEntry[1]
+                    break
+        elif horseTest != -1:
+            for horseEntry in self.horsePerf:
+                if horseEntry[0]==horseTest:
+                    meanFinishes=horseEntry[1]
+                    break
+
+
+        # Now normalise this horses performance next to the max and min
+        oldRange = (self.maxHorse - self.minHorse)
+        newMin=-1.0
+        newMax=1.0
+        try:
+            oldValue=meanFinishes
+        except Exception, e:
+            print "the horse being tested was not found in the test data"
+            print str(e)
+            raise Exception(str(e))
+
+        if (oldRange == 0):
+            newValue = newMin
+        else:
+            newRange = (newMax - newMin)  
+            newValue = (((oldValue - self.minHorse) * newRange) / oldRange) + newMin
+        return newValue
+
+
     def minMaxJockey(self):
         jockeys=[]
         self.jockeyPerf=[]
@@ -179,6 +263,8 @@ class dataPrepStuff:
                     break
             if not foundJockey:
                 jockeys.append(horse[7])
+
+        print "There are " + str(len(jockeys)) + " in the minMaxJockey function"
 
         self.minJockey=100000
         self.maxJockey=0
@@ -247,6 +333,8 @@ class dataPrepStuff:
                     break
             if not foundTrainer:
                 trainers.append(horse[13])
+
+        print "There are " + str(len(trainers)) + " in the minMaxTrainer function"
 
         self.minTrainer=100000
         self.maxTrainer=0
@@ -973,6 +1061,63 @@ class dataPrepStuff:
                 historyHorses.append(historyHorse)
 
         return historyHorses, reduceHorse
+    
+    def subReduce5s(self):
+        """make sure there is a history of 5 entries for all test inputs"""
+
+        if os.path.exists('subReduceHorseList'):
+            print "reading horseList from file in subReduce5s"
+            with open ('subReduceHorseList', 'rb') as fp:
+                horses = pickle.load(fp)
+        else:
+            print "There are " + str(len(self.horses)) + "horses in self.horses in the subReduce5s funtion"
+            horses=[]
+            for horse in self.horses:
+                foundHorse=False
+                for horseEntry in horses:
+                    if horseEntry==horse[1]:
+                        foundHorse=True
+                        break
+                if not foundHorse:
+                    horses.append(horse[1])
+                    
+        # create a copy of the horses list that we can remove horse from that have fewer than 5 history races
+        horsesCopy=horses
+        print "There are " + str(len(horses)) + " different horses in the subReduce5s function"
+
+        if os.path.exists('subReduce5sList'):
+            print "reading reduceHorses from file in subReduce5s"
+            with open ('subReduce5sList', 'rb') as fp:
+                reduceHorses = pickle.load(fp)
+        else:
+
+            reduceHorses=[]
+            for horseName in horses:
+                horseNameCount=0
+                horseList=[]
+                for horseCheck in self.horses:
+                    if horseName==horseCheck[1]:
+                        horseList.append(horseCheck)
+                        self.horses.remove(horseCheck)
+                        horseNameCount+=1
+                # if the history is >= 5 then add to the reduce list otherwise remove
+                # the horse from the list of horse names
+                if horseNameCount >= 5:
+                    reduceHorses=reduceHorses+horseList
+                else:
+                    horsesCopy.remove(horseName)
+
+        print "There are " + str(len(reduceHorses)) + " reduced horses in the subReduce5s function"
+        
+        with open('subReduceHorseList', 'wb') as fp:
+            pickle.dump(horses, fp)
+
+        with open('subReduce5sList', 'wb') as fp:
+            pickle.dump(reduceHorses, fp)
+
+        self.horseList= horsesCopy
+        self.horses=reduceHorses
+
 
     def subReduceDraw(self):
         """ remove all horses that have no draw"""
@@ -1095,6 +1240,38 @@ class dataPrepStuff:
 
         self.raceHorses=raceHorses
         return raceHorses
+
+    def correlateHorse(self):
+        """ loop through the races and check to see if the 
+        best horse won"""
+        
+        # first need to find how good each horse is and put the result in
+        # an array that is in the same order as the horse in the races.
+        self.minMaxHorse()
+        tallyBest=0
+        tallySecond=0
+        tallyOther=0
+        for raceHorse in self.raceHorses:
+            bestHorse=0
+            bestHorsePos=0
+            for horse in raceHorse:
+                print str(horse[1]) + ' ' + str(self.normaliseHorseMinMax(horse=horse)) + ' ' + str(bestHorse)
+                if bestHorse < self.normaliseHorseMinMax(horse=horse):
+                    bestHorse=self.normaliseHorseMinMax(horse=horse)
+                    bestHorsePos=horse[4]
+            print "At " + str(horse[9]) + str(horse[10]) + str(horse[11]) + "best Horse came " + str(bestHorsePos)
+            
+            if bestHorsePos == 1:
+                tallyBest=tallyBest+1
+            if bestHorsePos == 2:
+                tallySecond=tallySecond+1
+            if bestHorsePos > 2:
+                tallyOther=tallyOther+1
+
+        print "from " + str(len(self.raceHorses)) + " races, the best horse won " + str(tallyBest) + " times"
+        print "from " + str(len(self.raceHorses)) + " races, the best horse came second " + str(tallySecond) + " times"
+        print "from " + str(len(self.raceHorses)) + " races, the best horse was third or worse " + str(tallyOther) + " times"
+        print "the average number of horses per race was " + str(len(self.horses)/len(self.raceHorses))
 
 
 
@@ -1244,7 +1421,7 @@ class dataPrepStuff:
         horse under analysis has been in.  The function called for normalising
         take all of these races into consideration in comparison to a particular
         race idx.  This way each race gets normalised in turn"""        
-        horsesn=[[0 for x in xrange(3)] for x in xrange(len(self.horses))]
+        horsesn=[[0 for x in xrange(4)] for x in xrange(len(self.horses))]
         print "subNormaliseInputs calculating means and std devs"
         #self.minMaxRaceLength(horses)
         self.minMaxJockey()
@@ -1253,6 +1430,7 @@ class dataPrepStuff:
         self.minMaxTrainer()
         #self.minMaxDraw()
         self.minMaxWeight()
+        self.minMaxHorse()
         #self.meanStdGoing(horses)
         #self.meanStdPosition(historyHorses)
                   
@@ -1271,7 +1449,7 @@ class dataPrepStuff:
             horsesn[idx][1]=self.normaliseTrainerMinMax(horse=horse)
             #horsesn[idx][2]=self.normaliseDrawMinMax(horse=horse)
             horsesn[idx][2]=self.normaliseWeightMinMax(horse=horse)
-            
+            horsesn[idx][3]=self.normaliseHorseMinMax(horse=horse)
        
         return horsesn
 
@@ -1298,12 +1476,12 @@ class dataPrepStuff:
 
         
 
-    def testFunction(self, jockeyName, trainerName, numberHorses, raceLength, weight, going, draw, date, verbose=0):#, trainerName):
+    def testFunction(self, horseName, jockeyName, trainerName, numberHorses, raceLength, weight, going, draw, date, verbose=0):#, trainerName):
         """blah"""
         #jockeyNames=self.getNormalizedJockey(jockeyName, date)
         #trainerNames=self.getNormalizedTrainer(trainerName, date)
-
-        testn=[None]*3
+        print str(horseName)
+        testn=[None]*4
         #testn[0]=self.normaliseTestRaceLength(raceLength)
         #testn[1]=self.normaliseTestNumberOfHorses(numberHorses)
         #testn[2]=self.normaliseTestPastPosition(horses[len(horses)-1][4])
@@ -1316,6 +1494,7 @@ class dataPrepStuff:
         testn[1]=self.normaliseTrainerMinMax(trainerTest=trainerName)
         #testn[2]=self.normaliseDrawMinMax(drawTest=draw)
         testn[2]=self.normaliseWeightMinMax(weightTest=weight)
+        testn[3]=self.normaliseHorseMinMax(horseTest=horseName)
         #testn[5]=self.normaliseTestTrainer(trainerName)
         #testn[3]=jockeyNames
         #print "testFunction trainerName value is " + str(trainerNames)

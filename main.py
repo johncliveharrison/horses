@@ -79,16 +79,18 @@ def neuralNetPrepTrain(databaseNames, date=-1):
         horses=horses + SqlStuffInst.getAllTable(date=date)#[0:1000]
 
     dataPrepStuffInst=dataPrepStuff(horses)
+    dataPrepStuffInst.subReduce5s()
     # correlation checks
     # is there a correelation between the best jockey and the winner
     #dataPrepStuffInst.getHorsesInRaces()
     #dataPrepStuffInst.correlateJockey()
     #dataPrepStuffInst.correlateTrainer()
+    #dataPrepStuffInst.correlateHorse()
     #dataPrepStuffInst.correlateDraw()
     #dataPrepStuffInst.correlateWeight()
 
     # remove any unwanted entries from the database in memory
-    dataPrepStuffInst.subReduceDraw()
+    #dataPrepStuffInst.subReduceDraw()
     # next we need to normalise the database in memory
     netInputs=dataPrepStuffInst.subNormaliseInputs()
     netOutputs=dataPrepStuffInst.subNormaliseOutputs()
@@ -121,7 +123,7 @@ def neuralNetPrepTrain(databaseNames, date=-1):
         trained=False
         for ii in range(0, 10):
             aux=trainer.train() #UntilConvergence(dataset=DS)
-            if aux < 0.0384: # and tstresult < 0.001:
+            if aux < 0.03: #0.038999: # and tstresult < 0.001:
                 print net
                 print net.params
                 params = net.params
@@ -129,7 +131,7 @@ def neuralNetPrepTrain(databaseNames, date=-1):
                 trained=True
                 break;
                 
-            if  jj > 15:
+            if  jj > 2:
                 print "skip race due to inablility to converge during training"
                 skipFileWrite=1
                 trained=True
@@ -231,15 +233,16 @@ def neuralNet(net, dataPrepStuffInst, filenameAppend, afterResult = "noResult", 
             """
 
         for idx, horse in enumerate(race):
-            try:
-                tmp=int(draws[raceNo][idx])+1
-                print "draw in this race = " + str(draws[raceNo][idx])
-                skipFileWrite=1
-                break
+            #try:
+            #    tmp=int(draws[raceNo][idx])+1
+            #    # if there is no exception (so there is a draw) then dont't use
+            #    print "draw in this race = " + str(draws[raceNo][idx])
+            #    skipFileWrite=1
+            #    break
 
-            except Exception, e:
-                tmp=0
-                #print "no draw so using race/hor"
+            #except Exception, e:
+            #    tmp=0
+            #    #print "no draw so using race/hor"
 
             dataPrepHorses=dataPrepStuffInst.getHorse(horse)
             if len(dataPrepHorses)==0:
@@ -263,7 +266,7 @@ def neuralNet(net, dataPrepStuffInst, filenameAppend, afterResult = "noResult", 
                 break;
              
             try:
-                testinput=dataPrepStuffInst.testFunction(jockeys[raceNo][idx],trainers[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo], draws[raceNo][idx], date)
+                testinput=dataPrepStuffInst.testFunction(horses[raceNo][idx],jockeys[raceNo][idx],trainers[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo], draws[raceNo][idx], date)
 
                 result=net.activate(testinput)
 
@@ -366,8 +369,6 @@ def neuralNet(net, dataPrepStuffInst, filenameAppend, afterResult = "noResult", 
             print "This won't appear on file"  # Only on stdout
             f.close()
 
-    print "the oddsWinnings is " + str(oddsWinnings)
-
     return returnSortHorse, returnResults, moneypot, moneypot2, horseNumberWinningsLocal, oddsWinnings
 
 def runNeuralNet(date, databaseNames, number=1, horseLimit=20):
@@ -432,7 +433,6 @@ def runTestDateRange(dateStart, dateEnd, databaseNames, hiddenExplore=1):
         
         predictedWinner.append(winner)
         numberOfRacesArray.append(numberOfRaces)
-        oddsWinningAnalysis(oddsWinnings)
 
 
     print "final summary"
