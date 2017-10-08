@@ -113,6 +113,27 @@ class SqlStuff2:
                 greatestIdx = idx;
         print "the most wins is " + winnerList[greatestIdx][1] + " with " + str(greatest) + "  wins"
         return winnerList
+        
+    def getMultiple(self, horseName=-1, raceLength=-1, raceVenue=-1):
+        needAnd=False
+        self.sql_str="SELECT * from RESULTS_INFO where "
+        if horseName != -1:
+            self.sql_str=self.sql_str+"HORSENAME='{}'".format(horseName.replace("'", "''"))
+            needAnd=True
+        if raceLength != -1:
+            if needAnd:
+                self.sql_str=self.sql_str+" AND "
+            self.sql_str=self.sql_str+"RACELENGTH='{}'".format(raceLength.replace("'", "''"))
+            needAnd=True
+        if raceVenue != -1:
+            if needAnd:
+                self.sql_str=self.sql_str+" AND "
+            self.sql_str=self.sql_str+"RACEVENUE='{}'".format(raceVenue.replace("'", "''"))
+
+        self.cursor=self.conn.execute(self.sql_str)
+        self.rows=self.cursor.fetchall()
+        return self.rows
+
 
     def getHorse(self, horseName):
         self.sql_str="SELECT * from RESULTS_INFO where HORSENAME='{}'".format(horseName.replace("'", "''"))

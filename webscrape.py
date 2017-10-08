@@ -93,7 +93,13 @@ class HrefStuff:
             divH2Header=h2Header.find("div")
             spanDivH2Header=divH2Header.find("span")
             raceVenue=" ".join(spanDivH2Header.find(text=True).split())
+            if raceVenue == "Free to air TV Races":
+                continue
+            if raceVenue == "Worldwide Stakes Races":
+                continue
+                
             self.raceVenue.append(raceVenue)
+            print "so I got this far " + str(raceVenue)
 
             courseDescription=table.find("div", {"class":"RC-courseDescription__info"})
             meetingList=table.find("div", {"class":"RC-meetingList"})
@@ -103,6 +109,7 @@ class HrefStuff:
                 self.raceHrefs.append(href)
                 time=meetingItem.find("div", {"class":"RC-meetingItem__time"}).find(text=True).strip()
                 self.raceTimes[idx].append(time)
+                print "and the time is " + str(time)
         # get the raceTimes and raceVenue into the same format as that returned by the
         # makeATestcardFromResults function
         raceTimes=[]
@@ -131,6 +138,7 @@ class HrefStuff:
         main=self.uiContent.find("main")
         section=main.find("section")
         #raceLength
+        print "got this far 1"
         cardHeader=section.find("div", {"class":"RC-cardHeader"})
         cardHeaderDetails=cardHeader.findAll("div")[-1]
         distance=cardHeaderDetails.find("strong", {"class":"RC-cardHeader__distance"}).find(text=True).strip()
@@ -138,6 +146,7 @@ class HrefStuff:
         self.raceLength = s.replace('\\xbd', '.5')
         # try and get the rows in the table with the horse info
         sectionDiv=section.findAll("div")
+        print "got this far 2"
         for card in sectionDiv:
             if "RC-runnerRowWrapper" in card.get("class"):
                 cardTable=card
@@ -147,6 +156,7 @@ class HrefStuff:
             if "js-RC-runnerRow" in rows.get("class"):
                 if not "js-runnerNonRunner" in rows.get("class"):
                     cardTableRows.append(rows)
+        print "got this far 3"
         for cardTableRow in cardTableRows:
             #horseName
             runnerCardWrapper=cardTableRow.find("div",{"class":"RC-runnerCardWrapper"})
@@ -154,16 +164,19 @@ class HrefStuff:
             runnerMainWrapper=runnerRowHorseWrapper.find("div",{"class":"RC-runnerMainWrapper"})
             a=runnerMainWrapper.find("a").find(text=True).strip()
             horseName.append(a)
+            print "horse name is " + str(a)
             #jockey
             runnerRowInfoWrapper=runnerCardWrapper.find("div",{"class":"RC-runnerRowInfoWrapper"})
             runnerInfoWrapper=runnerRowInfoWrapper.find("div",{"class":"RC-runnerInfoWrapper"})
             runnerInfoJockey=runnerInfoWrapper.find("div",{"class":"RC-runnerInfo RC-runnerInfo_jockey"})
             a=runnerInfoJockey.find("a").find(text=True).strip()
             jockey.append(a)
+            print "jockey is " + str(a)
             #trainer
             runnerInfoTrainer=runnerInfoWrapper.find("div",{"class":"RC-runnerInfo RC-runnerInfo_trainer"})
             a=runnerInfoTrainer.find("a").find(text=True).strip()
             trainer.append(a)
+            print "trainer is " + str(a)
             #weight
             runnerWgtOrWrapper=runnerRowInfoWrapper.find("div",{"class":"RC-runnerWgtorWrapper"})
             runnerWgt=runnerWgtOrWrapper.find("div",{"class":"RC-runnerWgt"})
@@ -171,11 +184,14 @@ class HrefStuff:
             runnerWgtCarriedSt=runnerWgtCarried.find("span",{"class":"RC-runnerWgt__carried_st"}).find(text=True).strip()
             runnerWgtCarriedLb=runnerWgtCarried.find("span",{"class":"RC-runnerWgt__carried_lb"}).find(text=True).strip()
             Wgt=str(runnerWgtCarriedSt)+"-"+str(runnerWgtCarriedLb)
-            weight.append(Wgt)            
+            weight.append(Wgt)          
+            print "weight is " + str(Wgt)
             #draw
             runnerNumber=runnerRowHorseWrapper.find("div",{"class":"RC-runnerNumber"})
             s=runnerNumber.find("span",{"class":"RC-runnerNumber__draw"}).find(text=True).strip().strip("()")
             draw.append(s)
+            print "draw is " + str(s)
+        print "got this far 4"
         #going
         keyInfo=cardHeader.find("div",{"class":"RC-cardHeader__keyInfo"})
         headerBox=keyInfo.find("div",{"class":"RC-headerBox"})

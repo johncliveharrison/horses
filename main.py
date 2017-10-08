@@ -79,7 +79,7 @@ def neuralNetPrepTrain(databaseNames, date=-1):
         horses=horses + SqlStuffInst.getAllTable(date=date)#[0:1000]
 
     dataPrepStuffInst=dataPrepStuff(horses)
-    dataPrepStuffInst.subReduce5s()
+    #dataPrepStuffInst.subReduce5s()
     # correlation checks
     # is there a correelation between the best jockey and the winner
     #dataPrepStuffInst.getHorsesInRaces()
@@ -95,19 +95,19 @@ def neuralNetPrepTrain(databaseNames, date=-1):
     netInputs=dataPrepStuffInst.subNormaliseInputs()
     netOutputs=dataPrepStuffInst.subNormaliseOutputs()
 
+    #for ii in range(2,10):
     print "create the DS"
+    print str(len(netInputs))
     DS = SupervisedDataSet(len(netInputs[0]), 1)
     for resultNo, inputs in enumerate(netInputs):
-        #print str(resultNo)
-        #print str(inputs)
-        #print str(netOutputs[resultNo])
         DS.appendLinked(inputs, netOutputs[resultNo]) 
-
+        
     #tstdata, trndata = DS.splitWithProportion( 0.25 )
     trndata=DS
-    net=buildNetwork(len(trndata['input'][0]), 3, 1, bias=True, outclass=SigmoidLayer, hiddenclass=TanhLayer) # 4,10,5,1
-    trainer=BackpropTrainer(net,trndata, momentum=0.1, verbose=True, learningrate=0.5)
-    nonconvergence=0
+    tstdata=DS
+
+    net=buildNetwork(len(trndata['input'][0]), 3, 7, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
+    trainer=BackpropTrainer(net,trndata, momentum=0.1, verbose=True, learningrate=0.1)
     # number of attempts to get training to converge
     for jj in range(0, 100):
         if os.path.exists('filename.xml'):
@@ -115,30 +115,31 @@ def neuralNetPrepTrain(databaseNames, date=-1):
             net = NetworkReader.readFrom('filename.xml') 
             break
 
-        trnresult = SumSquareError(net.activateOnDataset(dataset=trndata), trndata['target'])
-        #tstresult = SumSquareError(net.activateOnDataset(dataset=tstdata), tstdata['target'])
         print "training iteration " + str(jj*10)
-
+        
         # number of iterations in the training        
         trained=False
         for ii in range(0, 10):
             aux=trainer.train() #UntilConvergence(dataset=DS)
-            if aux < 0.03: #0.038999: # and tstresult < 0.001:
-                print net
-                print net.params
-                params = net.params
-                print "training successful"
-                trained=True
-                break;
+            #if aux < 0.03: #0.038999: # and tstresult < 0.001:
+            #    print net
+            #    print net.params
+            #    params = net.params
+            #    print "training successful"
+            #    trained=True
+            #    break;
                 
-            if  jj > 2:
+            if  jj > 15:
                 print "skip race due to inablility to converge during training"
                 skipFileWrite=1
                 trained=True
                 break
         if trained:
             break
+    mse=trainer.testOnData(dataset=tstdata)
+    print "Mean Squared Error = " + str(mse)
 
+    #sys.exit()
     # save the net params
     NetworkWriter.writeToFile(net, 'filename.xml')
 
@@ -247,10 +248,10 @@ def neuralNet(net, dataPrepStuffInst, filenameAppend, afterResult = "noResult", 
             #    #print "no draw so using race/hor"
 
             dataPrepHorses=dataPrepStuffInst.getHorse(horse)
-            if len(dataPrepHorses)==0:
-                skipFileWrite=1
-                print "horse has no form so skip race"
-                break;
+            #if len(dataPrepHorses)==0:
+            #    skipFileWrite=1
+            #    print "horse has no form so skip race"
+            #    break;
            
                 #skipFileWrite=1
                 #print "horse less than 6 races of form so skip race"
@@ -268,7 +269,7 @@ def neuralNet(net, dataPrepStuffInst, filenameAppend, afterResult = "noResult", 
                 break;
              
             try:
-                testinput=dataPrepStuffInst.testFunction(horses[raceNo][idx],jockeys[raceNo][idx],trainers[raceNo][idx], numberHorses, lengths[raceNo], weights[raceNo][idx], goings[raceNo], draws[raceNo][idx], date)
+                testinput=dataPrepStuffInst.testFunction(horses[raceNo][idx],jockeys[raceNo][idx],trainers[raceNo][idx], numberHorses, lengths[raceNo], todaysRaceVenues[raceNo], weights[raceNo][idx], goings[raceNo], draws[raceNo][idx], date)
 
                 result=net.activate(testinput)
 
@@ -276,7 +277,7 @@ def neuralNet(net, dataPrepStuffInst, filenameAppend, afterResult = "noResult", 
             
             except Exception, e:
                 print "something not correct in testFunction"
-                skipFileWrite=1
+                #skipFileWrite=1
 
         if skipFileWrite==0:
             
@@ -384,6 +385,9 @@ def runNeuralNet(date, databaseNames, number=1, horseLimit=20):
     """ The noResult string means that the actual result of the race will not be included in 
     the output file or stdout (usually used when predicting a result before the race"""
     net, dataPrepStuffInst=neuralNetPrepTrain(databaseNames)
+
+    #net=0
+    #dataPrepStuffInst=0
     neuralNet(net, dataPrepStuffInst, horseLimitStr, "noResult", date)
     
 

@@ -82,10 +82,23 @@ def makeATestcard(date):
     todaysTestCardHref=HrefStuffInst.getTestCardHref(date)
     """ extract all of the links for the races from the days card"""
 
+    print "got the test card name"
     todaysRaces, todaysRaceTimes, todaysRaceVenues=HrefStuffInst.getTodaysRaces(todaysTestCardHref)
     
-    for todaysRace in todaysRaces:
-        horse, jockey, length, weight, going, draw, trainer=HrefStuffInst.getCardContents(todaysRace)
+    print "scraped the test card"
+
+    raceToRemove=[]
+    for ii, todaysRace in enumerate(todaysRaces):
+        print "gonna to the race " + str(todaysRace)
+        try:
+            horse, jockey, length, weight, going, draw, trainer=HrefStuffInst.getCardContents(todaysRace)
+        except Exception, e:
+            print "There was an error with the race " + str(todaysRace)
+            print "This was " + str(todaysRaceVenues[ii]) + " at " + str(todaysRaceTimes[ii])
+            raceToRemove.append(ii)
+            continue
+            raise Exception(e);
+        print "did the race " + str(todaysRace)
         horseName.append(horse)
         jockeyName.append(jockey)
         raceLength.append(length)
@@ -93,6 +106,11 @@ def makeATestcard(date):
         goings.append(going)
         draws.append(draw)
         trainers.append(trainer)
+    for ii in reversed(raceToRemove):
+        del todaysRaceVenues[ii]
+        del todaysRaceTimes[ii]
+        del todaysRaces[ii]
+
     return (horseName, jockeyName, raceLength, weights, goings, draws, trainers, todaysRaceTimes, todaysRaceVenues)    
 
         

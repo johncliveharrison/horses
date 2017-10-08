@@ -153,38 +153,53 @@ class dataPrepStuff:
     def minMaxJockey(self):
         jockeys=[]
         self.jockeyPerf=[]
-        # first create a list where each jockey in the DS appears once
-        for horse in self.horses:
-            foundJockey=False
-            for jockey in jockeys:
-                if jockey==horse[7]:
-                    foundJockey=True
-                    break
-            if not foundJockey:
-                jockeys.append(horse[7])
-
-        print "There are " + str(len(jockeys)) + " in the minMaxJockey function"
-
         self.minJockey=100000
         self.maxJockey=0
-        for ii, jockey in enumerate(jockeys):
-            rides=self.getJockey(jockey)
-            finish=0.0
-            for ride in rides:
-                OldRange = (ride[6] - 1)
-                if (OldRange == 0):
-                    NewValue = 0.0
-                else:
-                    NewRange = (1.0 - 0.0)  
-                    NewValue = (((float(ride[4]) - 1.0) * NewRange) / float(OldRange)) #+ 0
-                # the 1.0- here makes it so a better jockey has a bigger value
-                finish=finish+float(1.0-NewValue)            
-            meanFinishes=(finish/len(rides))
-            self.jockeyPerf.append([jockey, meanFinishes])
+        
+        if os.path.exists('minMaxJockeyList'):
+            print "reading jockeys from file in minmaxJockey"
+            with open ('minMaxJockeyList', 'rb') as fp:
+                self.jockeyPerf = pickle.load(fp)
+
+        if not self.jockeyPerf:
+
+            # first create a list where each jockey in the DS appears once
+            for horse in self.horses:
+                foundJockey=False
+                for jockey in jockeys:
+                    if jockey==horse[7]:
+                        foundJockey=True
+                        break
+                if not foundJockey:
+                    jockeys.append(horse[7])
+
+            print "There are " + str(len(jockeys)) + " in the minMaxJockey function"
+
+            for ii, jockey in enumerate(jockeys):
+                rides=self.getJockey(jockey)
+                finish=0.0
+                for ride in rides:
+                    OldRange = (ride[6] - 1)
+                    if (OldRange == 0):
+                        NewValue = 0.0
+                    else:
+                        NewRange = (1.0 - 0.0)  
+                        NewValue = (((float(ride[4]) - 1.0) * NewRange) / float(OldRange)) #+ 0
+                        # the 1.0- here makes it so a better jockey has a bigger value
+                    finish=finish+float(1.0-NewValue)            
+                meanFinishes=(finish/len(rides))
+                self.jockeyPerf.append([jockey, meanFinishes])
+                        
+        for jockeyPerf in self.jockeyPerf:
+            meanFinishes=jockeyPerf[1]
             if meanFinishes > self.maxJockey:
                 self.maxJockey=meanFinishes
             if meanFinishes < self.minJockey:
                 self.minJockey=meanFinishes
+
+        with open('minMaxJockeyList', 'wb') as fp:
+            pickle.dump(self.jockeyPerf, fp)
+
 
     def normaliseJockeyMinMax(self, horse=-1, jockeyTest=-1):
         """ normalise the jockey performance based on min (worse)
@@ -221,38 +236,53 @@ class dataPrepStuff:
     def minMaxTrainer(self):
         trainers=[]
         self.trainerPerf=[]
-        # first create a list where each trainer in the DS appears once
-        for horse in self.horses:
-            foundTrainer=False
-            for trainer in trainers:
-                if trainer==horse[13]:
-                    foundTrainer=True
-                    break
-            if not foundTrainer:
-                trainers.append(horse[13])
-
-        print "There are " + str(len(trainers)) + " in the minMaxTrainer function"
-
         self.minTrainer=100000
         self.maxTrainer=0
-        for ii, trainer in enumerate(trainers):
-            rides=self.getTrainer(trainer)
-            finish=0.0
-            for ride in rides:
-                OldRange = (ride[6] - 1)
-                if (OldRange == 0):
-                    NewValue = 0.0
-                else:
-                    NewRange = (1.0 - 0.0)  
-                    NewValue = (((float(ride[4]) - 1.0) * NewRange) / float(OldRange)) #+ 0
-                # the 1.0- here makes it so a better trainer has a bigger value
-                finish=finish+float(1.0-NewValue)            
-            meanFinishes=(finish/len(rides))
-            self.trainerPerf.append([trainer, meanFinishes])
+        
+        if os.path.exists('minMaxTrainerList'):
+            print "reading trainers from file in minmaxTrainer"
+            with open ('minMaxTrainerList', 'rb') as fp:
+                self.trainerPerf = pickle.load(fp)
+
+        if not self.trainerPerf:
+            # first create a list where each trainer in the DS appears once
+            for horse in self.horses:
+                foundTrainer=False
+                for trainer in trainers:
+                    if trainer==horse[13]:
+                        foundTrainer=True
+                        break
+                if not foundTrainer:
+                    trainers.append(horse[13])
+
+            print "There are " + str(len(trainers)) + " in the minMaxTrainer function"
+
+            for ii, trainer in enumerate(trainers):
+                rides=self.getTrainer(trainer)
+                finish=0.0
+                for ride in rides:
+                    OldRange = (ride[6] - 1)
+                    if (OldRange == 0):
+                        NewValue = 0.0
+                    else:
+                        NewRange = (1.0 - 0.0)  
+                        NewValue = (((float(ride[4]) - 1.0) * NewRange) / float(OldRange)) #+ 0
+                        # the 1.0- here makes it so a better trainer has a bigger value
+                    finish=finish+float(1.0-NewValue)            
+                meanFinishes=(finish/len(rides))
+                self.trainerPerf.append([trainer, meanFinishes])
+        
+        for trainerPerf in self.trainerPerf:
+            meanFinishes = trainerPerf[1]
             if meanFinishes > self.maxTrainer:
                 self.maxTrainer=meanFinishes
             if meanFinishes < self.minTrainer:
                 self.minTrainer=meanFinishes
+
+        
+        with open('minMaxTrainerList', 'wb') as fp:
+            pickle.dump(self.trainerPerf, fp)
+
 
     def normaliseTrainerMinMax(self, horse=-1, trainerTest=-1):
         """ normalise the trainer performance based on min (worse)
@@ -926,6 +956,9 @@ class dataPrepStuff:
         """ return a list of entries from the loaded database for 
         this horse """
         returnHorse = []
+        returnHorse=[x for x in self.horses if x[1] == horseName]
+        return returnHorse
+
         for horse in self.horses:
             if horse[1]==horseName:
                 returnHorse.append(horse)
@@ -950,6 +983,93 @@ class dataPrepStuff:
         return returnTrainer
 
 
+    def getPreviousResults(self):
+        """ get previous results for this horse from the same venue
+        and distance"""
+        
+        if os.path.exists('prevAverageList'):
+            print "reading prevAverage from file in getPreviousResults"
+            with open ('prevAverageList', 'rb') as fp:
+                self.prevAverage = pickle.load(fp)
+                return self.prevAverage
+        else:
+            self.prevAverage=[]
+
+        for horseTest in self.horses:
+            prevAverage=0.0
+            numPrev=0
+            
+            raceLength=horseTest[5]
+            raceVenue=horseTest[10]
+            horses=self.getHorse(horseTest[1])
+        
+            for horse in horses:
+                # dont't want to use this actual race to predict this
+                # races result!!!
+                if horse == horseTest:
+                    continue
+                if horse[5]==raceLength:
+                    if horse[10]==raceVenue:
+                        # normalise the result to range -1 to 1
+                        oldRange = (horse[6] - 1)
+                        if oldRange==0:
+                            continue
+                        newMin=-1.0
+                        newMax=1.0
+
+                        newRange = (newMax - newMin)
+                        newValue = (((horse[4] - 1) * newRange) / oldRange) + newMin
+                        # now make first place have max val
+                        newValue = newValue*-1.0
+                        numPrev+=1
+                        prevAverage+=newValue
+        
+            if numPrev:
+                prevAverage=prevAverage/numPrev
+
+            self.prevAverage.append(prevAverage)
+
+        
+        with open('prevAverageList', 'wb') as fp:
+            pickle.dump(self.prevAverage, fp)
+
+        return self.prevAverage
+
+    def getPreviousResultsTest(self, horseName=-1, length=-1, venue=-1):
+        """ get previous results for this horse from the same venue
+        and distance"""
+        prevAverage=0.0
+        numPrev=0
+        horses=self.getHorse(horseName)
+        raceVenue=venue
+        raceLength=length
+
+        for horse in horses:
+            # dont't want to use this actual race to predict this
+            # races result!!!
+            if horse[5]==raceLength:
+                if horse[10]==raceVenue:
+                    # normalise the result to range -1 to 1
+                    oldRange = (horse[6] - 1)
+                    if oldRange==0:
+                        continue
+                    newMin=-1.0
+                    newMax=1.0
+
+                    newRange = (newMax - newMin)
+                    newValue = (((horse[4] - 1) * newRange) / oldRange) + newMin
+                    # now make first place have max val
+                    newValue = newValue*-1.0
+                    numPrev+=1
+                    prevAverage+=newValue
+        
+        if numPrev:
+            prevAverage=prevAverage/numPrev
+
+        return prevAverage
+
+
+
 
     def subNormaliseInputs(self):
         """normalise the inputs.  horses is a list of all of the races that the
@@ -959,19 +1079,27 @@ class dataPrepStuff:
         horsesn=[[0 for x in xrange(4)] for x in xrange(len(self.horses))]
         print "subNormaliseInputs calculating means and std devs"
         #self.minMaxRaceLength(horses)
-        self.minMaxHorse()
+        #self.minMaxHorse()
         self.minMaxJockey()
         self.minMaxTrainer()
-        #self.minMaxDraw()
+        self.minMaxDraw()
         self.minMaxWeight()
+        #self.getPreviousResults()
                   
+        a=datetime.datetime.now()
         for idx, horse in enumerate(self.horses):
+            if not (idx-1)%1000:
+                b=datetime.datetime.now()
+                c=(b-a)/idx
+                d=b+(c*(len(self.horses)-idx))
+                print str(idx) + " of " + str(len(self.horses)) + " expected completion " + str(d)
             #horsesn[idx][0]=self.normaliseRaceLengthMinMax(horse)
             horsesn[idx][0]=self.normaliseJockeyMinMax(horse=horse)
             horsesn[idx][1]=self.normaliseTrainerMinMax(horse=horse)
-            #horsesn[idx][2]=self.normaliseDrawMinMax(horse=horse)
-            horsesn[idx][2]=self.normaliseWeightMinMax(horse=horse)
-            horsesn[idx][3]=self.normaliseHorseMinMax(horse=horse)
+            horsesn[idx][2]=self.normaliseDrawMinMax(horse=horse)
+            horsesn[idx][3]=self.normaliseWeightMinMax(horse=horse)
+            #horsesn[idx][4]=self.prevAverage[idx]
+            #horsesn[idx][3]=self.normaliseHorseMinMax(horse=horse)
        
         return horsesn
 
@@ -992,12 +1120,12 @@ class dataPrepStuff:
             else:
                 horsesn[idx][0]=0.0"""
             
-            horsesn[idx][0]=1.0 - float(horse[4])/float(horse[6])
+            #horsesn[idx][0]=1.0 - float(horse[4])/float(horse[6])
             
-            posDiff = 0.5/float(horse[6])
-            newValue = 0.5-((float(horse[4])-2.0)*posDiff)
-            if horse[4]==1:
-                newValue=1.0
+            posDiff = 1.0/float(horse[6])
+            newValue = 1.0-((float(horse[4])-1.0)*posDiff)
+            #if horse[4]==1:
+            #    newValue=1.0
             
             horsesn[idx]=newValue
 
@@ -1006,11 +1134,10 @@ class dataPrepStuff:
 
         
 
-    def testFunction(self, horseName, jockeyName, trainerName, numberHorses, raceLength, weight, going, draw, date, verbose=0):#, trainerName):
+    def testFunction(self, horseName, jockeyName, trainerName, numberHorses, raceLength, raceVenue, weight, going, draw, date, verbose=0):#, trainerName):
         """blah"""
         #jockeyNames=self.getNormalizedJockey(jockeyName, date)
         #trainerNames=self.getNormalizedTrainer(trainerName, date)
-        print str(horseName)
         testn=[None]*4
         #testn[0]=self.normaliseTestRaceLength(raceLength)
         #testn[1]=self.normaliseTestNumberOfHorses(numberHorses)
@@ -1022,9 +1149,13 @@ class dataPrepStuff:
         #testn[1]=self.normaliseTestWeight(weight)
         #testn[4]=self.NeuralNetworkStuffInst.subJockeyPercentWins(jockeyNames)[0]
         testn[1]=self.normaliseTrainerMinMax(trainerTest=trainerName)
-        #testn[2]=self.normaliseDrawMinMax(drawTest=draw)
-        testn[2]=self.normaliseWeightMinMax(weightTest=weight)
-        testn[3]=self.normaliseHorseMinMax(horseTest=horseName)
+        testn[2]=self.normaliseDrawMinMax(drawTest=draw)
+        testn[3]=self.normaliseWeightMinMax(weightTest=weight)
+        #print "raceLength: " + str(raceLength)
+        #print "raceVenue: " + str(raceVenue)
+        #print "horseName:" + str(horseName) 
+        #testn[4]=self.getPreviousResultsTest(horseName=horseName, length=raceLength, venue=raceVenue)
+        #testn[3]=self.normaliseHorseMinMax(horseTest=horseName)
         #testn[5]=self.normaliseTestTrainer(trainerName)
         #testn[3]=jockeyNames
         #print "testFunction trainerName value is " + str(trainerNames)
