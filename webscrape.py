@@ -77,15 +77,20 @@ class HrefStuff:
             raise Exception(str(e))
         self.divBody=self.soup.body
         self.uiCanvas=self.divBody.find("div", {"class":"ui-canvas js-contentWrapper ui-advertising__skinsWrp ui-advertising__skinsWrp_secNav"})
-
-        self.uiContent=self.uiCanvas.find("div", {"class":"ui-content ui-content_marginless js-ui-content RC-mobile RC-desktop"})
+        #print "uiCanvas ****************************************************"
+        #print str(self.uiCanvas)
+        self.uiContent=self.uiCanvas.find("div")#, {"class":"ui-content"})
         self.mainContent=self.uiContent.find("main", {"class":"js-RC-mainContent RC-content-wrapper ui-mainContent"})
-        #print self.mainContent
-        self.uiAccordianRows=self.mainContent.findAll("section")#, {"class":"ui-accordion__row"})# js-accordion RC-accordion"})
-        #print self.uiAccordian
+        #print "mainContent ****************************************************"
+        #print str(self.mainContent)
+        self.uiAccordianRows=self.mainContent.find("div", {"data-test-selector":"RC-accordion__body"})#"ui-accordion" "js-accordion" "RC-accordion"})# js-accordion RC-accordion"})
+        #print str(self.uiAccordianRows)
+        self.sectionRows=self.uiAccordianRows.findAll("section")#, {"class":"ui-accordion__row"})# js-accordion RC-accordion"})
+      #  print "uiAccordian***************************************************"
+        print str(self.sectionRows)
         self.raceVenue=[]
-        self.raceTimes=[[] for _ in range(len(self.uiAccordianRows[:]))]
-        for idx, uiAccordianRow in enumerate(self.uiAccordianRows):
+        self.raceTimes=[[] for _ in range(len(self.sectionRows[:]))]
+        for idx, uiAccordianRow in enumerate(self.sectionRows):
             rowSection= uiAccordianRow.findAll("div")
             header=rowSection[0]
             table=rowSection[3]
@@ -96,6 +101,8 @@ class HrefStuff:
             if raceVenue == "Free to air TV Races":
                 continue
             if raceVenue == "Worldwide Stakes Races":
+                continue
+            if raceVenue == "Scoop 6":
                 continue
                 
             self.raceVenue.append(raceVenue)
@@ -130,13 +137,43 @@ class HrefStuff:
         weight=[]
         draw=[]
         self.url="http://www.racingpost.com" + href + "&raceTabs=lc_"
+        try:
+            self.soup=self.webscrapePolite(self.url)
+        except Exception, e:
+            print "self.soup=self.webscrapePolite(self.url)"
+            print str(e)
+            raise Exception(e);
+        try:
+            self.divBody=self.soup.body
+        except Exception, e:
+            print "self.divBody=self.soup.body"
+            print str(e)
+            raise Exception(e)
+        try:
+            self.uiCanvas=self.divBody.find("div", {"class":"ui-canvas js-contentWrapper ui-advertising__skinsWrp ui-advertising__skinsWrp_secNav"})
+        except Exception, e:
+            print "self.uiCanvas=self.divBody.find(div, {class:ui-canvas js-contentWrapper ui-advertising__skinsWrp ui-advertising__skinsWrp_secNav})"
+            print str(e)
+            raise Exception(e)
+        try:
+            self.uiContent=self.uiCanvas.find("div")#, {"class":"ui-content ui-content_marginless js-ui-content RC-desktop"})
+        except Exception, e:
+            print "self.uiContent=self.uiCanvas.find(div, {class:ui-content ui-content_marginless js-ui-content RC-mobile RC-desktop})"
+            print str(e)
+            raise Exception(e)
+        try:
+            main=self.uiContent.find("main")
+        except Exception, e:
+            print "main=self.uiContent.find(main)"
+            print str(e)
+            raise Exception(e)
+        try:
+            section=main.find("section")
+        except Exception, e:
+            print "section=main.find(section)"
+            print str(e)
+            raise Exception(e)
 
-        self.soup=self.webscrapePolite(self.url)
-        self.divBody=self.soup.body
-        self.uiCanvas=self.divBody.find("div", {"class":"ui-canvas js-contentWrapper ui-advertising__skinsWrp ui-advertising__skinsWrp_secNav"})
-        self.uiContent=self.uiCanvas.find("div", {"class":"ui-content ui-content_marginless js-ui-content RC-mobile RC-desktop"})
-        main=self.uiContent.find("main")
-        section=main.find("section")
         #raceLength
         print "got this far 1"
         cardHeader=section.find("div", {"class":"RC-cardHeader"})
