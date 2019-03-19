@@ -19,7 +19,7 @@ class HrefStuff:
        # self.jockey=[]
     
 
-    def webscrapePolite(self, href, verbose=1, test=1):
+    def webscrapePolite(self, href, verbose=0, test=0):
         """ check to see if this page already has been collected and is in the results folder
         if it hasn't been read previously then insert a wait between 1s and 5 seconds to
         avoid bombarding the website with requests"""
@@ -29,7 +29,6 @@ class HrefStuff:
         href_replace = href_replace.replace(".", "_")
         href_replace = href_replace.replace("/", "_")
         if verbose:
-            print "Look for file"
             print str(href_replace)
         if os.path.isfile("horses_local/"+href_replace+".txt"):
             f=open("horses_local/"+href_replace+".txt", 'r').read()
@@ -255,35 +254,47 @@ class HrefStuff:
         try:
             self.rpContainer=self.divBody.find("div", {"class":"rp-results rp-container cf js-contentWrapper"})
         except Exception, e:
+            print "self.rpContainer=self.divBody.find"
             raise Exception(str(e))
 
         try:
             self.rpResultsWrapper=self.rpContainer.find("div", {"class":"rp-resultsWrapper__content"})
         except Exception, e:
+            print "self.rpResultsWrapper=self.rpContainer.find"
             raise Exception(str(e))
 
         try:
-            self.rpRaceCourse=self.rpResultsWrapper.find("div", {"class":"rp-raceCourse"})
+            self.rpDataDirectiveRaceCourse=self.rpResultsWrapper.find("main", {"data-test-selector":"results-main-container"})
         except Exception, e:
+            raise Exception(str(e))
+
+        try:
+            self.rpRaceCourse=self.rpDataDirectiveRaceCourse.find("div", {"class":"rp-raceCourse ui-accordion"})
+        except Exception, e:
+            print "self.rpRaceCourse=self.rpResultsWrapper.find"
             raise Exception(str(e))
  
         try:
-            self.rpRaceCourseMeeting=self.rpRaceCourse.findAll("section", {"class":"rp-raceCourse__meetingContainer"})
+            self.rpRaceCourseMeeting=self.rpRaceCourse.findAll("section", {"class":"rp-raceCourse__meetingContainer ui-accordion__row"})
         except Exception, e:
+            print "self.rpRaceCourseMeeting=self.rpRaceCourse.findAll"
             raise Exception(str(e))
-        # loop through the race courses for the day
+
+       # loop through the race courses for the day
         for rpRaceCourseMeeting in self.rpRaceCourseMeeting:
             try:
-                self.rpRaceCoursePanel=rpRaceCourseMeeting.find("div", {"class":"rp-raceCourse__panel"})
+                self.rpRaceCoursePanel=rpRaceCourseMeeting.find("div", {"class":"rp-raceCourse__panel ui-accordion__content hidden"})
             except Exception, e:
+                print "self.rpRaceCoursePanel=rpRaceCourseMeeting.find"
                 raise Exception(str(e))
-
+                
             if not self.rpRaceCoursePanel:
                 continue
 
             try:
                 self.rpRaceCoursePanelContainer=self.rpRaceCoursePanel.findAll("div", {"class":"rp-raceCourse__panel__container"})
             except Exception, e:
+                print "self.rpRaceCoursePanelContainer=self.rpRaceCoursePanel.findAll"
                 raise Exception(str(e))
 
             # loop through the races held at each course
@@ -291,10 +302,12 @@ class HrefStuff:
                 try:
                     self.rpRaceCoursePanelRace=rpRaceCoursePanelContainer.find("div", {"class":"rp-raceCourse__panel__race"})
                 except Exception, e:
+                    print "self.rpRaceCoursePanelRace=rpRaceCoursePanelContainer.find"
                     raise Exception(str(e))
                 try:
                     self.fullResultHrefs.append(self.rpRaceCoursePanelRace.get("href")) 
                 except Exception, e:
+                    print "self.fullResultHrefs.append"
                     raise Exception(str(e))
 
                         
@@ -383,12 +396,23 @@ class ResultStuff:
         """ get the time of the race"""
         try:
             self.h1=self.fullHeader.find("h1")
+        except Exception ,e:
+            print "self.h1=self.fullHeader.find"
+            raise Exception(str(e));
+
+        try:
             self.span=self.h1.find("span", {"class":"rp-raceTimeCourseName__time"})
+        except Exception, e:
+            print "self.span=self.h1.find"
+            raise Exception(str(e))
+        
+        try:
             spanStr=unicode.join(u'\n',map(unicode,self.span))
             colonPos=spanStr.index(':')
             self.raceTime=spanStr[colonPos-1:colonPos+3]
             #print "race time is " + str(self.raceTime)
         except AttributeError:
+            print str(self.span)
             print "no race time found"
 
 

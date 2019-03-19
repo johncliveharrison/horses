@@ -120,10 +120,10 @@ def tryLegacy(date):
     Return the HrefStuffInst"""
     # check if the legacy webscrape file exists
     try:        
-        HrefStuffInst=webscrape_legacy.HrefStuff_legacy()
+        HrefStuffInst_legacy=webscrape_legacy.HrefStuff_legacy()
         """ get the hrefs that must be appended to http://www.racingpost.com/"""
-        fullResultHrefs=HrefStuffInst.getFullResultHrefs(date)
-        return (HrefStuffInst, fullResultHrefs)
+        fullResultHrefs_legacy=HrefStuffInst_legacy.getFullResultHrefs(date)
+        return (HrefStuffInst_legacy, fullResultHrefs_legacy, 1)
     except Exception, e:
         pass
 
@@ -131,8 +131,9 @@ def tryLegacy(date):
         HrefStuffInst=webscrape.HrefStuff()
         """ get the hrefs that must be appended to http://www.racingpost.com/"""
         fullResultHrefs=HrefStuffInst.getFullResultHrefs(date)
-        return (HrefStuffInst, fullResultHrefs)
+        return (HrefStuffInst, fullResultHrefs, 0)
     except Exception, e:
+        print e
         raise Exception("problem getting href in any format")
 
 
@@ -159,7 +160,7 @@ def makeAPoliteDatabase(dateStart, dateEnd, databaseName, test = "false"):
         for fullResultHref in fullResultHrefs:
             webpage=urllib2.urlopen(fullResultHref.get("href"))"""
         try:
-            HrefStuffInst, fullResultHrefs = tryLegacy(date)
+            HrefStuffInst, fullResultHrefs, legacy = tryLegacy(date)
         except Exception, e:
             print e
             
@@ -177,7 +178,10 @@ def makeAPoliteDatabase(dateStart, dateEnd, databaseName, test = "false"):
             fullResult=HrefStuffInst.getFullResultsGrid()
             fullHeader=HrefStuffInst.getFullResultsHeader()
             fullInfo=HrefStuffInst.getFullRaceInfo()
-            ResultStuffInst=webscrape_legacy.ResultStuff(fullResult, fullHeader, fullInfo, date)
+            if legacy:
+                ResultStuffInst=webscrape_legacy.ResultStuff(fullResult, fullHeader, fullInfo, date)
+            else:
+                ResultStuffInst=webscrape.ResultStuff(fullResult, fullHeader, fullInfo, date)
             ResultStuffInst.getAllResultInfo()            
             """ResultStuffInst.getRaceDate()
             ResultStuffInst.getHorseNames()
