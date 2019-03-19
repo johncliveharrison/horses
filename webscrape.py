@@ -252,20 +252,52 @@ class HrefStuff:
         self.url="http://www.racingpost.com/results/" + self.date
         self.soup=self.webscrapePolite(self.url)
         self.divBody=self.soup.body
-        self.rpContainer=self.divBody.find("div", {"class":"rp-results rp-container cf js-contentWrapper"})
-        self.rpResultsWrapper=self.rpContainer.find("div", {"class":"rp-resultsWrapper__content"})
-        self.rpRaceCourse=self.rpResultsWrapper.find("div", {"class":"rp-raceCourse"})
-        self.rpRaceCourseMeeting=self.rpRaceCourse.findAll("section", {"class":"rp-raceCourse__meetingContainer"})
+        try:
+            self.rpContainer=self.divBody.find("div", {"class":"rp-results rp-container cf js-contentWrapper"})
+        except Exception, e:
+            raise Exception(str(e))
+
+        try:
+            self.rpResultsWrapper=self.rpContainer.find("div", {"class":"rp-resultsWrapper__content"})
+        except Exception, e:
+            raise Exception(str(e))
+
+        try:
+            self.rpRaceCourse=self.rpResultsWrapper.find("div", {"class":"rp-raceCourse"})
+        except Exception, e:
+            raise Exception(str(e))
+ 
+        try:
+            self.rpRaceCourseMeeting=self.rpRaceCourse.findAll("section", {"class":"rp-raceCourse__meetingContainer"})
+        except Exception, e:
+            raise Exception(str(e))
         # loop through the race courses for the day
         for rpRaceCourseMeeting in self.rpRaceCourseMeeting:
-            self.rpRaceCoursePanel=rpRaceCourseMeeting.find("div", {"class":"rp-raceCourse__panel"})
+            try:
+                self.rpRaceCoursePanel=rpRaceCourseMeeting.find("div", {"class":"rp-raceCourse__panel"})
+            except Exception, e:
+                raise Exception(str(e))
+
             if not self.rpRaceCoursePanel:
                 continue
-            self.rpRaceCoursePanelContainer=self.rpRaceCoursePanel.findAll("div", {"class":"rp-raceCourse__panel__container"})
+
+            try:
+                self.rpRaceCoursePanelContainer=self.rpRaceCoursePanel.findAll("div", {"class":"rp-raceCourse__panel__container"})
+            except Exception, e:
+                raise Exception(str(e))
+
             # loop through the races held at each course
             for rpRaceCoursePanelContainer in self.rpRaceCoursePanelContainer:
-                self.fullResultHrefs.append(rpRaceCoursePanelContainer.get("href")) 
-                
+                try:
+                    self.rpRaceCoursePanelRace=rpRaceCoursePanelContainer.find("div", {"class":"rp-raceCourse__panel__race"})
+                except Exception, e:
+                    raise Exception(str(e))
+                try:
+                    self.fullResultHrefs.append(self.rpRaceCoursePanelRace.get("href")) 
+                except Exception, e:
+                    raise Exception(str(e))
+
+                        
         """print self.rpRaceCourseMeeting
         for self.fself.rpRaceCoursePanself.rpRaceCoursePanullResultButton in self.fullResultButtons:
             self.fullResultHrefs.append(self.fullResultButton.get("href")) 
@@ -469,9 +501,12 @@ class ResultStuff:
             for self.tr in self.trs:
 
                 self.td=self.tr.find("td", {"class":"rp-horseTable__horseCell"})
-                self.div=self.td.find("div", {"class":"rp-horseTable__horse"})
-                self.div=self.div.find("div")
-                self.horsePrice=self.div.find("span", {"class":"rp-horseTable__horse__price"}).find(text=True).strip()
+                self.horseTableHorseContainer=self.td.find("div", {"class":"rp-horseTable__horseContainer"})
+                self.horseTableInfo=self.horseTableHorseContainer.find("div", {"class":"rp-horseTable__info"})
+
+                self.div=self.horseTableInfo.find("div", {"class":"rp-horseTable__horse"})
+                self.horseDetails=self.div.find("span", {"class":"rp-horseTable__horse__details"})
+                self.horsePrice=self.horseDetails.find("span", {"class":"rp-horseTable__horse__price"}).find(text=True).strip()
                 self.horsePrice=re.sub('[A-Za-z]', '', self.horsePrice)
                 self.odds.append(self.horsePrice)
 
@@ -485,12 +520,20 @@ class ResultStuff:
         """if there are no horsenames available then do nothing"""
         try:
             self.bodys=self.fullResult.find("tbody")
+        except Exception:
+            print "tbody not found"
+        try:
             self.trs=self.bodys.findAll("tr", {"class":"rp-horseTable__mainRow"})
+        except Exception:
+            print "horseTable__mainRow not found"
+        try:
             for self.tr in self.trs:
-
                 self.td=self.tr.find("td", {"class":"rp-horseTable__horseCell"})
-                self.div=self.td.find("div", {"class":"rp-horseTable__horse"})
-                self.div=self.div.find("div")
+                self.horseTableHorseContainer=self.td.find("div", {"class":"rp-horseTable__horseContainer"})
+                self.horseTableInfo=self.horseTableHorseContainer.find("div", {"class":"rp-horseTable__info"})
+
+                self.div=self.horseTableInfo.find("div", {"class":"rp-horseTable__horse"})
+                #self.div=self.div.find("div")
                 self.horseName=self.div.find("a").find(text=True).strip()
                 self.horseNames.append(self.horseName)
             #print self.horseNames

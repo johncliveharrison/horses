@@ -233,8 +233,10 @@ def makeAPoliteFileStash(dateStart, dateEnd, test = "false"):
 
         HrefStuffInst=webscrape.HrefStuff()
         """ get the hrefs that must be appended to http://www.racingpost.com/"""
-        fullResultHrefs=HrefStuffInst.getFullResultHrefs(date)
-
+        try:
+            fullResultHrefs=HrefStuffInst.getFullResultHrefs(date)
+        except Exception, e:
+            print e
         """loop through the number of races and make a ResultStuff object for each"""
         for fullResultHref in fullResultHrefs:
             if not fullResultHref:
