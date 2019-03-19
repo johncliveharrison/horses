@@ -9,6 +9,7 @@ from sqlstuff2 import SqlStuff2
 import datetime
 #import os.path    
 import webscrape
+import webscrape_legacy
 import time
 from common import daterange
     
@@ -113,7 +114,29 @@ def makeATestcard(date):
 
     return (horseName, jockeyName, raceLength, weights, goings, draws, trainers, todaysRaceTimes, todaysRaceVenues)    
 
-        
+
+def tryLegacy(date):
+    """try the legacy result format and if it fails try the current. 
+    Return the HrefStuffInst"""
+    # check if the legacy webscrape file exists
+    try:        
+        HrefStuffInst=webscrape_legacy.HrefStuff_legacy()
+        """ get the hrefs that must be appended to http://www.racingpost.com/"""
+        fullResultHrefs=HrefStuffInst.getFullResultHrefs(date)
+        return (HrefStuffInst, fullResultHrefs)
+    except Exception, e:
+        pass
+
+    try:        
+        HrefStuffInst=webscrape.HrefStuff()
+        """ get the hrefs that must be appended to http://www.racingpost.com/"""
+        fullResultHrefs=HrefStuffInst.getFullResultHrefs(date)
+        return (HrefStuffInst, fullResultHrefs)
+    except Exception, e:
+        raise Exception("problem getting href in any format")
+
+
+
 def makeAPoliteDatabase(dateStart, dateEnd, databaseName, test = "false"):
     """ the polite database is based on the original database but has the extra fields...
     raceName, raceTime
@@ -135,11 +158,11 @@ def makeAPoliteDatabase(dateStart, dateEnd, databaseName, test = "false"):
         """
         for fullResultHref in fullResultHrefs:
             webpage=urllib2.urlopen(fullResultHref.get("href"))"""
-
-        HrefStuffInst=webscrape.HrefStuff()
-        """ get the hrefs that must be appended to http://www.racingpost.com/"""
-        fullResultHrefs=HrefStuffInst.getFullResultHrefs(date)
-
+        try:
+            HrefStuffInst, fullResultHrefs = tryLegacy(date)
+        except Exception, e:
+            print e
+            
         """loop through the number of races and make a ResultStuff object for each"""
         for fullResultHref in fullResultHrefs:
             if not fullResultHref:
@@ -154,7 +177,7 @@ def makeAPoliteDatabase(dateStart, dateEnd, databaseName, test = "false"):
             fullResult=HrefStuffInst.getFullResultsGrid()
             fullHeader=HrefStuffInst.getFullResultsHeader()
             fullInfo=HrefStuffInst.getFullRaceInfo()
-            ResultStuffInst=webscrape.ResultStuff(fullResult, fullHeader, fullInfo, date)
+            ResultStuffInst=webscrape_legacy.ResultStuff(fullResult, fullHeader, fullInfo, date)
             ResultStuffInst.getAllResultInfo()            
             """ResultStuffInst.getRaceDate()
             ResultStuffInst.getHorseNames()

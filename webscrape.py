@@ -19,18 +19,25 @@ class HrefStuff:
        # self.jockey=[]
     
 
-    def webscrapePolite(self, href):
+    def webscrapePolite(self, href, verbose=1, test=1):
         """ check to see if this page already has been collected and is in the results folder
         if it hasn't been read previously then insert a wait between 1s and 5 seconds to
         avoid bombarding the website with requests"""
+        if verbose:
+            print "href = " + str(href)
         href_replace = href.replace("http://www.","")
         href_replace = href_replace.replace(".", "_")
         href_replace = href_replace.replace("/", "_")
+        if verbose:
+            print "Look for file"
+            print str(href_replace)
         if os.path.isfile("horses_local/"+href_replace+".txt"):
             f=open("horses_local/"+href_replace+".txt", 'r').read()
             self.soup = BeautifulSoup(f)
             #print "from file"
         else:
+            if test==1:
+                sys.exit()
             waitint=randint(10,15)
             #time.sleep(waitint)
             opener = urllib2.build_opener()
