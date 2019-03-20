@@ -69,6 +69,7 @@ def SumSquareError(Actual, Desired):
 def neuralNetPrepTrain(databaseNames, date=-1):
     # The first thing that we need to do is get all horses from the database
     horses=[]
+    netFilename = "net"
     databaseNamesList=map(str, databaseNames.strip('[]').split(','))
     NeuralNetworkStuffInst=NeuralNetworkStuff()
     SqlStuffInst=SqlStuff2()
@@ -77,8 +78,10 @@ def neuralNetPrepTrain(databaseNames, date=-1):
         print "databaseName is " + str(databaseName)
         SqlStuffInst.connectDatabase(databaseName)
         horses=horses + SqlStuffInst.getAllTable(date=date)#[0:1000]
+        netFilename = netFilename + str(databaseName)
+    netFilename = netFilename + ".xml"
 
-    dataPrepStuffInst=dataPrepStuff(horses)
+    dataPrepStuffInst=dataPrepStuff(horses, databaseNamesList)
     #dataPrepStuffInst.subReduce5s()
     # correlation checks
     # is there a correelation between the best jockey and the winner
@@ -109,39 +112,20 @@ def neuralNetPrepTrain(databaseNames, date=-1):
     net=buildNetwork(len(trndata['input'][0]), 3, 7, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
     trainer=BackpropTrainer(net,trndata, momentum=0.1, verbose=True, learningrate=0.1)
     # number of attempts to get training to converge
-    for jj in range(0, 100):
-        if os.path.exists('filename.xml'):
-            print "found network training file"
-            net = NetworkReader.readFrom('filename.xml') 
-            break
 
-        print "training iteration " + str(jj*10)
-        
-        # number of iterations in the training        
-        trained=False
-        for ii in range(0, 10):
-            aux=trainer.train() #UntilConvergence(dataset=DS)
-            #if aux < 0.03: #0.038999: # and tstresult < 0.001:
-            #    print net
-            #    print net.params
-            #    params = net.params
-            #    print "training successful"
-            #    trained=True
-            #    break;
-                
-            if  jj > 15:
-                print "skip race due to inablility to converge during training"
-                skipFileWrite=1
-                trained=True
-                break
-        if trained:
-            break
+    if os.path.exists(netFilename):
+        print "found network training file"
+        net = NetworkReader.readFrom(netFilename) 
+        #break
+    else:
+        aux=trainer.trainUntilConvergence(dataset=DS, maxEpochs=None, verbose=True, continueEpochs=10, validationProportion=0.25)
+    
     mse=trainer.testOnData(dataset=tstdata)
     print "Mean Squared Error = " + str(mse)
 
     #sys.exit()
     # save the net params
-    NetworkWriter.writeToFile(net, 'filename.xml')
+    NetworkWriter.writeToFile(net, netFilename)
 
     return net, dataPrepStuffInst
 

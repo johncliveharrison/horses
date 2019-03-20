@@ -8,9 +8,16 @@ from sqlstuff2 import SqlStuff2
 
 class dataPrepStuff:
       
-    def __init__(self, horses):
+    def __init__(self, horses, databaseNamesList):
         """initialise the class object"""
         self.horses=horses
+        self.minMaxJockeyListFilename = "minMaxJockeyList_"
+        self.minMaxTrainerListFilename = "minMaxTrainerList_"
+        for databaseName in databaseNamesList:
+            self.minMaxJockeyListFilename = self.minMaxJockeyListFilename + str(databaseName)
+            self.minMaxTrainerListFilename = self.minMaxTrainerListFilename + str(databaseName)
+        self.minMaxJockeyListFilename = self.minMaxJockeyListFilename + ".mm"
+        self.minMaxTrainerListFilename = self.minMaxTrainerListFilename + ".mm"
 
     def convertRaceLengthMetres(self, distance):
         """convert the mixed letters and numbers of the distance to meters"""
@@ -156,9 +163,9 @@ class dataPrepStuff:
         self.minJockey=100000
         self.maxJockey=0
         
-        if os.path.exists('minMaxJockeyList'):
-            print "reading jockeys from file in minmaxJockey"
-            with open ('minMaxJockeyList', 'rb') as fp:
+        if os.path.exists(self.minMaxJockeyListFilename):
+            print "reading jockeys from file in " + self.minMaxJockeyListFilename
+            with open (self.minMaxJockeyListFilename, 'rb') as fp:
                 self.jockeyPerf = pickle.load(fp)
 
         if not self.jockeyPerf:
@@ -197,7 +204,7 @@ class dataPrepStuff:
             if meanFinishes < self.minJockey:
                 self.minJockey=meanFinishes
 
-        with open('minMaxJockeyList', 'wb') as fp:
+        with open(self.minMaxJockeyListFilename, 'wb') as fp:
             pickle.dump(self.jockeyPerf, fp)
 
 
@@ -239,9 +246,9 @@ class dataPrepStuff:
         self.minTrainer=100000
         self.maxTrainer=0
         
-        if os.path.exists('minMaxTrainerList'):
-            print "reading trainers from file in minmaxTrainer"
-            with open ('minMaxTrainerList', 'rb') as fp:
+        if os.path.exists(self.minMaxTrainerListFilename):
+            print "reading trainers from file " + self.minMaxTrainerListFilename
+            with open (self.minMaxTrainerListFilename, 'rb') as fp:
                 self.trainerPerf = pickle.load(fp)
 
         if not self.trainerPerf:
@@ -280,7 +287,7 @@ class dataPrepStuff:
                 self.minTrainer=meanFinishes
 
         
-        with open('minMaxTrainerList', 'wb') as fp:
+        with open(self.minMaxTrainerListFilename, 'wb') as fp:
             pickle.dump(self.trainerPerf, fp)
 
 
