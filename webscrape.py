@@ -485,9 +485,25 @@ class ResultStuff:
         ref=10000
         minutes=0
         seconds=0
-        self.ul=self.fullInfo.find("ul")
-        self.li=self.ul.find("li")
-        self.span=self.li.findAll("span", {"class":"rp-raceInfo__value"})[0].find(text=True).strip()
+        try:
+            self.ul=self.fullInfo.find("ul")
+        except Exception, e:
+            print "missing time - probable void race"
+            self.finishingTime=0
+            raise Exception(str(e))
+        try:
+            self.li=self.ul.find("li")
+        except:
+            print "missing time - probable void race"
+            self.finishingTime=0
+            raise Exception(str(e))
+        try:
+            self.span=self.li.findAll("span", {"class":"rp-raceInfo__value"})[0].find(text=True).strip()
+        except:
+            print "missing time - probable void race"
+            self.finishingTime=0
+            raise Exception(str(e))
+            
         #print "race finish time is " + str(self.span)
         self.raceFinishTime=str(self.span)
         for ii, self.info in enumerate(self.raceFinishTime.split()):
@@ -696,7 +712,10 @@ class ResultStuff:
         self.getNumberOfHorses()
         self.getWeightAgeJockeyTrainer()
         self.getRaceLengthGoingJumps()
-        self.getRaceFinishingTimes()
+        try:
+            self.getRaceFinishingTimes()
+        except:
+            pass
         if self.numberOfHorses != len(self.jockeys):
             print self.numberOfHorses
             print self.jockeys
