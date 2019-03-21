@@ -12,6 +12,29 @@ import webscrape
 import webscrape_legacy
 import time
 from common import daterange
+
+def tryLegacy(date):
+    """try the legacy result format and if it fails try the current. 
+    Return the HrefStuffInst"""
+    # check if the legacy webscrape file exists
+    try:        
+        HrefStuffInst_legacy=webscrape_legacy.HrefStuff_legacy()
+        """ get the hrefs that must be appended to http://www.racingpost.com/"""
+        fullResultHrefs_legacy=HrefStuffInst_legacy.getFullResultHrefs(date)
+        return (HrefStuffInst_legacy, fullResultHrefs_legacy, 1)
+    except Exception, e:
+        print e;
+        pass
+
+    try:        
+        HrefStuffInst=webscrape.HrefStuff()
+        """ get the hrefs that must be appended to http://www.racingpost.com/"""
+        fullResultHrefs=HrefStuffInst.getFullResultHrefs(date)
+        return (HrefStuffInst, fullResultHrefs, 0)
+    except Exception, e:
+        print e
+        raise Exception("problem getting href in any format")
+
     
 def makeATestcardFromResults(date):
     """ This function will make a test card from the results.  This is required as the actual
@@ -19,11 +42,13 @@ def makeATestcardFromResults(date):
     a race"""
     print date
     ResultStuffInsts=[]       
-    
-    HrefStuffInst=webscrape.HrefStuff()
-    """ get the hrefs that must be appended to http://www.racingpost.com/"""
-    fullResultHrefs=HrefStuffInst.getFullResultHrefs(date)
 
+    try:
+        HrefStuffInst, fullResultHrefs, legacy = tryLegacy(date)
+    except Exception, e:
+        print e
+
+    print "legacy is " + str(legacy)
     horseName=[]       
     jockeyName=[]       
     trainerName=[]
@@ -49,7 +74,10 @@ def makeATestcardFromResults(date):
         fullResult=HrefStuffInst.getFullResultsGrid()
         fullHeader=HrefStuffInst.getFullResultsHeader()
         fullInfo=HrefStuffInst.getFullRaceInfo()
-        ResultStuffInst=webscrape.ResultStuff(fullResult, fullHeader, fullInfo, date)
+        if legacy:
+            ResultStuffInst=webscrape_legacy.ResultStuff(fullResult, fullHeader, fullInfo, date)
+        else:
+            ResultStuffInst=webscrape.ResultStuff(fullResult, fullHeader, fullInfo, date)
         ResultStuffInst.getAllResultInfo()            
         ResultStuffInsts.append(ResultStuffInst)
     """loop through the ResultStuff class objects and add them to the database"""        
@@ -115,26 +143,6 @@ def makeATestcard(date):
     return (horseName, jockeyName, raceLength, weights, goings, draws, trainers, todaysRaceTimes, todaysRaceVenues)    
 
 
-def tryLegacy(date):
-    """try the legacy result format and if it fails try the current. 
-    Return the HrefStuffInst"""
-    # check if the legacy webscrape file exists
-    try:        
-        HrefStuffInst_legacy=webscrape_legacy.HrefStuff_legacy()
-        """ get the hrefs that must be appended to http://www.racingpost.com/"""
-        fullResultHrefs_legacy=HrefStuffInst_legacy.getFullResultHrefs(date)
-        return (HrefStuffInst_legacy, fullResultHrefs_legacy, 1)
-    except Exception, e:
-        pass
-
-    try:        
-        HrefStuffInst=webscrape.HrefStuff()
-        """ get the hrefs that must be appended to http://www.racingpost.com/"""
-        fullResultHrefs=HrefStuffInst.getFullResultHrefs(date)
-        return (HrefStuffInst, fullResultHrefs, 0)
-    except Exception, e:
-        print e
-        raise Exception("problem getting href in any format")
 
 
 
@@ -264,9 +272,11 @@ def makeAResult(date):
     for fullResultHref in fullResultHrefs:
     webpage=urllib2.urlopen(fullResultHref.get("href"))"""
 
-    HrefStuffInst=webscrape.HrefStuff()
-    """ get the hrefs that must be appended to http://www.racingpost.com/"""
-    fullResultHrefs=HrefStuffInst.getFullResultHrefs(date)
+    try:
+        HrefStuffInst, fullResultHrefs, legacy = tryLegacy(date)
+    except Exception, e:
+        print e
+
 
     """loop through the number of races and make a ResultStuff object for each"""
     for fullResultHref in fullResultHrefs:
@@ -282,7 +292,10 @@ def makeAResult(date):
         fullResult=HrefStuffInst.getFullResultsGrid()
         fullHeader=HrefStuffInst.getFullResultsHeader()
         fullInfo=HrefStuffInst.getFullRaceInfo()
-        ResultStuffInst=webscrape.ResultStuff(fullResult, fullHeader, fullInfo, date)
+        if legacy:
+            ResultStuffInst=webscrape_legacy.ResultStuff(fullResult, fullHeader, fullInfo, date)
+        else:
+            ResultStuffInst=webscrape.ResultStuff(fullResult, fullHeader, fullInfo, date)
         ResultStuffInst.getAllResultInfo()            
         """ResultStuffInst.getRaceDate()
         ResultStuffInst.getHorseNames()
