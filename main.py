@@ -404,8 +404,11 @@ def runTestDateRange(dateStart, dateEnd, databaseNames, hiddenExplore=1):
         numberOfRaces=len(predicteds)
         for idx, predicted in enumerate(predicteds):
             horseNumbers[len(predicted)]+=1
-            if predicted[0]==actuals[idx].horseNames[0]:
-                horseNumbersWins[len(predicted)]+=1
+            try:
+                if predicted[0]==actuals[idx].horseNames[0]:
+                    horseNumbersWins[len(predicted)]+=1
+            except:
+                pass
 
             for jdx, predict in enumerate(predicted):
                 try:
