@@ -4,12 +4,21 @@ NEW
 find out how often the horse with lowest odds wins / second lowest etc.
 
 run the correlation stuff again to the results
-
-try using only one hidden layer witn len(input) + len(output) / 2 nodes
+add correlation for the best jockey + best trainer
+add correlation for the best jockey + draw < 5
+add correlation for the best trainer + draw < 5
+add average odds of best jockey/trainer/horse winner in correlation functions
 
 Can we use something other than feedforward (the other sort) for learning form?
 
 
+DONE
+try using only one hidden layer witn len(input) + len(output) / 2 nodes
+  -- slightly worse result but only tested on one month
+
+do legacy2 format for the 2016 results
+
+------------------------------------------------------------------------------
 
 
 ###normalise the outputs for each horse (place-mean)/std-deviation##### -- see later point about normalisation
