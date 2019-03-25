@@ -10,6 +10,7 @@ import datetime
 #import os.path    
 import webscrape
 import webscrape_legacy
+import webscrape_legacy2
 import time
 from common import daterange
 
@@ -22,6 +23,15 @@ def tryLegacy(date):
         """ get the hrefs that must be appended to http://www.racingpost.com/"""
         fullResultHrefs_legacy=HrefStuffInst_legacy.getFullResultHrefs(date)
         return (HrefStuffInst_legacy, fullResultHrefs_legacy, 1)
+    except Exception, e:
+        print e;
+        pass
+
+    try:        
+        HrefStuffInst_legacy2=webscrape_legacy2.HrefStuff_legacy2()
+        """ get the hrefs that must be appended to http://www.racingpost.com/"""
+        fullResultHrefs_legacy2=HrefStuffInst_legacy2.getFullResultHrefs(date)
+        return (HrefStuffInst_legacy2, fullResultHrefs_legacy2, 2)
     except Exception, e:
         print e;
         pass
@@ -74,8 +84,10 @@ def makeATestcardFromResults(date):
         fullResult=HrefStuffInst.getFullResultsGrid()
         fullHeader=HrefStuffInst.getFullResultsHeader()
         fullInfo=HrefStuffInst.getFullRaceInfo()
-        if legacy:
+        if legacy == 1:
             ResultStuffInst=webscrape_legacy.ResultStuff(fullResult, fullHeader, fullInfo, date)
+        elif legacy == 2:
+            ResultStuffInst=webscrape_legacy2.ResultStuff(fullResult, fullHeader, fullInfo, date)
         else:
             ResultStuffInst=webscrape.ResultStuff(fullResult, fullHeader, fullInfo, date)
         ResultStuffInst.getAllResultInfo()            
@@ -186,8 +198,10 @@ def makeAPoliteDatabase(dateStart, dateEnd, databaseName, test = "false"):
             fullResult=HrefStuffInst.getFullResultsGrid()
             fullHeader=HrefStuffInst.getFullResultsHeader()
             fullInfo=HrefStuffInst.getFullRaceInfo()
-            if legacy:
+            if legacy == 1:
                 ResultStuffInst=webscrape_legacy.ResultStuff(fullResult, fullHeader, fullInfo, date)
+            elif legacy == 2:
+                ResultStuffInst=webscrape_legacy2.ResultStuff(fullResult, fullHeader, fullInfo, date)
             else:
                 ResultStuffInst=webscrape.ResultStuff(fullResult, fullHeader, fullInfo, date)
             ResultStuffInst.getAllResultInfo()            
@@ -292,8 +306,10 @@ def makeAResult(date):
         fullResult=HrefStuffInst.getFullResultsGrid()
         fullHeader=HrefStuffInst.getFullResultsHeader()
         fullInfo=HrefStuffInst.getFullRaceInfo()
-        if legacy:
+        if legacy == 1:
             ResultStuffInst=webscrape_legacy.ResultStuff(fullResult, fullHeader, fullInfo, date)
+        elif legacy == 2:
+            ResultStuffInst=webscrape_legacy2.ResultStuff(fullResult, fullHeader, fullInfo, date)
         else:
             ResultStuffInst=webscrape.ResultStuff(fullResult, fullHeader, fullInfo, date)
         ResultStuffInst.getAllResultInfo()            
