@@ -104,8 +104,8 @@ class dataPrepStuff:
         self.maxHorse=0
         for ii, horseEntry in enumerate(horses):
             rides=self.getHorse(horseEntry)
-            if len(rides) < 5:
-                print "for horse " + str(horseEntry) + " there are " + str(len(rides))
+            #if len(rides) < 5:
+               # print "for horse " + str(horseEntry) + " there are " + str(len(rides))
             finish=0.0
             for ride in rides:
                 OldRange = (ride[6] - 1)
@@ -788,10 +788,10 @@ class dataPrepStuff:
 
         # first create a list of all the race name/time/date
         races=[]
-        horseNameTimeDate= [self.horses[0][9], self.horses[0][10], self.horses[0][11]]
+        horseNameTimeDate= [self.horses[0][6], self.horses[0][9], self.horses[0][10], self.horses[0][11]]
         races.append(horseNameTimeDate)
         for horse in self.horses:
-            horseNameTimeDate= [horse[9], horse[10], horse[11]]
+            horseNameTimeDate= [horse[6], horse[9], horse[10], horse[11]]
             foundRace=False
             for race in races:
                 if horseNameTimeDate == race:
@@ -799,16 +799,20 @@ class dataPrepStuff:
                     break
             if foundRace == False:
                 races.append(horseNameTimeDate)
-                    
+
+        print "Number of races is " + str(len(races))
         raceHorses=[]
-        for race in races:
+        for ii, race in enumerate(races):
             raceHorse=[]
             for horse in self.horses:
-                horseNameTimeDate= [horse[9], horse[10], horse[11]]
+                horseNameTimeDate= [horse[6], horse[9], horse[10], horse[11]]
                 if horseNameTimeDate == race:
                     raceHorse.append(horse)
+                    if len(raceHorse) == horse[6]:
+                        break
                 
             raceHorses.append(raceHorse)
+            #print "race " + str(ii) + " of " + str(len(races))
 
         self.raceHorses=raceHorses
         return raceHorses
@@ -827,11 +831,11 @@ class dataPrepStuff:
             bestHorse=0
             bestHorsePos=0
             for horse in raceHorse:
-                print str(horse[1]) + ' ' + str(self.normaliseHorseMinMax(horse=horse)) + ' ' + str(bestHorse)
+                #print str(horse[1]) + ' ' + str(self.normaliseHorseMinMax(horse=horse)) + ' ' + str(bestHorse)
                 if bestHorse < self.normaliseHorseMinMax(horse=horse):
                     bestHorse=self.normaliseHorseMinMax(horse=horse)
                     bestHorsePos=horse[4]
-            print "At " + str(horse[9]) + str(horse[10]) + str(horse[11]) + "best Horse came " + str(bestHorsePos)
+            #print "At " + str(horse[9]) + str(horse[10]) + str(horse[11]) + "best Horse came " + str(bestHorsePos)
             
             if bestHorsePos == 1:
                 tallyBest=tallyBest+1
@@ -846,6 +850,57 @@ class dataPrepStuff:
         print "the average number of horses per race was " + str(len(self.horses)/len(self.raceHorses))
 
 
+    def correlateJockeyTrainer(self):
+        """ loop through the races and check to see if the 
+        best jockey won"""
+
+
+        # first need to find how good each trainer is and put the result in
+        # an array that is in the same order as the horse in the races.
+        self.minMaxTrainer()
+
+        # first need to find how good each jockey is and put the result in
+        # an array that is in the same order as the horse in the races.
+        self.minMaxJockey()
+        tallyBest=0
+        tallySecond=0
+        tallyOther=0
+        bestJockeyTrainer=0
+        for raceHorse in self.raceHorses:
+            bestJockey=0
+            bestJockeyPos=0
+            bestTrainer=0
+            bestTrainerPos=0
+            bestJockeyHorse=raceHorse[0]
+            bestTrainerHorse=raceHorse[0]
+            for horse in raceHorse:
+                if bestJockey < self.normaliseJockeyMinMax(horse=horse):
+                    bestJockey=self.normaliseJockeyMinMax(horse=horse)
+                    bestJockeyPos=horse[4]
+                    bestJockeyHorse=horse
+                if bestTrainer < self.normaliseTrainerMinMax(horse=horse):
+                    bestTrainer=self.normaliseTrainerMinMax(horse=horse)
+                    bestTrainerPos=horse[4]
+                    bestTrainerHorse=horse
+            #print "At " + str(horse[9]) + str(horse[10]) + str(horse[11]) + "best Jockey came " + str(bestJockeyPos)
+            if bestJockeyHorse[1] == bestTrainerHorse[1]:
+                bestJockeyTrainer=bestJockeyTrainer+1
+                if bestJockeyPos == 1:
+                    print str(bestJockeyHorse)
+                    tallyBest=tallyBest+1
+                if bestJockeyPos == 2:
+                    tallySecond=tallySecond+1
+                if bestJockeyPos > 2:
+                    tallyOther=tallyOther+1
+
+        print "from " + str(len(self.raceHorses)) + " races, the best jockey rode the best trainers horse" + str(bestJockeyTrainer) + " times"                    
+        print "from " + str(len(self.raceHorses)) + " races, the best jockey and trainer won " + str(tallyBest) + " times"                    
+        print "from " + str(len(self.raceHorses)) + " races, the best jockey and trainer came second " + str(tallySecond) + " times"
+        print "from " + str(len(self.raceHorses)) + " races, the best jockey and trainer was third or worse " + str(tallyOther) + " times"
+        print "the average number of horses per race was " + str(len(self.horses)/len(self.raceHorses))
+
+
+        
 
     def correlateJockey(self):
         """ loop through the races and check to see if the 
@@ -864,7 +919,7 @@ class dataPrepStuff:
                 if bestJockey < self.normaliseJockeyMinMax(horse=horse):
                     bestJockey=self.normaliseJockeyMinMax(horse=horse)
                     bestJockeyPos=horse[4]
-            print "At " + str(horse[9]) + str(horse[10]) + str(horse[11]) + "best Jockey came " + str(bestJockeyPos)
+            #print "At " + str(horse[9]) + str(horse[10]) + str(horse[11]) + "best Jockey came " + str(bestJockeyPos)
             
             if bestJockeyPos == 1:
                 tallyBest=tallyBest+1
@@ -897,7 +952,7 @@ class dataPrepStuff:
                 if bestTrainer < self.normaliseTrainerMinMax(horse=horse):
                     bestTrainer=self.normaliseTrainerMinMax(horse=horse)
                     bestTrainerPos=horse[4]
-            print "At " + str(horse[9]) + str(horse[10]) + str(horse[11]) + "best Trainer came " + str(bestTrainerPos)
+            #print "At " + str(horse[9]) + str(horse[10]) + str(horse[11]) + "best Trainer came " + str(bestTrainerPos)
             
             if bestTrainerPos == 1:
                 tallyBest=tallyBest+1

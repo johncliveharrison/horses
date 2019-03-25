@@ -1,6 +1,6 @@
 import time
 from commands import makeATestcard, makeAResult, makeATestcardFromResults
-from neuralnetworks import NeuralNetwork
+#from neuralnetworks import NeuralNetwork
 from pastperf import pastPerf
 import sys
 import os.path
@@ -10,7 +10,7 @@ import datetime
 from sqlstuff2 import SqlStuff2
 
 from pybrain.utilities import percentError
-from neuralnetworkstuff import NeuralNetworkStuff
+#from neuralnetworkstuff import NeuralNetworkStuff
 from dataprepstuff import dataPrepStuff
 from pybrain.datasets import SupervisedDataSet
 from pybrain.supervised.trainers import BackpropTrainer
@@ -71,33 +71,25 @@ def neuralNetPrepTrain(databaseNames, date=-1):
     horses=[]
     netFilename = "net"
     databaseNamesList=map(str, databaseNames.strip('[]').split(','))
-    NeuralNetworkStuffInst=NeuralNetworkStuff()
+    #NeuralNetworkStuffInst=NeuralNetworkStuff()
     SqlStuffInst=SqlStuff2()
+
     print "databaseNamesList is " + str(databaseNamesList)
     for databaseName in databaseNamesList:
         print "databaseName is " + str(databaseName)
         SqlStuffInst.connectDatabase(databaseName)
         horses=horses + SqlStuffInst.getAllTable(date=date)#[0:1000]
         netFilename = netFilename + str(databaseName)
-    netFilename = netFilename + ".xml"
+
 
     dataPrepStuffInst=dataPrepStuff(horses, databaseNamesList)
-    #dataPrepStuffInst.subReduce5s()
-    # correlation checks
-    # is there a correelation between the best jockey and the winner
-    #dataPrepStuffInst.getHorsesInRaces()
-    #dataPrepStuffInst.correlateJockey()
-    #dataPrepStuffInst.correlateTrainer()
-    #dataPrepStuffInst.correlateHorse()
-    #dataPrepStuffInst.correlateDraw()
-    #dataPrepStuffInst.correlateWeight()
 
     # remove any unwanted entries from the database in memory
     #dataPrepStuffInst.subReduceDraw()
     # next we need to normalise the database in memory
     netInputs=dataPrepStuffInst.subNormaliseInputs()
     netOutputs=dataPrepStuffInst.subNormaliseOutputs()
-
+    
     #for ii in range(2,10):
     print "create the DS"
     print str(len(netInputs))
@@ -109,8 +101,14 @@ def neuralNetPrepTrain(databaseNames, date=-1):
     trndata=DS
     tstdata=DS
 
-    net=buildNetwork(len(trndata['input'][0]), 3, 7, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
-    trainer=BackpropTrainer(net,trndata, momentum=0.1, verbose=True, learningrate=0.1)
+    # number of hidden layers and nodes
+    hiddenLayer0=(len(trndata['input'][0])+1)/2
+    hiddenLayer1=0
+
+    netFilename = netFilename + "_" + str(hiddenLayer0) + "_" + str(hiddenLayer1) + ".xml"
+    
+    net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
+    trainer=BackpropTrainer(net,trndata, momentum=0.1, verbose=True, learningrate=0.01)
     # number of attempts to get training to converge
 
     if os.path.exists(netFilename):
@@ -118,7 +116,7 @@ def neuralNetPrepTrain(databaseNames, date=-1):
         net = NetworkReader.readFrom(netFilename) 
         #break
     else:
-        aux=trainer.trainUntilConvergence(dataset=DS, maxEpochs=None, verbose=True, continueEpochs=10, validationProportion=0.25)
+        aux=trainer.trainUntilConvergence(dataset=DS, maxEpochs=10, verbose=True, continueEpochs=2, validationProportion=0.25)
     
     mse=trainer.testOnData(dataset=tstdata)
     print "Mean Squared Error = " + str(mse)
@@ -357,6 +355,36 @@ def neuralNet(net, dataPrepStuffInst, filenameAppend, afterResult = "noResult", 
             f.close()
 
     return returnSortHorse, returnResults, moneypot, moneypot2, horseNumberWinningsLocal, oddsWinnings
+
+def runCorrelation(databaseNames):
+    """ run the correlation functions to see what should be used as
+    inputs to the neural net"""
+    # The first thing that we need to do is get all horses from the database
+    horses=[]
+    databaseNamesList=map(str, databaseNames.strip('[]').split(','))
+    #NeuralNetworkStuffInst=NeuralNetworkStuff()
+    SqlStuffInst=SqlStuff2()
+    date="2030-01-01"
+
+    print "databaseNamesList is " + str(databaseNamesList)
+    for databaseName in databaseNamesList:
+        print "databaseName is " + str(databaseName)
+        SqlStuffInst.connectDatabase(databaseName)
+        horses=horses + SqlStuffInst.getAllTable(date=date)#[0:1000]
+
+    dataPrepStuffInst=dataPrepStuff(horses, databaseNamesList)
+    #dataPrepStuffInst.subReduce5s()
+    # correlation checks
+    # is there a correelation between the best jockey and the winner
+    dataPrepStuffInst.getHorsesInRaces()
+    dataPrepStuffInst.correlateJockeyTrainer()
+    dataPrepStuffInst.correlateJockey()
+    dataPrepStuffInst.correlateTrainer()
+    dataPrepStuffInst.correlateHorse()
+    dataPrepStuffInst.correlateDraw()
+    dataPrepStuffInst.correlateWeight()
+
+
 
 def runNeuralNet(date, databaseNames, number=1, horseLimit=20):
     """ date is the date to use.  Number is the number of times to train the neural net (different

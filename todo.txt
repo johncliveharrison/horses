@@ -1,5 +1,17 @@
 NEW
 
+2019
+find out how often the horse with lowest odds wins / second lowest etc.
+
+run the correlation stuff again to the results
+
+try using only one hidden layer witn len(input) + len(output) / 2 nodes
+
+Can we use something other than feedforward (the other sort) for learning form?
+
+
+
+
 ###normalise the outputs for each horse (place-mean)/std-deviation##### -- see later point about normalisation
 un-normalise the predicted output to find the placing (result*std-deviation)+mean
 
