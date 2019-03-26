@@ -13,11 +13,23 @@ class dataPrepStuff:
         self.horses=horses
         self.minMaxJockeyListFilename = "minMaxJockeyList_"
         self.minMaxTrainerListFilename = "minMaxTrainerList_"
+        self.minMaxHorseFilename = "minMaxHorse_"
+        self.horsePerfFilename = "horsePerf_"
+        self.maxHorseFilename = "maxHorse_"
+        self.minHorseFilename = "minHorse_"
         for databaseName in databaseNamesList:
             self.minMaxJockeyListFilename = self.minMaxJockeyListFilename + str(databaseName)
             self.minMaxTrainerListFilename = self.minMaxTrainerListFilename + str(databaseName)
+            self.minMaxHorseFilename = self.minMaxHorseFilename + str(databaseName)
+            self.horsePerfFilename = self.horsePerfFilename + str(databaseName)
+            self.maxHorseFilename = self.maxHorseFilename + str(databaseName)
+            self.minHorseFilename = self.minHorseFilename + str(databaseName)
         self.minMaxJockeyListFilename = self.minMaxJockeyListFilename + ".mm"
         self.minMaxTrainerListFilename = self.minMaxTrainerListFilename + ".mm"
+        self.minMaxHorseFilename = self.minMaxHorseFilename + ".mm"
+        self.horsePerfFilename = self.horsePerfFilename + ".mm"
+        self.maxHorseFilename = self.maxHorseFilename + ".mm"
+        self.minHorseFilename = self.minHorseFilename + ".mm"
 
     def convertRaceLengthMetres(self, distance):
         """convert the mixed letters and numbers of the distance to meters"""
@@ -83,10 +95,17 @@ class dataPrepStuff:
             horses=self.horseList            
         except Exception:
             print "self.horseList not found, looking for file"
-            if os.path.exists('subReduceHorseList'):
+            if os.path.exists(self.minMaxHorseFilename):
                 print "reading horses from file in minmaxHorse"
-                with open ('subReduceHorseList', 'rb') as fp:
+                with open (self.minMaxHorseFilename, 'rb') as fp:
                     horses = pickle.load(fp)
+                with open (self.horsePerfFilename, 'rb') as fp:
+                    self.horsePerf = pickle.load(fp)
+                with open (self.maxHorseFilename, 'rb') as fp:
+                    self.maxHorse = pickle.load(fp)
+                with open (self.minHorseFilename, 'rb') as fp:
+                    self.minHorse = pickle.load(fp)
+                    
         if not horses:
             print "subReduceHorseList file not found so create horses in minmaxHorse"
             for horse in self.horses:
@@ -97,9 +116,15 @@ class dataPrepStuff:
                         break
                 if not foundHorse:
                     horses.append(horse[1])
+                    
+            with open(self.minMaxHorseFilename, 'wb') as fp:
+                pickle.dump(horses, fp)
 
         print "There are " + str(len(horses)) + " different horses in the minMaxHorse function"
 
+        if self.horsePerf:
+            return None
+        
         self.minHorse=100000
         self.maxHorse=0
         for ii, horseEntry in enumerate(horses):
@@ -123,6 +148,14 @@ class dataPrepStuff:
             if meanFinishes < self.minHorse:
                 self.minHorse=meanFinishes
 
+        with open(self.horsePerfFilename, 'wb') as fp:
+            pickle.dump(self.horsePerf, fp)
+        with open(self.maxHorseFilename, 'wb') as fp:
+            pickle.dump(self.maxHorse, fp)
+        with open(self.minHorseFilename, 'wb') as fp:
+            pickle.dump(self.minHorse, fp)
+
+                
     def normaliseHorseMinMax(self, horse=-1, horseTest=-1):
         """ normalise the horse performance based on min (worse)
         max(best) values"""

@@ -401,6 +401,257 @@ def runNeuralNet(date, databaseNames, number=1, horseLimit=20):
     #net=0
     #dataPrepStuffInst=0
     neuralNet(net, dataPrepStuffInst, horseLimitStr, "noResult", date)
+
+
+def noNet(dataPrepStuffInst, filenameAppend, afterResult = "noResult", date=time.strftime("%Y-%m-%d"), moneystart = 0.0, moneystart2 = 0.0, horseNumberWinnings=[0]*50, oddsWinnings=[]):
+    horseName=[]
+    jockeyName=[]
+    lengths=[]
+    draws=[]
+    
+    in_loop = True
+
+
+    try:
+        if date >= datetime.datetime.today().strftime('%Y-%m-%d'):
+            print "trying to make a test card from the days test card as date is today or later"
+            horses, jockeys, lengths, weights, goings, draws, trainers, todaysRaceTimes, todaysRaceVenues=makeATestcard(date)
+        else:
+            print "tring to make a test card from past results"
+            horses, jockeys, lengths, weights, goings, draws, trainers, todaysRaceTimes, todaysRaceVenues, odds=makeATestcardFromResults(date)
+    except Exception:
+        print "making a testcard from results failed"
+
+    if afterResult != "noResult":
+        todaysResults=makeAResult(date)
+    print todaysRaceVenues
+    
+
+    moneypot=moneystart
+    moneypot2=moneystart2
+    horseNumberWinningsLocal=horseNumberWinnings
+    returnSortHorse=[]
+    returnPastPerf=[]
+    returnResults=[]
+
+    for raceNo, race in enumerate(horses):
+        numberHorses=len(horses[raceNo])
+        position=[0.0]*numberHorses
+        #basedOn=[]
+        sortList=[]
+        sortDecimal=[]
+        sortHorse=[]
+        skipFileWrite=0
+        # do a quick check on all of the horses in the race
+        SqlStuffInst=SqlStuff2()
+
+        for idx, horse in enumerate(race):
+            errors=0
+            yValues=0
+            bO=0
+            if skipFileWrite==1:
+                break;
+            if len(race) > 40:
+                skipFileWrite=1
+                break;
+             
+            try:
+                # get the result (how good this horse is)
+                result=dataPrepStuffInst.normaliseHorseMinMax(horseTest=horse)
+                
+                sortDecimal, sortList, sortHorse=sortResult(result, str(horse), str(0), 0, sortList, sortDecimal, sortHorse)
+            
+            except Exception, e:
+                print "something not correct in testFunction"
+                #skipFileWrite=1
+
+        if skipFileWrite==0:
+            
+            returnSortHorse.append(sortHorse)
+            if len(sortHorse) > 0 and afterResult !="noResult":
+
+                if sortHorse[0]==todaysResults[raceNo].horseNames[0]:
+
+                    try:
+                        odd_split=todaysResults[raceNo].odds[0].split("/")
+                        moneypot=moneypot+((float(odd_split[0])/float(odd_split[1]))*10)
+                        horseNumberWinningsLocal[len(sortHorse)]+=((float(odd_split[0])/float(odd_split[1]))*10)
+                        odds=float(odd_split[0])/float(odd_split[1])
+                        oddsWinnings.append([len(sortHorse),odds,"win"])
+                        
+                        #break
+                    except ValueError:
+                        print str(todaysResults[raceNo].odds[0]) + " odds were not split properly"
+                    except Exception:
+                        print str(todaysResults[raceNo].odds[0]) + " odds were not split properly but not ValueError"
+                else:
+                    moneypot=moneypot-10.0
+                    horseNumberWinningsLocal[len(sortHorse)]-=10
+                    try:
+                        # find the odds of the horse that we bet on so that it can be added to
+                        # the correct oddsWinnings entry
+                        for idx, resultHorseName in enumerate(todaysResults[raceNo].horseNames):
+                            if sortHorse[0]==resultHorseName:
+                                odd_split=todaysResults[raceNo].odds[idx].split("/")
+                                odds=float(odd_split[0])/float(odd_split[1])
+                                oddsWinnings.append([len(sortHorse),odds,"lose"])
+                    except Exception:
+                        print str(todaysResults[raceNo].odds[0]) + " odds were not split properly"
+
+            temp=0.0
+            temp2=0.0
+            if len(sortHorse) > 1 and afterResult != "noResult":
+                # go through the results to find the odds for our predicted winner
+                for idx, idxHorse in enumerate(todaysResults[raceNo].horseNames):
+                    if sortHorse[0]==idxHorse:
+
+                        odd_split=todaysResults[raceNo].odds[idx].split("/")
+
+                        try:
+                            temp=float(odd_split[0])/float(odd_split[1])
+                       
+                        except ValueError:
+                            print str(todaysResults[raceNo].odds[idx]) + " odds were not split properly"
+                        except Exception:
+                            print str(todaysResults[raceNo].odds[idx]) + " odds were not split properly but not ValueError"
+                    
+                if temp >= 2:
+                    if sortHorse[0]==todaysResults[raceNo].horseNames[0]:
+                        moneypot2=moneypot2+(temp*10)
+                    else:
+                        moneypot2=moneypot2-10;
+                    if sortHorse[0]==todaysResults[raceNo].horseNames[1]:
+                        temp=temp/2
+                        moneypot2=moneypot2+(temp*10)
+                    else:
+                        moneypot2=moneypot2-10;
+                else:
+                    print "No bet for moneypot2"
+
+
+            print "The moneypot so far is " + str(moneypot) + "kr"
+            print "The moneypot2 so far is " + str(moneypot2) + "kr"
+            for ii, hnwl in enumerate(horseNumberWinningsLocal):
+                print "The winnings from races with " + str(ii) + " horses is " + str(hnwl) + " kr"
+            
+            if afterResult != "noResult":
+                returnResults.append(todaysResults[raceNo])
+
+            # print sortList
+            #position.sort()
+            f = open("results/"+str(date)+str(filenameAppend),'a')
+            original = sys.stdout
+            sys.stdout = Tee(sys.stdout, f)
+            
+            print str(raceNo) + ' ' + str(todaysRaceVenues[raceNo]) + ' ' + str(todaysRaceTimes[raceNo]) 
+            for ii, pos in enumerate(sortList):
+                #splitpos=re.split(r'(\d+)', pos)
+                try:
+                    if afterResult == "noResult":
+                        print str(ii+1) + pos 
+                    else:
+                        print str(ii+1) + pos + '       ' + str(todaysResults[raceNo].horseNames[ii]) + ' ' + str(todaysResults[raceNo].odds[ii])
+                except IndexError:
+                    """if there are none finishers this will be the exception"""
+            #use the original
+            sys.stdout = original
+            print "This won't appear on file"  # Only on stdout
+            f.close()
+
+    return returnSortHorse, returnResults, moneypot, moneypot2, horseNumberWinningsLocal, oddsWinnings
+
+
+    
+
+def runTestDateRangeNoNet(dateStart, dateEnd, databaseNames, hiddenExplore=1):
+    """ run neuralNet for this daterange.  Get the actual results.  Compare them
+    How many times did the winner win, second place win and third place win.  If 
+    we add faveourite to the database then we can see how often the favorite wins
+    and also use this as a parameter to the neuralNet"""
+    dateStartSplit=dateStart.split('-')
+    dateEndSplit=dateEnd.split('-')
+    moneypot = 0.0
+    moneypot2 = 0.0
+
+    horseNumbers=[0]*50
+    horseNumbersWins=[0]*50
+    horseNumberWinnings=[0]*50
+    oddsWinnings=[]
+
+    predictedWinner=[]
+    numberOfRacesArray=[]
+
+
+    # The first thing that we need to do is get all horses from the database
+    horses=[]
+    databaseNamesList=map(str, databaseNames.strip('[]').split(','))
+    SqlStuffInst=SqlStuff2()
+
+    print "databaseNamesList is " + str(databaseNamesList)
+    for databaseName in databaseNamesList:
+        print "databaseName is " + str(databaseName)
+        SqlStuffInst.connectDatabase(databaseName)
+        horses=horses + SqlStuffInst.getAllTable(date=dateStart)#[0:1000]
+
+    dataPrepStuffInst=dataPrepStuff(horses, databaseNamesList)
+    # first need to find how good each horse is and put the result in
+    # an array that is in the same order as the horse in the races.
+    dataPrepStuffInst.minMaxHorse()
+
+    
+    for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2]))):
+
+        date=time.strftime("%Y-%m-%d", single_date.timetuple())       
+        print date
+        winner=[0]*10
+        
+        predicteds, actuals, moneypot, moneypot2, horseNumberWinnings, oddsWinnings = noNet(dataPrepStuffInst, "testDate", "Result", date, moneystart=moneypot, moneystart2=moneypot2, horseNumberWinnings=horseNumberWinnings, oddsWinnings=oddsWinnings)
+        numberOfRaces=len(predicteds)
+        for idx, predicted in enumerate(predicteds):
+            horseNumbers[len(predicted)]+=1
+            try:
+                if predicted[0]==actuals[idx].horseNames[0]:
+                    horseNumbersWins[len(predicted)]+=1
+            except:
+                pass
+
+            for jdx, predict in enumerate(predicted):
+                try:
+                    if predict == actuals[idx].horseNames[0]:
+                        #this means the predicted winner was the winner
+                        winner[jdx]+=1
+
+                except IndexError:
+                    """ this will happen if there were not at least three horses"""
+        
+        for idx, win in enumerate(winner):
+            print "predicted position " + str(idx+1) + " won " + str(win) + " times"
+            print "numberOfRaces = " + str(numberOfRaces)
+        
+        predictedWinner.append(winner)
+        numberOfRacesArray.append(numberOfRaces)
+
+
+    print "final summary"
+    ref=0
+    for idx, single_date in enumerate(daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2])))):
+        date=time.strftime("%Y-%m-%d", single_date.timetuple())       
+        print date
+        print "idx = " + str(idx)
+        print "number of races = " + str(numberOfRacesArray[ref])
+        for jdx, numWin in enumerate(predictedWinner[ref]):
+            print "number of times predicted place " + str(jdx+1) + " won was " + str(numWin)
+
+        ref+=1
+
+    print "final final summary"
+    for ii in range(0,len(horseNumbers)):
+        print "There were " + str(horseNumbers[ii]) + "races with " + str(ii) + " horses, and we won " + str(horseNumbersWins[ii])
+
+    oddsWinningAnalysis(oddsWinnings)
+
+
+
     
 
 def runTestDateRange(dateStart, dateEnd, databaseNames, hiddenExplore=1):
