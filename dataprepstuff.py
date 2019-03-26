@@ -264,7 +264,8 @@ class dataPrepStuff:
         except Exception, e:
             print "the jockey being tested was not found in the test data"
             print str(e)
-            raise Exception(str(e))
+            return -1.0
+            #raise Exception(str(e))
 
         if (oldRange == 0):
             newValue = newMin
@@ -342,7 +343,11 @@ class dataPrepStuff:
         oldRange = (self.maxTrainer - self.minTrainer)
         newMin=-1.0
         newMax=1.0
-        oldValue=meanFinishes
+        try:
+            oldValue=meanFinishes
+        except Exception, e:
+            print "unknown trainer " + str(trainerTest)
+            return -1.0
         if (oldRange == 0):
             newValue = newMin
         else:

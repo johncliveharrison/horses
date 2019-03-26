@@ -444,7 +444,22 @@ def noNet(dataPrepStuffInst, filenameAppend, afterResult = "noResult", date=time
         skipFileWrite=0
         # do a quick check on all of the horses in the race
         SqlStuffInst=SqlStuff2()
+        bestJockey=-1
+        bestTrainer=-1
 
+        for idx, horse in enumerate(race):
+            if bestJockey < dataPrepStuffInst.normaliseJockeyMinMax(jockeyTest=jockeys[raceNo][idx]):
+                bestJockey=dataPrepStuffInst.normaliseJockeyMinMax(jockeyTest=jockeys[raceNo][idx])
+                bestJockeyHorse=horse                                                                                         
+            if bestTrainer < dataPrepStuffInst.normaliseTrainerMinMax(trainerTest=trainers[raceNo][idx]):
+                bestTrainer=dataPrepStuffInst.normaliseTrainerMinMax(trainerTest=trainers[raceNo][idx])
+                bestTrainerHorse=horse                                                                                        
+            #print "At " + str(horse[9]) + str(horse[10]) + str(horse[11]) + "best Jockey came " + str(bestJockeyPos)             
+        if bestJockeyHorse != bestTrainerHorse:
+            skipFileWrite=1
+        else:
+            print "best jockey and trainer horse is " + str(bestJockeyHorse)
+            
         for idx, horse in enumerate(race):
             errors=0
             yValues=0
@@ -457,8 +472,9 @@ def noNet(dataPrepStuffInst, filenameAppend, afterResult = "noResult", date=time
              
             try:
                 # get the result (how good this horse is)
-                result=dataPrepStuffInst.normaliseHorseMinMax(horseTest=horse)
-                
+                #result=dataPrepStuffInst.normaliseHorseMinMax(horseTest=horse)
+                result = dataPrepStuffInst.normaliseJockeyMinMax(jockeyTest=jockeys[raceNo][idx])
+                result = result + dataPrepStuffInst.normaliseTrainerMinMax(trainerTest=trainers[raceNo][idx])
                 sortDecimal, sortList, sortHorse=sortResult(result, str(horse), str(0), 0, sortList, sortDecimal, sortHorse)
             
             except Exception, e:
@@ -597,7 +613,8 @@ def runTestDateRangeNoNet(dateStart, dateEnd, databaseNames, hiddenExplore=1):
     # first need to find how good each horse is and put the result in
     # an array that is in the same order as the horse in the races.
     dataPrepStuffInst.minMaxHorse()
-
+    dataPrepStuffInst.minMaxJockey()
+    dataPrepStuffInst.minMaxTrainer()
     
     for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2]))):
 
