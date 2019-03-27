@@ -26,7 +26,7 @@ class HrefStuff_legacy:
         href_replace = href.replace("http://www.","")
         href_replace = href_replace.replace(".", "_")
         href_replace = href_replace.replace("/", "_")
-        print "the legacy file name is " + href_replace+".txt"
+        #print "the legacy file name is " + href_replace+".txt"
         if os.path.isfile("horses_local/"+href_replace+".txt"):
             f=open("horses_local/"+href_replace+".txt", 'r').read()
             self.soup = BeautifulSoup(f)

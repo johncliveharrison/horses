@@ -22,10 +22,10 @@ from pybrain.structure import SoftmaxLayer
 from pybrain.tools.customxml.networkwriter import NetworkWriter
 from pybrain.tools.customxml.networkreader import NetworkReader
 
-def sortResult(decimalResult, horse, basedOn, error, sortList, sortDecimal, sortHorse):
+def sortResult(decimalResult, horse, extra1, extra2, extra3, error, sortList, sortDecimal, sortHorse):
     """ sort the results by date and return the most recent x"""
     if len(sortList)==0:
-        sortList.append(str(horse) + '('+str(decimalResult)+')('+str(basedOn)+')')  # appemd the first horse
+        sortList.append(str(horse) + '('+str(decimalResult)+')('+str(extra1)+')('+str(extra2)+')('+str(extra3)+')')  # appemd the first horse
         sortDecimal.append(decimalResult)
         sortHorse.append(str(horse))
         return sortDecimal, sortList, sortHorse
@@ -37,22 +37,22 @@ def sortResult(decimalResult, horse, basedOn, error, sortList, sortDecimal, sort
         decimal0=sortDecimal[idx]
 
         if decimal1==0.0:
-            sortList.append(str(horse) + '('+str(decimal1)+')('+str(basedOn)+')')
+            sortList.append(str(horse) + '('+str(decimal1)+')('+str(extra1)+')('+str(extra2)+')('+str(extra3)+')')
             sortDecimal.append(decimal1)
             sortHorse.append(str(horse))
             break
         elif decimal0==0.0:
-            sortList.insert(idx, str(horse) + '('+str(decimal1)+')('+str(basedOn)+')')
+            sortList.insert(idx, str(horse) + '('+str(decimal1)+')('+str(extra1)+')('+str(extra2)+')('+str(extra3)+')')
             sortDecimal.insert(idx,decimal1)
             sortHorse.insert(idx,str(horse))
             break
         elif decimal1 > decimal0:
-            sortList.insert(idx, str(horse) + '('+str(decimal1)+')('+str(basedOn)+')')
+            sortList.insert(idx, str(horse) + '('+str(decimal1)+')('+str(extra1)+')('+str(extra2)+')('+str(extra3)+')')
             sortDecimal.insert(idx,decimal1)
             sortHorse.insert(idx,str(horse))
             break
         elif idx == (iterations-1):
-            sortList.append(str(horse) + '('+str(decimal1)+')('+str(basedOn)+')')
+            sortList.append(str(horse) + '('+str(decimal1)+')('+str(extra1)+')('+str(extra2)+')('+str(extra3)+')')
             sortDecimal.append(decimal1)
             sortHorse.append(str(horse))
 
@@ -155,12 +155,12 @@ def oddsWinningAnalysis(oddsWinnings):
                         oddsLessThan40+=1
                     else:
                         oddsOther+=1
-            print "For " + str(numberOfHorses) + " there were " + str(oddsLessThan2) + " " + winLose + " at oddsLessThan2"
-            print "For " + str(numberOfHorses) + " there were " + str(oddsLessThan5) + " " + winLose + " at oddsLessThan5"
-            print "For " + str(numberOfHorses) + " there were " + str(oddsLessThan10) + " " + winLose + " at oddsLessThan10"
-            print "For " + str(numberOfHorses) + " there were " + str(oddsLessThan20) + " " + winLose + " at oddsLessThan20"
-            print "For " + str(numberOfHorses) + " there were " + str(oddsLessThan40) + " " + winLose + " at oddsLessThan40"
-            print "For " + str(numberOfHorses) + " there were " + str(oddsOther) + " " + winLose + " at oddsOther"
+            print "For races with " + str(numberOfHorses) + " horses there were " + str(oddsLessThan2) + " " + winLose + " at oddsLessThan2"
+            print "For  races with" + str(numberOfHorses) + " horses there were " + str(oddsLessThan5) + " " + winLose + " at oddsLessThan5"
+            print "For  races with" + str(numberOfHorses) + " horses there were " + str(oddsLessThan10) + " " + winLose + " at oddsLessThan10"
+            print "For  races with" + str(numberOfHorses) + " horses there were " + str(oddsLessThan20) + " " + winLose + " at oddsLessThan20"
+            print "For  races with" + str(numberOfHorses) + " horses there were " + str(oddsLessThan40) + " " + winLose + " at oddsLessThan40"
+            print "For  races with" + str(numberOfHorses) + " horses there were " + str(oddsOther) + " " + winLose + " at oddsOther"
             
 
 
@@ -444,8 +444,10 @@ def noNet(dataPrepStuffInst, filenameAppend, afterResult = "noResult", date=time
         skipFileWrite=0
         # do a quick check on all of the horses in the race
         SqlStuffInst=SqlStuff2()
-        bestJockey=-1
-        bestTrainer=-1
+        bestJockey=-1.0
+        bestTrainer=-1.0
+        bestHorse=-1.0
+        bestHorseHorse="undefined"
 
         for idx, horse in enumerate(race):
             if bestJockey < dataPrepStuffInst.normaliseJockeyMinMax(jockeyTest=jockeys[raceNo][idx]):
@@ -453,12 +455,21 @@ def noNet(dataPrepStuffInst, filenameAppend, afterResult = "noResult", date=time
                 bestJockeyHorse=horse                                                                                         
             if bestTrainer < dataPrepStuffInst.normaliseTrainerMinMax(trainerTest=trainers[raceNo][idx]):
                 bestTrainer=dataPrepStuffInst.normaliseTrainerMinMax(trainerTest=trainers[raceNo][idx])
-                bestTrainerHorse=horse                                                                                        
+                bestTrainerHorse=horse
+            try:
+                if bestHorse < dataPrepStuffInst.normaliseHorseMinMax(horseTest=horse):
+                    bestHorse = dataPrepStuffInst.normaliseHorseMinMax(horseTest=horse)
+                    bestHorseHorse = horse
+            except Exception,e:
+                print "horse " + str(horse) + " not found"
+
             #print "At " + str(horse[9]) + str(horse[10]) + str(horse[11]) + "best Jockey came " + str(bestJockeyPos)             
-        if bestJockeyHorse != bestTrainerHorse:
+        #if bestJockeyHorse != bestTrainerHorse:
+        #    skipFileWrite=1
+        if bestJockeyHorse != bestHorseHorse:
             skipFileWrite=1
-        else:
-            print "best jockey and trainer horse is " + str(bestJockeyHorse)
+        #else:
+        #    print "best jockey and trainer horse is " + str(bestJockeyHorse)
             
         for idx, horse in enumerate(race):
             errors=0
@@ -466,21 +477,30 @@ def noNet(dataPrepStuffInst, filenameAppend, afterResult = "noResult", date=time
             bO=0
             if skipFileWrite==1:
                 break;
-            if len(race) > 40:
+            if len(race) > 10:
+                skipFileWrite=1
+                break;
+            if len(race) ==1:
                 skipFileWrite=1
                 break;
              
             try:
                 # get the result (how good this horse is)
+                jockey=dataPrepStuffInst.normaliseJockeyMinMax(jockeyTest=jockeys[raceNo][idx])
+                trainer=dataPrepStuffInst.normaliseTrainerMinMax(trainerTest=trainers[raceNo][idx])
+                draw=draws[raceNo][idx]
+                #if str(draw) == "255":
+                #    skipFileWrite=1
+                #    break;
                 #result=dataPrepStuffInst.normaliseHorseMinMax(horseTest=horse)
                 result = dataPrepStuffInst.normaliseJockeyMinMax(jockeyTest=jockeys[raceNo][idx])
-                result = result + dataPrepStuffInst.normaliseTrainerMinMax(trainerTest=trainers[raceNo][idx])
-                sortDecimal, sortList, sortHorse=sortResult(result, str(horse), str(0), 0, sortList, sortDecimal, sortHorse)
+                #result = result + dataPrepStuffInst.normaliseTrainerMinMax(trainerTest=trainers[raceNo][idx])
+                sortDecimal, sortList, sortHorse=sortResult(result, str(horse), str(jockey), str(trainer), str(draw), 0, sortList, sortDecimal, sortHorse)
             
             except Exception, e:
                 print "something not correct in testFunction"
                 #skipFileWrite=1
-
+        oddsToBeat=1
         if skipFileWrite==0:
             
             returnSortHorse.append(sortHorse)
@@ -490,29 +510,63 @@ def noNet(dataPrepStuffInst, filenameAppend, afterResult = "noResult", date=time
 
                     try:
                         odd_split=todaysResults[raceNo].odds[0].split("/")
-                        moneypot=moneypot+((float(odd_split[0])/float(odd_split[1]))*10)
-                        horseNumberWinningsLocal[len(sortHorse)]+=((float(odd_split[0])/float(odd_split[1]))*10)
-                        odds=float(odd_split[0])/float(odd_split[1])
-                        oddsWinnings.append([len(sortHorse),odds,"win"])
+                        if (float(odd_split[0])/float(odd_split[1])) >= oddsToBeat:
+                            # money pot for the win
+                            moneypot=moneypot+((float(odd_split[0])/float(odd_split[1]))*10)
+                            # money pot for the win on an each way bet
+                            moneypot2=moneypot2+((float(odd_split[0])/float(odd_split[1]))*10)
+                            # money pot for the place on an each way bet
+                            moneypot2=moneypot2+((float(odd_split[0])/float(odd_split[1]))*(10/4))
+                            horseNumberWinningsLocal[len(sortHorse)]+=((float(odd_split[0])/float(odd_split[1]))*10)
+                            odds=float(odd_split[0])/float(odd_split[1])
+                            oddsWinnings.append([len(sortHorse),odds,"win"])
+                        else:
+                            print "No bet - odds too bad"
                         
                         #break
                     except ValueError:
                         print str(todaysResults[raceNo].odds[0]) + " odds were not split properly"
                     except Exception:
                         print str(todaysResults[raceNo].odds[0]) + " odds were not split properly but not ValueError"
+
                 else:
-                    moneypot=moneypot-10.0
-                    horseNumberWinningsLocal[len(sortHorse)]-=10
                     try:
-                        # find the odds of the horse that we bet on so that it can be added to
-                        # the correct oddsWinnings entry
-                        for idx, resultHorseName in enumerate(todaysResults[raceNo].horseNames):
-                            if sortHorse[0]==resultHorseName:
-                                odd_split=todaysResults[raceNo].odds[idx].split("/")
-                                odds=float(odd_split[0])/float(odd_split[1])
-                                oddsWinnings.append([len(sortHorse),odds,"lose"])
-                    except Exception:
+                        odd_split=todaysResults[raceNo].odds[1].split("/")
+                        
+                    
+                        if (float(odd_split[0])/float(odd_split[1])) >= oddsToBeat:
+                            if sortHorse[0]==todaysResults[raceNo].horseNames[1]:
+                                # money pot for the place on an each way bet
+                                moneypot2=moneypot2+((float(odd_split[0])/float(odd_split[1]))*(10/4))
+                            else:
+                                moneypot2=moneypot2-20.0                                        
+                                moneypot=moneypot-10.0
+                                horseNumberWinningsLocal[len(sortHorse)]-=10
+                                try:
+                                    # find the odds of the horse that we bet on so that it can be added to
+                                    # the correct oddsWinnings entry
+                                    for idx, resultHorseName in enumerate(todaysResults[raceNo].horseNames):
+                                        if sortHorse[0]==resultHorseName:
+                                            odd_split=todaysResults[raceNo].odds[idx].split("/")
+                                            odds=float(odd_split[0])/float(odd_split[1])
+                                            oddsWinnings.append([len(sortHorse),odds,"lose"])
+                                except Exception:
+                                    print str(todaysResults[raceNo].odds[0]) + " odds were not split properly"
+                        else:
+                            for idx, ii in enumerate(todaysResults[raceNo].horseNames):
+                                if sortHorse[0]==ii:
+                                    odd_split=todaysResults[raceNo].odds[idx].split("/")
+                                    if (float(odd_split[0])/float(odd_split[1])) >= oddsToBeat:
+                                        moneypot2=moneypot2-20.0
+                                        moneypot=moneypot-10.0
+                                        horseNumberWinningsLocal[len(sortHorse)]-=10
+                                    else:
+                                        print "no bed odds too bad"
+                            
+                    except ValueError:
                         print str(todaysResults[raceNo].odds[0]) + " odds were not split properly"
+                    except Exception:
+                        print str(todaysResults[raceNo].odds[0]) + " odds were not split properly but not ValueError"
 
             temp=0.0
             temp2=0.0
@@ -530,25 +584,26 @@ def noNet(dataPrepStuffInst, filenameAppend, afterResult = "noResult", date=time
                             print str(todaysResults[raceNo].odds[idx]) + " odds were not split properly"
                         except Exception:
                             print str(todaysResults[raceNo].odds[idx]) + " odds were not split properly but not ValueError"
-                    
-                if temp >= 2:
-                    if sortHorse[0]==todaysResults[raceNo].horseNames[0]:
-                        moneypot2=moneypot2+(temp*10)
-                    else:
-                        moneypot2=moneypot2-10;
-                    if sortHorse[0]==todaysResults[raceNo].horseNames[1]:
-                        temp=temp/2
-                        moneypot2=moneypot2+(temp*10)
-                    else:
-                        moneypot2=moneypot2-10;
-                else:
-                    print "No bet for moneypot2"
+
+                
+                #if temp >= 2:
+                #    if sortHorse[0]==todaysResults[raceNo].horseNames[0]:
+                #        moneypot2=moneypot2+(temp*10)
+                #    else:
+                #        moneypot2=moneypot2-10;
+                #    if sortHorse[0]==todaysResults[raceNo].horseNames[1]:
+                #        temp=temp/2
+                #        moneypot2=moneypot2+(temp*10)
+                #    else:
+                #        moneypot2=moneypot2-10;
+                #else:
+                #    print "No bet for moneypot2"
 
 
             print "The moneypot so far is " + str(moneypot) + "kr"
             print "The moneypot2 so far is " + str(moneypot2) + "kr"
-            for ii, hnwl in enumerate(horseNumberWinningsLocal):
-                print "The winnings from races with " + str(ii) + " horses is " + str(hnwl) + " kr"
+            #for ii, hnwl in enumerate(horseNumberWinningsLocal):
+            #    print "The winnings from races with " + str(ii) + " horses is " + str(hnwl) + " kr"
             
             if afterResult != "noResult":
                 returnResults.append(todaysResults[raceNo])
@@ -665,7 +720,7 @@ def runTestDateRangeNoNet(dateStart, dateEnd, databaseNames, hiddenExplore=1):
     for ii in range(0,len(horseNumbers)):
         print "There were " + str(horseNumbers[ii]) + "races with " + str(ii) + " horses, and we won " + str(horseNumbersWins[ii])
 
-    oddsWinningAnalysis(oddsWinnings)
+    #oddsWinningAnalysis(oddsWinnings)
 
 
 
