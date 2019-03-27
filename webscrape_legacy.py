@@ -148,7 +148,7 @@ class HrefStuff_legacy:
         try:
             self.soup=self.webscrapePolite(self.url)
         except:
-            raise Exception("failed to find legacy results")
+            raise Exception("webscrape_legacy.getFullResultHrefs failed to find legacy results")
         self.divBody=self.soup.body
         self.divTabBlock=self.divBody.find("div", {"class":"tabBlock"})        
         self.tableResultGrids=self.divTabBlock.findAll("table", {"class":"resultGrid"})
@@ -198,7 +198,8 @@ class ResultStuff:
         self.lengthGoingTypeTemp=[]
         self.jockeys=[]
         self.trainers=[]
-        
+        self.finishingTime=[]
+
     def getRaceName(self):
         """ get the name of the race"""
         """ if there is no race info available then do nothing"""

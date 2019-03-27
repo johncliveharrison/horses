@@ -243,7 +243,10 @@ class HrefStuff_legacy2:
         self.date=date
         """add the date to the base url"""
         self.url="http://www.racingpost.com/results/" + self.date
-        self.soup=self.webscrapePolite(self.url)
+        try:
+            self.soup=self.webscrapePolite(self.url)
+        except Exception,e:
+            raise Exception("webscrape_legacy2.getFullResultHrefs failed to find legacy results")
         self.divBody=self.soup.body
         self.rpContainer=self.divBody.find("div", {"class":"rp-results rp-container cf js-contentWrapper"})
         self.rpResultsWrapper=self.rpContainer.find("div", {"class":"rp-resultsWrapper__content"})
@@ -258,7 +261,7 @@ class HrefStuff_legacy2:
             # loop through the races held at each course
             for rpRaceCoursePanelContainer in self.rpRaceCoursePanelContainer:
                 self.fullResultHrefs.append(rpRaceCoursePanelContainer.get("href")) 
-                
+        print "and now i'm here"
         """print self.rpRaceCourseMeeting
         for self.fself.rpRaceCoursePanself.rpRaceCoursePanullResultButton in self.fullResultButtons:
             self.fullResultHrefs.append(self.fullResultButton.get("href")) 
@@ -315,7 +318,8 @@ class ResultStuff:
         self.lengthGoingTypeTemp=[]
         self.jockeys=[]
         self.trainers=[]
-        
+        self.finishingTime=[]
+
     def getRaceName(self):
         """ get the name of the race"""
         """ if there is no race info available then do nothing"""

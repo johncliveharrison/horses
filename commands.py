@@ -33,7 +33,8 @@ def tryLegacy(date):
         fullResultHrefs_legacy2=HrefStuffInst_legacy2.getFullResultHrefs(date)
         return (HrefStuffInst_legacy2, fullResultHrefs_legacy2, 2)
     except Exception, e:
-        print e;
+        print "webscrape_legacy2.getFullResultHrefs failed to find legacy results"
+        #print e;
         pass
 
     try:        

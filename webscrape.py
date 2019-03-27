@@ -367,7 +367,8 @@ class ResultStuff:
         self.lengthGoingTypeTemp=[]
         self.jockeys=[]
         self.trainers=[]
-        
+        self.finishingTime=[]
+
     def getRaceName(self):
         """ get the name of the race"""
         """ if there is no race info available then do nothing"""
