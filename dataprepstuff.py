@@ -17,6 +17,8 @@ class dataPrepStuff:
         self.horsePerfFilename = "horsePerf_"
         self.maxHorseFilename = "maxHorse_"
         self.minHorseFilename = "minHorse_"
+        self.reduce5sFilename = "reduce5s_"
+        self.reduce5sHistoryHorsesFilename = "reduce5sHistoryHorses_"
         for databaseName in databaseNamesList:
             self.minMaxJockeyListFilename = self.minMaxJockeyListFilename + str(databaseName)
             self.minMaxTrainerListFilename = self.minMaxTrainerListFilename + str(databaseName)
@@ -24,12 +26,16 @@ class dataPrepStuff:
             self.horsePerfFilename = self.horsePerfFilename + str(databaseName)
             self.maxHorseFilename = self.maxHorseFilename + str(databaseName)
             self.minHorseFilename = self.minHorseFilename + str(databaseName)
+            self.reduce5sFilename = self.reduce5sFilename + str(databaseName)
+            self.reduce5sHistoryHorsesFilename = self.reduce5sHistoryHorsesFilename + str(databaseName)
         self.minMaxJockeyListFilename = self.minMaxJockeyListFilename + ".mm"
         self.minMaxTrainerListFilename = self.minMaxTrainerListFilename + ".mm"
         self.minMaxHorseFilename = self.minMaxHorseFilename + ".mm"
         self.horsePerfFilename = self.horsePerfFilename + ".mm"
         self.maxHorseFilename = self.maxHorseFilename + ".mm"
         self.minHorseFilename = self.minHorseFilename + ".mm"
+        self.reduce5sFilename = self.reduce5sFilename + ".mm"
+        self.reduce5sHistoryHorsesFilename = self.reduce5sHistoryHorsesFilename + ".mm"        
 
     def convertRaceLengthMetres(self, distance):
         """convert the mixed letters and numbers of the distance to meters"""
@@ -85,7 +91,7 @@ class dataPrepStuff:
             newValue = (((float(oldValue) - float(self.minRaceLength)) * newRange) / float(oldRange)) + newMin
         return newValue
     
-    def minMaxHorse(self):
+    def minMaxHorse(self, ):
         horses=[]
         self.horsePerf=[]
         print "There are " + str(len(self.horses)) + "horses in self.horses in the minMaxHorse funtion"
@@ -122,6 +128,18 @@ class dataPrepStuff:
 
         print "There are " + str(len(horses)) + " different horses in the minMaxHorse function"
 
+        try:
+            print "looking for file" + self.horsePerfFilename
+            if os.path.exists(self.horsePerfFilename):
+                with open (self.horsePerfFilename, 'rb') as fp:
+                    self.horsePerf = pickle.load(fp)
+                with open (self.maxHorseFilename, 'rb') as fp:
+                    self.maxHorse = pickle.load(fp)
+                with open (self.minHorseFilename, 'rb') as fp:
+                    self.minHorse = pickle.load(fp)
+        except Exception, e:
+            print str(e)
+            
         if self.horsePerf:
             return None
         
@@ -671,9 +689,16 @@ class dataPrepStuff:
     def subReduce5s(self):
         """make sure there is a history of 5 entries for all test inputs"""
 
-        if os.path.exists('subReduceHorseList'):
+        # modify all the horse filenames to avoid non-reduced lists being used.
+        self.minMaxHorseFilename = "reduce5s_" + self.minMaxHorseFilename
+        self.horsePerfFilename = "reduce5s_" + self.horsePerfFilename
+        self.maxHorseFilename = "reduce5s_" + self.maxHorseFilename
+        self.minHorseFilename = "reduce5s_" + self.minHorseFilename
+        self.historyHorses=[]
+        
+        if os.path.exists(self.minMaxHorseFilename):
             print "reading horseList from file in subReduce5s"
-            with open ('subReduceHorseList', 'rb') as fp:
+            with open (self.minMaxHorseFilename, 'rb') as fp:
                 horses = pickle.load(fp)
         else:
             print "There are " + str(len(self.horses)) + "horses in self.horses in the subReduce5s funtion"
@@ -689,11 +714,13 @@ class dataPrepStuff:
                     
         print "There are " + str(len(horses)) + " different horses in the subReduce5s function"
 
-        if os.path.exists('subReduce5sList'):
+        if os.path.exists(self.reduce5sFilename):
             print "reading reduceHorses from file in subReduce5s"
-            with open ('subReduce5sList', 'rb') as fp:
+            with open (self.reduce5sFilename, 'rb') as fp:
                 reduceHorses = pickle.load(fp)
                 horseNameReduce=horses
+            with open (self.reduce5sHistoryHorsesFilename, 'rb') as fp:
+                self.historyHorses = pickle.load(fp)
         else:
 
             reduceHorses=[]
@@ -716,16 +743,24 @@ class dataPrepStuff:
                 if horseNameCount >= 5:
                     reduceHorses=reduceHorses+horseList
                     horseNameReduce.append(horseName)
+                    self.historyHorses.append(horseList)
 
         print "There are " + str(len(reduceHorses)) + " reduced horses in the subReduce5s function"
         
-        with open('subReduceHorseList', 'wb') as fp:
+        with open(self.minMaxHorseFilename, 'wb') as fp:
             pickle.dump(horseNameReduce, fp)
 
-        with open('subReduce5sList', 'wb') as fp:
+        with open(self.reduce5sFilename, 'wb') as fp:
             pickle.dump(reduceHorses, fp)
 
+        with open(self.reduce5sHistoryHorsesFilename, 'wb') as fp:
+            pickle.dump(self.historyHorses, fp)
+
+            
+        #horseList is a list of names of horses.  Each horse is only listed once.
         self.horseList= horseNameReduce
+        #horses is a list of all the horses in all the races (now having been reduced
+        #to only contain horses that are in at least 5 races)
         self.horses=reduceHorses
 
 
@@ -1232,7 +1267,24 @@ class dataPrepStuff:
 
         return horsesn
 
-        
+
+    def netGenInputsOutputs(self, horseName, verbose=0):
+        """loop through the horseList to find the idx to the horseHistory
+        array for this horse.  Loop through the horseHistory to create the
+        test inputs and the test outputs"""
+
+        for idx, horse in enumerate(self.horseList):
+            if horseName==horse:
+                horseIdx=idx
+                break
+        inputsn=[[0 for x in xrange(4)] for x in xrange(len(self.historyHorses[horseIdx]))]
+        outputsn=[[0 for x in xrange(1)] for x in xrange(len(self.historyHorses[horseIdx]))]
+        for idx, horse in enumerate(self.historyHorses[horseIdx]):
+            inputsn[idx]=self.testFunction(horseName=horse[1],jockeyName=horse[7],trainerName=horse[13],numberHorses=horse[6],raceLength=horse[4],raceVenue=horse[11],weight=horse[3],going=horse[8],draw=horse[12],date=horse[9])
+            posDiff = 1.0/float(horse[6])
+            outputsn[idx]=1.0-((float(horse[4])-1.0)*posDiff)
+        return inputsn, outputsn
+
 
     def testFunction(self, horseName, jockeyName, trainerName, numberHorses, raceLength, raceVenue, weight, going, draw, date, verbose=0):#, trainerName):
         """blah"""

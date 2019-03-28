@@ -444,32 +444,6 @@ def noNet(dataPrepStuffInst, filenameAppend, afterResult = "noResult", date=time
         skipFileWrite=0
         # do a quick check on all of the horses in the race
         SqlStuffInst=SqlStuff2()
-        bestJockey=-1.0
-        bestTrainer=-1.0
-        bestHorse=-1.0
-        bestHorseHorse="undefined"
-
-        for idx, horse in enumerate(race):
-            if bestJockey < dataPrepStuffInst.normaliseJockeyMinMax(jockeyTest=jockeys[raceNo][idx]):
-                bestJockey=dataPrepStuffInst.normaliseJockeyMinMax(jockeyTest=jockeys[raceNo][idx])
-                bestJockeyHorse=horse                                                                                         
-            if bestTrainer < dataPrepStuffInst.normaliseTrainerMinMax(trainerTest=trainers[raceNo][idx]):
-                bestTrainer=dataPrepStuffInst.normaliseTrainerMinMax(trainerTest=trainers[raceNo][idx])
-                bestTrainerHorse=horse
-            try:
-                if bestHorse < dataPrepStuffInst.normaliseHorseMinMax(horseTest=horse):
-                    bestHorse = dataPrepStuffInst.normaliseHorseMinMax(horseTest=horse)
-                    bestHorseHorse = horse
-            except Exception,e:
-                print "horse " + str(horse) + " not found"
-
-            #print "At " + str(horse[9]) + str(horse[10]) + str(horse[11]) + "best Jockey came " + str(bestJockeyPos)             
-        #if bestJockeyHorse != bestTrainerHorse:
-        #    skipFileWrite=1
-        if bestJockeyHorse != bestHorseHorse:
-            skipFileWrite=1
-        #else:
-        #    print "best jockey and trainer horse is " + str(bestJockeyHorse)
             
         for idx, horse in enumerate(race):
             errors=0
@@ -485,21 +459,47 @@ def noNet(dataPrepStuffInst, filenameAppend, afterResult = "noResult", date=time
                 break;
              
             try:
-                # get the result (how good this horse is)
-                jockey=dataPrepStuffInst.normaliseJockeyMinMax(jockeyTest=jockeys[raceNo][idx])
-                trainer=dataPrepStuffInst.normaliseTrainerMinMax(trainerTest=trainers[raceNo][idx])
-                draw=draws[raceNo][idx]
-                #if str(draw) == "255":
-                #    skipFileWrite=1
-                #    break;
-                #result=dataPrepStuffInst.normaliseHorseMinMax(horseTest=horse)
-                result = dataPrepStuffInst.normaliseJockeyMinMax(jockeyTest=jockeys[raceNo][idx])
-                #result = result + dataPrepStuffInst.normaliseTrainerMinMax(trainerTest=trainers[raceNo][idx])
-                sortDecimal, sortList, sortHorse=sortResult(result, str(horse), str(jockey), str(trainer), str(draw), 0, sortList, sortDecimal, sortHorse)
+                #need to create an array of testinputs for this
+                #horse to train the neural net
+                inputsn,outputsn=dataPrepStuffInst.netGenInputsOutputs(horseName=horse)
+            except Exception,e:
+                print str(e)
+                print "skip this horse in training"
+                continue
+            #train the neural net for this horse
+            DS = SupervisedDataSet(len(inputsn[0]), 1)
+            for resultNo, inputs in enumerate(inputsn):
+                DS.appendLinked(inputs, outputsn[resultNo]) 
+        
+            #tstdata, trndata = DS.splitWithProportion( 0.25 )
+            trndata=DS
+            tstdata=DS
+
+            # number of hidden layers and nodes
+            hiddenLayer0=3 #(len(trndata['input'][0])+1)/2
+            hiddenLayer1=4
+
+            #netFilename = netFilename + "_" + str(hiddenLayer0) + "_" + str(hiddenLayer1) + ".xml"
+    
+            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
+            trainer=BackpropTrainer(net,trndata, momentum=0.1, verbose=False, learningrate=0.01)
+            # number of attempts to get training to converge
             
-            except Exception, e:
-                print "something not correct in testFunction"
-                #skipFileWrite=1
+            aux=trainer.trainUntilConvergence(dataset=DS, verbose=False, maxEpochs=400, validationProportion=0.25) #,continueEpochs=2,
+    
+            mse=trainer.testOnData(dataset=tstdata)
+            print "Mean Squared Error = " + str(mse)
+
+
+            #need to activate the neural net for this races
+            #input for this horse
+            activateInputs=dataPrepStuffInst.testFunction(horseName=horse,jockeyName=jockeys[raceNo][idx],trainerName=trainers[raceNo][idx],numberHorses=len(jockeys),raceLength=lengths[raceNo],raceVenue=todaysRaceVenues[raceNo],weight=weights[raceNo][idx],going=goings[raceNo],draw=draws[raceNo][idx],date=date)
+            result=net.activate(activateInputs)
+            sortDecimal, sortList, sortHorse=sortResult(result, str(horse), str(jockeys[raceNo][idx]), str(trainers[raceNo][idx]), str(draws[raceNo][idx]), 0, sortList, sortDecimal, sortHorse)
+            
+            #except Exception, e:
+            #print "something not correct in testFunction"
+
         oddsToBeat=1
         if skipFileWrite==0:
             
@@ -667,9 +667,13 @@ def runTestDateRangeNoNet(dateStart, dateEnd, databaseNames, hiddenExplore=1):
     dataPrepStuffInst=dataPrepStuff(horses, databaseNamesList)
     # first need to find how good each horse is and put the result in
     # an array that is in the same order as the horse in the races.
-    dataPrepStuffInst.minMaxHorse()
     dataPrepStuffInst.minMaxJockey()
     dataPrepStuffInst.minMaxTrainer()
+
+    dataPrepStuffInst.subReduce5s()
+    dataPrepStuffInst.minMaxHorse()
+    dataPrepStuffInst.minMaxWeight()
+    dataPrepStuffInst.minMaxDraw()
     
     for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2]))):
 
