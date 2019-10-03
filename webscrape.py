@@ -74,7 +74,7 @@ class HrefStuff:
         self.url="https://www.racingpost.com/racecards/" + self.date
         return self.url
 
-    def getTodaysRaces(self, href):
+    def getTodaysRaces(self, href, verbose=False):
         """ get the hrefs for the races, exclude the terrestrial tv and worldwide stakes"""
         try:
             self.soup=self.webscrapePolite(href)
@@ -98,7 +98,7 @@ class HrefStuff:
         #print str(self.uiAccordianRows)
         self.sectionRows=self.uiAccordianRows.findAll("section")#, {"class":"ui-accordion__row"})# js-accordion RC-accordion"})
       #  print "uiAccordian***************************************************"
-        print str(self.sectionRows)
+        #print str(self.sectionRows)
         self.raceVenue=[]
         self.raceTimes=[[] for _ in range(len(self.sectionRows[:]))]
         for idx, uiAccordianRow in enumerate(self.sectionRows):
@@ -121,7 +121,8 @@ class HrefStuff:
                 continue
                 
             self.raceVenue.append(raceVenue)
-            print "so I got this far " + str(raceVenue)
+            if verbose:
+                print "so I got this far " + str(raceVenue)
 
             courseDescription=table.find("div", {"class":"RC-courseDescription__info"})
             meetingList=table.find("div", {"class":"RC-meetingList"})
@@ -131,7 +132,8 @@ class HrefStuff:
                 self.raceHrefs.append(href)
                 time=meetingItem.find("div", {"class":"RC-meetingItem__time"}).find(text=True).strip()
                 self.raceTimes[idx].append(time)
-                print "and the time is " + str(time)
+                if verbose:
+                    print "and the time is " + str(time)
         # get the raceTimes and raceVenue into the same format as that returned by the
         # makeATestcardFromResults function
         raceTimes=[]
@@ -144,7 +146,7 @@ class HrefStuff:
 
         return self.raceHrefs, raceTimes, raceVenue
 
-    def getCardContents(self, href):
+    def getCardContents(self, href, verbose=False):
         """ get the horse, jockey, number of horses and distance"""
         horseName=[]
         jockey=[]
@@ -190,7 +192,8 @@ class HrefStuff:
             raise Exception(e)
 
         #raceLength
-        print "got this far 1"
+        if verbose:
+            print "got this far 1"
         cardHeader=section.find("div", {"class":"RC-cardHeader"})
         cardHeaderDetails=cardHeader.findAll("div")[-1]
         distance=cardHeaderDetails.find("strong", {"class":"RC-cardHeader__distance"}).find(text=True).strip()
@@ -199,7 +202,8 @@ class HrefStuff:
         # try and get the rows in the table with the horse info
         sectionDiv=section.findAll("div", recursive=False)#"div", {"class":["RC-runnerRowwrapper", "js-RC-runnerRowWrapper"]})
         #print sectionDiv
-        print "got this far 2"
+        if verbose:
+            print "got this far 2"
         for card in sectionDiv:
             if "RC-runnerRowWrapper" in card.get("class"):
                 cardTable=card
@@ -209,7 +213,8 @@ class HrefStuff:
             if "js-RC-runnerRow" in rows.get("class"):
                 if not "js-runnerNonRunner" in rows.get("class"):
                     cardTableRows.append(rows)
-        print "got this far 3"
+        if verbose:
+            print "got this far 3"
         for cardTableRow in cardTableRows:
             #horseName
             runnerCardWrapper=cardTableRow.find("div",{"class":"RC-runnerCardWrapper"})
@@ -218,19 +223,22 @@ class HrefStuff:
             runnerMainWrapper=runnerRowHorseWrapper.find("div",{"class":"RC-runnerMainWrapper"})
             a=runnerMainWrapper.find("a").find(text=True).strip()
             horseName.append(a)
-            print "horse name is " + str(a)
+            if verbose:
+                print "horse name is " + str(a)
             #jockey
             runnerRowInfoWrapper=runnerCardWrapper.find("div",{"class":"RC-runnerRowInfoWrapper"})
             runnerInfoWrapper=runnerRowInfoWrapper.find("div",{"class":"RC-runnerInfoWrapper"})
             runnerInfoJockey=runnerInfoWrapper.find("div",{"class":"RC-runnerInfo RC-runnerInfo_jockey"})
             a=runnerInfoJockey.find("a").find(text=True).strip()
             jockey.append(a)
-            print "jockey is " + str(a)
+            if verbose:
+                print "jockey is " + str(a)
             #trainer
             runnerInfoTrainer=runnerInfoWrapper.find("div",{"class":"RC-runnerInfo RC-runnerInfo_trainer"})
             a=runnerInfoTrainer.find("a").find(text=True).strip()
             trainer.append(a)
-            print "trainer is " + str(a)
+            if verbose:
+                print "trainer is " + str(a)
             #weight
             runnerWgtOrWrapper=runnerRowInfoWrapper.find("div",{"class":"RC-runnerWgtorWrapper"})
             runnerWgt=runnerWgtOrWrapper.find("div",{"class":"RC-runnerWgt"})
@@ -239,19 +247,23 @@ class HrefStuff:
             runnerWgtCarriedLb=runnerWgtCarried.find("span",{"class":"RC-runnerWgt__carried_lb"}).find(text=True).strip()
             Wgt=str(runnerWgtCarriedSt)+"-"+str(runnerWgtCarriedLb)
             weight.append(Wgt)          
-            print "weight is " + str(Wgt)
+            if verbose:
+                print "weight is " + str(Wgt)
             #draw
             runnerNumber=runnerRowHorseWrapper.find("div",{"class":"RC-runnerNumber"})
             s=runnerNumber.find("span",{"class":"RC-runnerNumber__draw"}).find(text=True).strip().strip("()")
             draw.append(s)
-            print "draw is " + str(s)
-        print "got this far 4"
+            if verbose:
+                print "draw is " + str(s)
+        if verbose:
+            print "got this far 4"
         #going
         keyInfo=cardHeader.find("div",{"class":"RC-cardHeader__keyInfo"})
         headerBox=keyInfo.find("div",{"class":"RC-headerBox"})
         infoRow=headerBox.findAll("div",{"class":"RC-headerBox__infoRow"})
         going=infoRow[2].find("div",{"class":"RC-headerBox__infoRow__content"}).find(text=True).split()
-        print going
+        if verbose:
+            print going
         self.going=" ".join(going)
 
         return (horseName, jockey, self.raceLength, weight, self.going, draw, trainer)

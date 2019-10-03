@@ -25,7 +25,7 @@ from pybrain.tools.customxml.networkwriter import NetworkWriter
 from pybrain.tools.customxml.networkreader import NetworkReader
 
 
-def sortResult(decimalResult, horse, extra1, extra2, extra3, error, sortList, sortDecimal, sortHorse):
+def sortResult(decimalResult, horse, extra1, extra2, extra3, sortList, sortDecimal, sortHorse):
     """ sort the results by date and return the most recent x"""
     if len(sortList)==0:
         sortList.append(str(horse) + '('+str(decimalResult)+')('+str(extra1)+')('+str(extra2)+')('+str(extra3)+')')  # appemd the first horse
@@ -61,44 +61,66 @@ def sortResult(decimalResult, horse, extra1, extra2, extra3, error, sortList, so
 
     return sortDecimal, sortList, sortHorse
 
-def testFunction(self, databaseNames, horseName, raceLength, going, draw, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList):
+def testFunction(databaseNames, horseName, raceLength, going, draw, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList, verbose=False):
     """This function will determine the inputs for the neural net for a horse"""
     anInput = [None] * 6
     horse = []
-    databaseNamesList=map(str, databaseNames.strip('[]').split(','))
-    print "databaseNamesList is " + str(databaseNamesList)
-    for databaseName in databaseNamesList:
-        print "databaseName is " + str(databaseName)
-        SqlStuffInst.connectDatabase(databaseName)
-        horse=horse + SqlStuffInst.getHorse(horseName)
-        if len(horse) > 2:
-            break
+    SqlStuffInst=SqlStuff2()
+    try:
+        databaseNamesList=map(str, databaseNames.strip('[]').split(','))
+        for databaseName in databaseNamesList:
+            SqlStuffInst.connectDatabase(databaseName)
+            horse=horse + SqlStuffInst.getHorse(horseName)
+            if len(horse) > 2:
+                break
+    except Exception,e:
+        print "problem with the database in testFunction"
+        print "databaseNames is %s" % databaseNames
+        print str(e)
+        raise Exception
 
-    anInput[0] = horse[-1][4]/horse[-1][6]
-    anInput[1] = horse[-2][4]/horse[-2][6]
-    anInput[2] = horse[-3][4]/horse[-3][6]
+    try:
+        anInput[0] = horse[-1][4]/horse[-1][6]
+        anInput[1] = horse[-2][4]/horse[-2][6]
+        anInput[2] = horse[-3][4]/horse[-3][6]
+    except Exception:
+        if verbose:
+            print "skipping horse %s with problem form" % (horseName)
+            print "found %d entries" % (int(len(horse)))
+            print str(horse)
+        raise Exception
+
     # get the draw
     try:
         anInput[3] = normaliseDrawMinMax(draw,minMaxDrawList)
-    except TypeError:
-        print "skipping horse %s with problem draw" % (horseName)
+    except Exception:
+        if verbose:
+            print "skipping horse %s with problem draw" % (horseName)
+            print "the draw is %s" % (str(draw))
+            print "the minMaxDrawList is %s" % (str(minMaxDrawList))
         raise Exception
 
     # get the going
     try:
         anInput[4] = normaliseGoing(getGoing(going), meanStdGoingList)
-    except TypeError:
-        print "skipping horse %s with no going" % (horseName)
+    except Exception:
+        if verbose:
+            print "skipping horse %s with no going" % (horseName)
         raise Exception
     # get the race length
-    anInput[5] = normaliseRaceLengthMinMax(raceLength, minMaxRaceLengthList)
+    try:
+        anInput[5] = normaliseRaceLengthMinMax(raceLength, minMaxRaceLengthList)
+    except Exception:
+        if verbose:
+            print "skipping horse %s with no or bad racelength" % (horseName)
+        raise Exception
 
 
     return anInput
 
 
 
-def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList, makeResult = False, date=time.strftime("%Y-%m-%d")):
+def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList, makeResult = False, date=time.strftime("%Y-%m-%d"), verbose=False):
     #lengths=[]
     #draws=[]
     print "the date is " + str(date)
@@ -144,10 +166,12 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
 
                 result=net.activate(testinput)
 
-                sortDecimal, sortList, sortHorse=sortResult(result, str(horse), str(0), 0, sortList, sortDecimal, sortHorse)
+                sortDecimal, sortList, sortHorse=sortResult(result, str(horse), str(0), str(0), str(0), sortList, sortDecimal, sortHorse)
             
             except Exception, e:
-                print "something not correct in testFunction"
+                if verbose:
+                    print "something not correct in testFunction"
+                    print str(e)
                 #skipFileWrite=1
 
         if skipFileWrite==0:
@@ -167,7 +191,7 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
                 except IndexError:
                     """if there are none finishers this will be the exception"""
 
-    return returnSortHorse, returnResults, oddsWinnings
+    return returnSortHorse, returnResults
 
 
 

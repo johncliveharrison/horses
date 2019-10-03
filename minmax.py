@@ -22,9 +22,9 @@ def minMaxDraw(horses):
 def normaliseDrawMinMax(draw, minMax):
     """ normalise the jockey performance based on min (worse)
     max(best) values"""
-    oldValue=draw
-    maxDraw=minMax[1]
-    minDraw=minMax[0]
+    oldValue=float(draw)
+    maxDraw=float(minMax[1])
+    minDraw=float(minMax[0])
     # Now normalise this trainers performance next to the max and min
     oldRange = (maxDraw - minDraw)
     newMin=-1.0
