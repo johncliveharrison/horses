@@ -315,11 +315,19 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn):
                 continue
             # get the positions from the 3 races before the win
             # put the positions into the input list in pos 0,1,2
-            anInput[0] = horse[-1][4]/horse[-1][6]
-            anInput[1] = horse[-2][4]/horse[-2][6]
-            anInput[2] = horse[-3][4]/horse[-3][6]
+            try:
+                anInput[0] = horse[-1][4]/horse[-1][6]
+                anInput[1] = horse[-2][4]/horse[-2][6]
+                anInput[2] = horse[-3][4]/horse[-3][6]
+            except Exception:
+                print "skipping horse %d of %d  with bad form" % (idx, len(winnerSqlStuffInst.rows))   
+                continue
             # get the draw
-            anInput[3] = normaliseDrawMinMax(horseInfo[12],minMaxDrawList)
+            try:
+                anInput[3] = normaliseDrawMinMax(horseInfo[12],minMaxDrawList)
+            except TypeError:
+                print "skipping horse %d of %d  with bad/no draw" % (idx, len(winnerSqlStuffInst.rows))   
+                continue
             # get the going
             try:
                 anInput[4] = normaliseGoing(getGoing(horseInfo[8]), meanStdGoingList)
@@ -327,7 +335,12 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn):
                 print "skipping horse %d of %d  with no going" % (idx, len(winnerSqlStuffInst.rows))
                 continue
             # get the race length
-            anInput[5] = normaliseRaceLengthMinMax(horseInfo[5], minMaxRaceLengthList)
+            try:
+                anInput[5] = normaliseRaceLengthMinMax(horseInfo[5], minMaxRaceLengthList)
+            except:
+                print "skipping horse %d of %d  with no length" % (idx, len(winnerSqlStuffInst.rows))
+                continue
+
             # get the output speed
             output = normaliseSpeed(horseInfo, minMaxSpeedList)
 
