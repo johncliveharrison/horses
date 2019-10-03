@@ -28,16 +28,18 @@ class SqlStuff2:
             FINISHINGTIME INTEGER, \
             ODDS TEXT);")
 
-    def addResultStuffToTable(self, ResultStuff):
+    def addResultStuffToTable(self, ResultStuff, pos=-1):
         for idx, self.horseName in enumerate(ResultStuff.horseNames):
+            if pos==-1:
+                pos=idx+1
             """create a string with this horses values"""
             self.val_str="'{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}'".format(\
                 ResultStuff.horseNames[idx].replace("'", "''"),\
-                ResultStuff.horseAges[idx], ResultStuff.horseWeights[idx], idx+1, \
+                ResultStuff.horseAges[idx], ResultStuff.horseWeights[idx], pos, \
                 ResultStuff.raceLength, ResultStuff.numberOfHorses, ResultStuff.jockeys[idx].replace("'", "''"), \
                 ResultStuff.going, ResultStuff.raceDate, ResultStuff.raceTime, \
                 ResultStuff.raceName.replace("'", "''"), ResultStuff.draw[idx], \
-                ResultStuff.trainers[idx].replace("'", "''"), ResultStuff.finishingTime, ResultStuff.odds[idx])
+                ResultStuff.trainers[idx].replace("'", "''"), ResultStuff.finishingTime[idx], ResultStuff.odds[idx])
             #print self.val_str
             """create a string for the sql command"""
             self.sql_str="INSERT INTO RESULTS_INFO \
@@ -135,8 +137,11 @@ class SqlStuff2:
         return self.rows
 
 
-    def getHorse(self, horseName):
-        self.sql_str="SELECT * from RESULTS_INFO where HORSENAME='{}'".format(horseName.replace("'", "''"))
+    def getHorse(self, horseName,date=-1):
+        if date==-1:
+            self.sql_str="SELECT * from RESULTS_INFO where HORSENAME='{}'".format(horseName.replace("'", "''"))
+        else:
+            self.sql_str="SELECT * from RESULTS_INFO where HORSENAME='{}' AND RACEDATE<'{}'".format(horseName.replace("'", "''"),(date))
         self.cursor=self.conn.execute(self.sql_str)
         self.rows=self.cursor.fetchall()
         return self.rows

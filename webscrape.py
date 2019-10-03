@@ -85,11 +85,16 @@ class HrefStuff:
         self.uiCanvas=self.divBody.find("div", {"class":"ui-canvas js-contentWrapper ui-advertising__skinsWrp ui-advertising__skinsWrp_secNav"})
         #print "uiCanvas ****************************************************"
         #print str(self.uiCanvas)
-        self.uiContent=self.uiCanvas.find("div")#, {"class":"ui-content"})
-        self.mainContent=self.uiContent.find("main", {"class":"js-RC-mainContent RC-content-wrapper ui-mainContent"})
+        self.uiContent=self.uiCanvas.findAll("div")#, {"class":"ui-content"})
+        for content in self.uiContent:
+            if content.find("div", {"data-test-selector":"RC-accordion__body"}):
+                self.uiAccordianRows=content.find("div", {"data-test-selector":"RC-accordion__body"})
+                break
+        #self.mainContent=self.uiContent.find("main", {"class": ['js-RC-mainContent', 'RC-content-wrapper', 'ui-mainContent']})
         #print "mainContent ****************************************************"
         #print str(self.mainContent)
-        self.uiAccordianRows=self.mainContent.find("div", {"data-test-selector":"RC-accordion__body"})#"ui-accordion" "js-accordion" "RC-accordion"})# js-accordion RC-accordion"})
+        #self.uiAccordianRows=self.mainContent.find("div", {"data-test-selector":"RC-accordion__body"})#"ui-accordion" "js-accordion" "RC-accordion"})# js-accordion RC-accordion"})
+        #print "uiAccordianRows ****************************************************"
         #print str(self.uiAccordianRows)
         self.sectionRows=self.uiAccordianRows.findAll("section")#, {"class":"ui-accordion__row"})# js-accordion RC-accordion"})
       #  print "uiAccordian***************************************************"
@@ -103,6 +108,10 @@ class HrefStuff:
             h2Header=header.find("h2")
             divH2Header=h2Header.find("div")
             spanDivH2Header=divH2Header.find("span")
+            maybeAbandoned=divH2Header.findAll("span")
+            if len(maybeAbandoned) > 1:
+                if "abandoned" in maybeAbandoned[1].get("class"):
+                    continue
             raceVenue=" ".join(spanDivH2Header.find(text=True).split())
             if raceVenue == "Free to air TV Races":
                 continue
@@ -188,7 +197,8 @@ class HrefStuff:
         s=distance.strip("()")
         self.raceLength = s.replace('\\xbd', '.5')
         # try and get the rows in the table with the horse info
-        sectionDiv=section.findAll("div")
+        sectionDiv=section.findAll("div", recursive=False)#"div", {"class":["RC-runnerRowwrapper", "js-RC-runnerRowWrapper"]})
+        #print sectionDiv
         print "got this far 2"
         for card in sectionDiv:
             if "RC-runnerRowWrapper" in card.get("class"):
@@ -203,6 +213,7 @@ class HrefStuff:
         for cardTableRow in cardTableRows:
             #horseName
             runnerCardWrapper=cardTableRow.find("div",{"class":"RC-runnerCardWrapper"})
+
             runnerRowHorseWrapper=runnerCardWrapper.find("div",{"class":"RC-runnerRowHorseWrapper"})
             runnerMainWrapper=runnerRowHorseWrapper.find("div",{"class":"RC-runnerMainWrapper"})
             a=runnerMainWrapper.find("a").find(text=True).strip()
@@ -240,6 +251,7 @@ class HrefStuff:
         headerBox=keyInfo.find("div",{"class":"RC-headerBox"})
         infoRow=headerBox.findAll("div",{"class":"RC-headerBox__infoRow"})
         going=infoRow[2].find("div",{"class":"RC-headerBox__infoRow__content"}).find(text=True).split()
+        print going
         self.going=" ".join(going)
 
         return (horseName, jockey, self.raceLength, weight, self.going, draw, trainer)
@@ -352,6 +364,22 @@ class HrefStuff:
         self.rpRaceInfo=self.rpResultsSection.find("div", {"class":"rp-raceInfo"})
         return self.rpRaceInfo
 
+class ResultStuffObj:
+    def __init__(self):
+        self.raceDate =""
+        self.raceTime =""
+        self.raceName =""
+        self.raceLength =""
+        self.numberOfHorses = 0
+        self.horseNames=[]
+        self.odds=[]
+        self.draw=[]
+        self.horseAges=[]
+        self.horseWeights=[]
+        self.lengthGoingTypeTemp=[]
+        self.jockeys=[]
+        self.trainers=[]
+        self.finishingTime=[]
 
 class ResultStuff:
     def __init__(self, fullResult, fullHeader, fullInfo, raceDate):
