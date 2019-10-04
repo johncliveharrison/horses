@@ -3,7 +3,7 @@ from numpy import mean, std, array
 
 """ this file contains the functions required to find the min and max
 values for a field in the winners list"""
-def minMaxDraw(horses):
+def minMaxDraw(horses, verbose=False):
     minDraw=100000
     maxDraw=0
     for ii, horse in enumerate(horses):
@@ -13,7 +13,8 @@ def minMaxDraw(horses):
             continue
         if horse[12] > maxDraw:
             if horse[12] < 50:
-                print "set the maxDraw to " + str(horse[12])
+                if verbose:
+                    print "set the maxDraw to " + str(horse[12])
                 maxDraw=horse[12]
         if horse[12] < minDraw:
             minDraw=horse[12]
@@ -25,7 +26,7 @@ def normaliseDrawMinMax(draw, minMax):
     oldValue=float(draw)
     maxDraw=float(minMax[1])
     minDraw=float(minMax[0])
-    # Now normalise this trainers performance next to the max and min
+    # Now normalise this draw next to the max and min
     oldRange = (maxDraw - minDraw)
     newMin=-1.0
     newMax=1.0

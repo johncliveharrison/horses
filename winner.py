@@ -296,7 +296,7 @@ def getWinnersSubsetHorse(races, winnerdb, databaseNames):
                 winner_racesSqlStuffInst.addResultStuffToTable(ResultStuffInst, pos=row[4])
 
 
-def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn):
+def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=False):
     """ create a text file of all the inputs to the net"""
 
     #input 0,1,2 the past positions of this horse when it won
@@ -308,8 +308,8 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn):
     netFilename = "net"
     print "create the DS"
     DS = SupervisedDataSet(len(anInput), 1)
-    hiddenLayer0=(len(anInput)+1)/2
-    hiddenLayer1=0
+    hiddenLayer0=6 #(len(anInput)+1)/2
+    hiddenLayer1=0 #(len(anInput)+1)/2 -1
     netFilename = netFilename + "_" + str(hiddenLayer0) + "_" + str(hiddenLayer1) + ".xml"
 
     # get all the winner horses from the winnerdb
@@ -328,7 +328,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn):
         print "found network training file"
         net = NetworkReader.readFrom(netFilename) 
     else:
-        for idx, horseInfo in enumerate(winnerSqlStuffInst.rows):
+        for idx, horseInfo in enumerate(winnerSqlStuffInst.rows[0:2000]):
             horseName= horseInfo[1]
             date=horseInfo[9]
             horse= []
@@ -343,6 +343,8 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn):
                 anInput[0] = horse[-1][4]/horse[-1][6]
                 anInput[1] = horse[-2][4]/horse[-2][6]
                 anInput[2] = horse[-3][4]/horse[-3][6]
+                if verbose:
+                    print "horseName %s - dates %s   %s   %s" % (str(horse[-1][1]), str(horse[-1][9]), str(horse[-2][9]), str(horse[-3][9]))
             except Exception:
                 print "skipping horse %d of %d  with bad form" % (idx, len(winnerSqlStuffInst.rows))   
                 continue
@@ -379,7 +381,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn):
         net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
         trainer=BackpropTrainer(net,trndata, momentum=0.1, verbose=True, learningrate=0.01)
 
-        aux=trainer.trainUntilConvergence(dataset=DS, maxEpochs=10, verbose=True, continueEpochs=2, validationProportion=0.25)
+        aux=trainer.trainUntilConvergence(dataset=DS, maxEpochs=30, verbose=True, continueEpochs=2, validationProportion=0.25)
 
         mse=trainer.testOnData(dataset=tstdata)
         print "Mean Squared Error = " + str(mse)
