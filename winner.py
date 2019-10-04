@@ -6,10 +6,13 @@ from minmax import minMaxDraw
 from minmax import meanStdGoing
 from minmax import minMaxRaceLength
 from minmax import minMaxSpeed
+from minmax import minMaxWeight
 from minmax import normaliseDrawMinMax
 from minmax import normaliseGoing
 from minmax import normaliseRaceLengthMinMax
+from minmax import normaliseWeightMinMax
 from minmax import normaliseSpeed
+from minmax import normaliseFinish
 from minmax import getGoing
 from sqlstuff2 import SqlStuff2
 from webscrape import ResultStuffObj
@@ -61,9 +64,9 @@ def sortResult(decimalResult, horse, extra1, extra2, extra3, sortList, sortDecim
 
     return sortDecimal, sortList, sortHorse
 
-def testFunction(databaseNames, horseName, raceLength, going, draw, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList, verbose=False):
+def testFunction(databaseNames, horseName, raceLength, going, draw, weight, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList, verbose=False):
     """This function will determine the inputs for the neural net for a horse"""
-    anInput = [None] * 6
+    anInput = [None] * 7
     horse = []
     SqlStuffInst=SqlStuff2()
     try:
@@ -80,9 +83,9 @@ def testFunction(databaseNames, horseName, raceLength, going, draw, minMaxDrawLi
         raise Exception
 
     try:
-        anInput[0] = horse[-1][4]/horse[-1][6]
-        anInput[1] = horse[-2][4]/horse[-2][6]
-        anInput[2] = horse[-3][4]/horse[-3][6]
+        anInput[0] = normaliseFinish(horse[-1][4],horse[-1][6])
+        anInput[1] = normaliseFinish(horse[-2][4],horse[-2][6])
+        anInput[2] = normaliseFinish(horse[-3][4],horse[-3][6])
     except Exception:
         if verbose:
             print "skipping horse %s with problem form" % (horseName)
@@ -114,13 +117,20 @@ def testFunction(databaseNames, horseName, raceLength, going, draw, minMaxDrawLi
         if verbose:
             print "skipping horse %s with no or bad racelength" % (horseName)
         raise Exception
+    # get the weight
+    try:
+        anInput[6] = normaliseWeightMinMax(weight, minMaxWeightList)
+    except Exception:
+        if verbose:
+            print "skipping horse %s with no or bad weight" % (horseName)
+        raise Exception
 
 
     return anInput
 
 
 
-def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList, makeResult = False, date=time.strftime("%Y-%m-%d"), verbose=False):
+def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList, makeResult = False, date=time.strftime("%Y-%m-%d"), verbose=False):
     #lengths=[]
     #draws=[]
     print "the date is " + str(date)
@@ -162,7 +172,7 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
                 break;
              
             try:
-                testinput=testFunction(databaseNames, horses[raceNo][idx],lengths[raceNo],goings[raceNo], draws[raceNo][idx],minMaxDrawList, meanStdGoingList,minMaxRaceLengthList)
+                testinput=testFunction(databaseNames, horses[raceNo][idx],lengths[raceNo],goings[raceNo], draws[raceNo][idx], weights[raceNo][idx], minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList)
 
                 result=net.activate(testinput)
 
@@ -303,14 +313,15 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
     #input 3 draw
     #input 4 going
     #input 5 race length
-    anInput = [None] * 6
+    anInput = [None] * 7
 
     netFilename = "net"
     print "create the DS"
     DS = SupervisedDataSet(len(anInput), 1)
-    hiddenLayer0=6 #(len(anInput)+1)/2
-    hiddenLayer1=0 #(len(anInput)+1)/2 -1
-    netFilename = netFilename + "_" + str(hiddenLayer0) + "_" + str(hiddenLayer1) + ".xml"
+    hiddenLayer0=4 #(len(anInput)+1)/2
+    hiddenLayer1=6 #(len(anInput)+1)/2 -1
+    hiddenLayer2=3 #(len(anInput)+1)/2 -1
+    netFilename = netFilename + "_" + str(hiddenLayer0) + "_" + str(hiddenLayer1) + "_" + str(hiddenLayer2) +".xml"
 
     # get all the winner horses from the winnerdb
     winnerSqlStuffInst=SqlStuff2()
@@ -319,6 +330,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
     minMaxDrawList = minMaxDraw(firstPlaceHorses)
     meanStdGoingList = meanStdGoing(firstPlaceHorses)
     minMaxRaceLengthList = minMaxRaceLength(firstPlaceHorses)
+    minMaxWeightList = minMaxWeight(firstPlaceHorses)
     minMaxSpeedList = minMaxSpeed(firstPlaceHorses)
     # save the winners races in a winners_races.db
     winner_racesSqlStuffInst=SqlStuff2()
@@ -328,7 +340,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
         print "found network training file"
         net = NetworkReader.readFrom(netFilename) 
     else:
-        for idx, horseInfo in enumerate(winnerSqlStuffInst.rows[0:2000]):
+        for idx, horseInfo in enumerate(winnerSqlStuffInst.rows[0:10000]):
             horseName= horseInfo[1]
             date=horseInfo[9]
             horse= []
@@ -340,13 +352,14 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
             # get the positions from the 3 races before the win
             # put the positions into the input list in pos 0,1,2
             try:
-                anInput[0] = horse[-1][4]/horse[-1][6]
-                anInput[1] = horse[-2][4]/horse[-2][6]
-                anInput[2] = horse[-3][4]/horse[-3][6]
+                anInput[0] = normaliseFinish(horse[-1][4],horse[-1][6])
+                anInput[1] = normaliseFinish(horse[-2][4],horse[-2][6])
+                anInput[2] = normaliseFinish(horse[-3][4],horse[-3][6])
                 if verbose:
                     print "horseName %s - dates %s   %s   %s" % (str(horse[-1][1]), str(horse[-1][9]), str(horse[-2][9]), str(horse[-3][9]))
-            except Exception:
+            except Exception,e:
                 print "skipping horse %d of %d  with bad form" % (idx, len(winnerSqlStuffInst.rows))   
+                print str(e)
                 continue
             # get the draw
             try:
@@ -367,6 +380,15 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
                 print "skipping horse %d of %d  with no length" % (idx, len(winnerSqlStuffInst.rows))
                 continue
 
+            try:
+                anInput[6] = normaliseWeightMinMax(horseInfo[3], minMaxWeightList)
+            except Exception, e:
+                print str(e)
+                print "the weight is " + str(horseInfo[3])
+                print "skipping horse %d of %d  with no weight" % (idx, len(winnerSqlStuffInst.rows))
+                continue
+
+
             # get the output speed
             output = normaliseSpeed(horseInfo, minMaxSpeedList)
 
@@ -375,10 +397,11 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
         tstdata, trndata = DS.splitWithProportion( 0.25 )
         #trndata=DS
         #tstdata=DS
-
+        print "length of trndata is " + str(len(trndata))
+        print "length of tstdata is " + str(len(tstdata))
         # number of hidden layers and nodes
 
-        net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
+        net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
         trainer=BackpropTrainer(net,trndata, momentum=0.1, verbose=True, learningrate=0.01)
 
         aux=trainer.trainUntilConvergence(dataset=DS, maxEpochs=30, verbose=True, continueEpochs=2, validationProportion=0.25)
@@ -389,5 +412,5 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
         # save the net params
         NetworkWriter.writeToFile(net, netFilename)
     
-    neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList, makeResult = False, date=dateIn)
+    neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList, makeResult = False, date=dateIn)
     

@@ -223,7 +223,7 @@ def normaliseSpeed(horse, minMaxSpeedList):
     minSpeed=minMaxSpeedList[0]
 
     oldRange = (maxSpeed - minSpeed)
-    newMin=-1.0
+    newMin=0.0
     newMax=1.0
 
     if (oldRange == 0):
@@ -231,4 +231,69 @@ def normaliseSpeed(horse, minMaxSpeedList):
     else:
         newRange = (newMax - newMin)
         newValue = (((oldValue - minSpeed) * newRange) / oldRange) + newMin
+    return newValue
+
+def normaliseFinish(position, numberOfHorses):
+    """ normalise the horse speed """
+    oldValue=float(position)
+    maxFinish=float(numberOfHorses)
+    minFinish=float(1)
+
+    oldRange = (maxFinish - minFinish)
+    newMin=-1.0
+    newMax=1.0
+
+    if (oldRange == 0):
+        newValue = newMin
+    else:
+        newRange = (newMax - newMin)
+        newValue = (((oldValue - minFinish) * newRange) / oldRange) + newMin
+    return newValue
+
+
+def convertWeightKilos(weight):
+    """convert the stone, pounds weight to kilos"""
+    ss=re.findall('\d+|\D+', weight)
+    if len(ss) < 3:
+        return 60.0
+    else:
+        return (float(ss[0])*6.35+float(ss[2])*0.45)
+
+def minMaxWeight(horses, verbose=False):
+    weights=[]
+    minWeight=100000
+    maxWeight=0
+    for ii, horse in enumerate(horses):
+        try:
+            kg=convertWeightKilos(horse[3])
+            weights.append(kg)
+        except Exception,e:
+            print str(e)
+            print "skipping weight %s for horse %s" % (str(horse[3]), str(horse[1]))
+            continue
+        if kg > maxWeight:
+            if verbose:
+                print "set the maxWeight to " + str(kg)
+                maxWeight=kg
+        if kg < minWeight:
+            minWeight=kg
+    return [minWeight, maxWeight]
+
+def normaliseWeightMinMax(weight, minMaxWeight):
+    """ normalise the weight based on min (worse)
+    max(best) values"""
+    oldValue=convertWeightKilos(weight)
+
+    # Now normalise this trainers performance next to the max and min
+    minWeight=minMaxWeight[0]
+    maxWeight=minMaxWeight[1]
+    oldRange = (maxWeight - minWeight)
+    newMin=-1.0
+    newMax=1.0
+
+    if (oldRange == 0):
+        newValue = newMin
+    else:
+        newRange = (newMax - newMin)
+        newValue = (((oldValue - minWeight) * newRange) / oldRange) + newMin
     return newValue

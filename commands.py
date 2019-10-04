@@ -135,6 +135,7 @@ def makeATestcard(date):
         try:
             horse, jockey, length, weight, going, draw, trainer=HrefStuffInst.getCardContents(todaysRace)
         except Exception, e:
+            print str(e)
             print "There was an error with the race " + str(todaysRace)
             print "This was " + str(todaysRaceVenues[ii]) + " at " + str(todaysRaceTimes[ii])
             raceToRemove.append(ii)
