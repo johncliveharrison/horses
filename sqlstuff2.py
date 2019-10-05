@@ -31,15 +31,20 @@ class SqlStuff2:
     def addResultStuffToTable(self, ResultStuff, pos=-1):
         for idx, self.horseName in enumerate(ResultStuff.horseNames):
             if pos==-1:
-                pos=idx+1
+                posidx=idx+1
+                finishingTime=ResultStuff.finishingTime
+            else:
+                posidx=pos
+                finishingTime=ResultStuff.finishingTime[idx]
             """create a string with this horses values"""
             self.val_str="'{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}'".format(\
                 ResultStuff.horseNames[idx].replace("'", "''"),\
-                ResultStuff.horseAges[idx], ResultStuff.horseWeights[idx], pos, \
+                ResultStuff.horseAges[idx], ResultStuff.horseWeights[idx], posidx, \
                 ResultStuff.raceLength, ResultStuff.numberOfHorses, ResultStuff.jockeys[idx].replace("'", "''"), \
                 ResultStuff.going, ResultStuff.raceDate, ResultStuff.raceTime, \
                 ResultStuff.raceName.replace("'", "''"), ResultStuff.draw[idx], \
-                ResultStuff.trainers[idx].replace("'", "''"), ResultStuff.finishingTime[idx], ResultStuff.odds[idx])
+                ResultStuff.trainers[idx].replace("'", "''"), finishingTime, ResultStuff.odds[idx])
+            
             #print self.val_str
             """create a string for the sql command"""
             self.sql_str="INSERT INTO RESULTS_INFO \

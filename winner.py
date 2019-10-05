@@ -319,8 +319,8 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
     print "create the DS"
     DS = SupervisedDataSet(len(anInput), 1)
     hiddenLayer0=4 #(len(anInput)+1)/2
-    hiddenLayer1=6 #(len(anInput)+1)/2 -1
-    hiddenLayer2=3 #(len(anInput)+1)/2 -1
+    hiddenLayer1=0 #(len(anInput)+1)/2 -1
+    hiddenLayer2=0 #(len(anInput)+1)/2 -1
     netFilename = netFilename + "_" + str(hiddenLayer0) + "_" + str(hiddenLayer1) + "_" + str(hiddenLayer2) +".xml"
 
     # get all the winner horses from the winnerdb
@@ -401,7 +401,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
         print "length of tstdata is " + str(len(tstdata))
         # number of hidden layers and nodes
 
-        net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
+        net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
         trainer=BackpropTrainer(net,trndata, momentum=0.1, verbose=True, learningrate=0.01)
 
         aux=trainer.trainUntilConvergence(dataset=DS, maxEpochs=30, verbose=True, continueEpochs=2, validationProportion=0.25)
