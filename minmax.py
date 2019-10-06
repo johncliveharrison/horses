@@ -1,4 +1,5 @@
 import re
+import os
 from numpy import mean, std, array
 
 """ this file contains the functions required to find the min and max
@@ -205,7 +206,15 @@ def minMaxSpeed(horses):
     maxSpeed = 0
     for horse in horses:
         lengthm=float(convertRaceLengthMetres(horse[5]))
-        times = float(horse[14].strip('[]'))
+        try:
+            times = float(horse[14].strip('[]'))
+        except AttributeError,e:
+            try:
+                times = float(horse[14])
+            except Exception,e:
+                print "problem with the number of horses field in minmaxSpeed"
+                print str(e)
+                continue
         if times == 0:
             continue
         speedms = lengthm/times
@@ -298,44 +307,9 @@ def normaliseWeightMinMax(weight, minMaxWeight):
         newValue = (((oldValue - minWeight) * newRange) / oldRange) + newMin
     return newValue
 
-def minMaxJockey(horses, databaseNamesList):
-    jockeys={}
-    #jockeyPerf=[]
+def minMaxJockey(jockeys):
     minJockey=100000
     maxJockey=0
-
-    if os.path.exists(minMaxJockeyListFilename):
-        print "reading jockeys from file in " + minMaxJockeyListFilename
-        with open (minMaxJockeyListFilename, 'rb') as fp:
-            jockeyPerf = pickle.load(fp)
-
-    if not self.jockeyPerf:
-
-        # first create a list where each jockey in the DS appears once
-        for horse in horses:
-            jockeyName=horse[7]
-            if not jockeyName in jockeys.keys():
-                jockeys[jockeyName]= []
-                #now loop through the databases and add all entries in the dict
-                for databaseName in databaseNamesList:
-                    #print "databaseName is " + str(databaseName)
-                    SqlStuffInst.connectDatabase(databaseName)
-                    jockey=jockey + SqlStuffInst.getJockey(jockeyName)
-                #now loop through the jockey and find the median score
-                for ride in jockey:
-                    OldRange = (ride[6] - 1)
-                    if (OldRange == 0):
-                        NewValue = 0.0
-                    else:
-                        NewRange = (1.0 - 0.0)  
-                        NewValue = (((float(ride[4]) - 1.0) * NewRange) / float(OldRange)) #+ 0
-                        # the 1.0- here makes it so a better jockey has a bigger value
-                    finish=finish+float(1.0-NewValue)            
-                meanFinishes=(finish/len(rides))
-                #now put this value in the dictionary
-                jockeys[jockeyName]=meanFinishes
-            
-        print "There are " + str(len(jockeys)) + " in the minMaxJockey function"
 
     for jockey in jockeys:
         meanFinishes=jockey
@@ -344,10 +318,7 @@ def minMaxJockey(horses, databaseNamesList):
         if meanFinishes < minJockey:
             minJockey=meanFinishes
 
-    with open(self.minMaxJockeyListFilename, 'wb') as fp:
-        pickle.dump(self.jockeys, fp)
-
-    return [minJockey, maxJockey], jockeys
+    return [minJockey, maxJockey]
 
 
 def normaliseJockeyMinMax(jockey, minMaxJockey):
@@ -363,6 +334,7 @@ def normaliseJockeyMinMax(jockey, minMaxJockey):
         newMax=1.0
     except Exception,e:
         print "something up with the minmax jockey values passed in"
+        print str(minJockey) + " " + str(maxJockey)
         raise Exception(str(e))
     try:
         oldValue=jockey
@@ -375,7 +347,7 @@ def normaliseJockeyMinMax(jockey, minMaxJockey):
             newValue = newMin
         else:
             newRange = (newMax - newMin)  
-            newValue = (((oldValue - self.minJockey) * newRange) / oldRange) + newMin
+            newValue = (((oldValue - minJockey) * newRange) / oldRange) + newMin
     except Exception,e:
         print "something up with the normalise jockey calc"
         raise Exception(str(e))

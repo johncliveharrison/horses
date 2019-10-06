@@ -2,17 +2,20 @@ import sys
 import os
 import time
 import datetime
+import pickle
 from minmax import minMaxDraw
 from minmax import meanStdGoing
 from minmax import minMaxRaceLength
 from minmax import minMaxSpeed
 from minmax import minMaxWeight
+from minmax import minMaxJockey
 from minmax import normaliseDrawMinMax
 from minmax import normaliseGoing
 from minmax import normaliseRaceLengthMinMax
 from minmax import normaliseWeightMinMax
 from minmax import normaliseSpeed
 from minmax import normaliseFinish
+from minmax import normaliseJockeyMinMax
 from minmax import getGoing
 from sqlstuff2 import SqlStuff2
 from webscrape import ResultStuffObj
@@ -26,6 +29,63 @@ from pybrain.structure import LinearLayer
 from pybrain.structure import SoftmaxLayer
 from pybrain.tools.customxml.networkwriter import NetworkWriter
 from pybrain.tools.customxml.networkreader import NetworkReader
+
+def minMaxJockeyTrainer(horses, databaseNamesList,jockeyTrainer="jockey"):
+    jockeys={}
+    if jockeyTrainer=="jockey":
+        dbNo=7
+        minMaxJockeyListFilename = "minMaxJockeyList_"
+    else:
+        dbNo=13
+        minMaxJockeyListFilename = "minMaxTrainerList_"
+    for databaseName in databaseNamesList:
+        minMaxJockeyListFilename = minMaxJockeyListFilename + str(databaseName)
+    minMaxJockeyListFilename = minMaxJockeyListFilename + ".mm"
+    SqlStuffInst=SqlStuff2()
+
+    if os.path.exists(minMaxJockeyListFilename):
+        print "reading jockeys/trainers from file in " + minMaxJockeyListFilename
+        with open (minMaxJockeyListFilename, 'rb') as fp:
+            jockeys = pickle.load(fp)
+
+    if not jockeys:
+        # first create a list where each jockey in the DS appears once
+        for idx, horse in enumerate(horses):
+            if idx%1000==0:
+                print "db entry %d of %d" % (idx,len(horses)) 
+            jockey=[]
+            jockeyName=horse[dbNo]
+            if not jockeyName in jockeys.keys():
+                jockeys[jockeyName]= []
+                #now loop through the databases and add all entries in the dict
+                for databaseName in databaseNamesList:
+                    #print "databaseName is " + str(databaseName)
+                    SqlStuffInst.connectDatabase(databaseName)
+                    if jockeyTrainer=="jockey":
+                        jockey=jockey + SqlStuffInst.getJockey(jockeyName)
+                    else:
+                        jockey=jockey + SqlStuffInst.getTrainer(jockeyName)
+                #now loop through the jockey and find the median score
+                finish=0.0
+                for ride in jockey:
+                    OldRange = (ride[6] - 1)
+                    if (OldRange == 0):
+                        NewValue = 0.0
+                    else:
+                        NewRange = (1.0 - 0.0)  
+                        NewValue = (((float(ride[4]) - 1.0) * NewRange) / float(OldRange)) #+ 0
+                        # the 1.0- here makes it so a better jockey has a bigger value
+                    finish=finish+float(1.0-NewValue)            
+                meanFinishes=(finish/len(jockey))
+                #now put this value in the dictionary
+                jockeys[jockeyName]=meanFinishes
+            
+        print "There are " + str(len(jockeys)) + " in the minMaxJockey/Trainer function"
+
+    with open(minMaxJockeyListFilename, 'wb') as fp:
+        pickle.dump(jockeys, fp)
+
+    return jockeys
 
 
 def sortResult(decimalResult, horse, extra1, extra2, extra3, sortList, sortDecimal, sortHorse):
@@ -64,16 +124,16 @@ def sortResult(decimalResult, horse, extra1, extra2, extra3, sortList, sortDecim
 
     return sortDecimal, sortList, sortHorse
 
-def testFunction(databaseNames, horseName, raceLength, going, draw, weight, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList, verbose=False):
+def testFunction(databaseNames, horseName, jockeyName, trainerName, raceLength, going, draw, weight, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, date, verbose=False):
     """This function will determine the inputs for the neural net for a horse"""
-    anInput = [None] * 7
+    anInput = [None] * 9
     horse = []
     SqlStuffInst=SqlStuff2()
     try:
         databaseNamesList=map(str, databaseNames.strip('[]').split(','))
         for databaseName in databaseNamesList:
             SqlStuffInst.connectDatabase(databaseName)
-            horse=horse + SqlStuffInst.getHorse(horseName)
+            horse=horse + SqlStuffInst.getHorse(horseName,date)
             if len(horse) > 2:
                 break
     except Exception,e:
@@ -125,6 +185,17 @@ def testFunction(databaseNames, horseName, raceLength, going, draw, weight, minM
             print "skipping horse %s with no or bad weight" % (horseName)
         raise Exception
 
+    try:
+        anInput[7]= normaliseJockeyMinMax(jockeyDict[jockeyName], minMaxJockeyList)
+    except Exception,e:
+        print "problem with the jockey normalise in the testfunction"
+        raise Exception
+
+    try:
+        anInput[8]= normaliseJockeyMinMax(trainerDict[trainerName], minMaxTrainerList)
+    except Exception,e:
+        print "problem with the trainer normalise in the testfunction"
+        raise Exception
 
     return anInput
 
@@ -172,7 +243,7 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
                 break;
              
             try:
-                testinput=testFunction(databaseNames, horses[raceNo][idx],lengths[raceNo],goings[raceNo], draws[raceNo][idx], weights[raceNo][idx], minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList)
+                testinput=testFunction(databaseNames, horses[raceNo][idx],jockeys[raceNo][idx],trainers[raceNo][idx],lengths[raceNo],goings[raceNo], draws[raceNo][idx], weights[raceNo][idx], minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict,date)
 
                 result=net.activate(testinput)
 
@@ -314,12 +385,12 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
     #input 3 draw
     #input 4 going
     #input 5 race length
-    anInput = [None] * 8
+    anInput = [None] * 9
 
     netFilename = "net"
     print "create the DS"
     DS = SupervisedDataSet(len(anInput), 1)
-    hiddenLayer0=4 #(len(anInput)+1)/2
+    hiddenLayer0=5 #(len(anInput)+1)/2
     hiddenLayer1=0 #(len(anInput)+1)/2 -1
     hiddenLayer2=0 #(len(anInput)+1)/2 -1
     netFilename = netFilename + "_" + str(hiddenLayer0) + "_" + str(hiddenLayer1) + "_" + str(hiddenLayer2) +".xml"
@@ -336,7 +407,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
         databaseNamesList=map(str, databaseNames.strip('[]').split(','))
         for databaseName in databaseNamesList:
             allHorseSqlStuffInst.connectDatabase(databaseName)
-            allHorses=allHorses + allHorseSqlStuffInst.getHorse(horseName)
+            allHorses=allHorses + allHorseSqlStuffInst.getAllTable()
 
     except Exception,e:
         print "problem with the database in testFunction"
@@ -349,7 +420,10 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
     minMaxRaceLengthList = minMaxRaceLength(allHorses)
     minMaxWeightList = minMaxWeight(allHorses)
     minMaxSpeedList = minMaxSpeed(allHorses)
-    minMaxJockeyList, jockeyDict = minMaxJockey(allHorses,databaseNamesList)
+    jockeyDict=minMaxJockeyTrainer(allHorses, databaseNamesList,jockeyTrainer="jockey")
+    minMaxJockeyList = minMaxJockey(jockeyDict)
+    trainerDict=minMaxJockeyTrainer(allHorses, databaseNamesList,jockeyTrainer="trainer")
+    minMaxTrainerList = minMaxJockey(trainerDict)
     # save the winners races in a winners_races.db
     winner_racesSqlStuffInst=SqlStuff2()
     winner_racesSqlStuffInst.connectDatabase(winner_racesdb)
@@ -406,15 +480,24 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
                 print "skipping horse %d of %d  with no weight" % (idx, len(winnerSqlStuffInst.rows))
                 continue
 
-
             try:
                 jockeyName=horseInfo[7]
-                anInput[7] = normaliseJockey(jockeyDict[jockeyName], minMaxWeightsList)
+                anInput[7] = normaliseJockeyMinMax(jockeyDict[jockeyName], minMaxJockeyList)
             except Exception,e:
                 print "problem with the jockey normalise"
-                sys.exit()
+                print "jockey is %s, median is %s.  Min is %s, max is %s" % (str(jockeyName), str(jockeyDict[jockeyName]),str(minMaxJockeyList[0]), str(minMaxJockeyList[1])) 
                 print str(e)
                 continue
+
+            try:
+                trainerName=horseInfo[13]
+                anInput[8] = normaliseJockeyMinMax(jockeyDict[jockeyName], minMaxTrainerList)
+            except Exception,e:
+                print "problem with the trainer normalise"
+                print "trainer is %s, median is %s.  Min is %s, max is %s" % (str(trainerName), str(trainerDict[trainerName]),str(minMaxTrainerList[0]), str(minMaxTrainerList[1])) 
+                print str(e)
+                continue
+
             # get the output speed
             output = normaliseSpeed(horseInfo, minMaxSpeedList)
 
