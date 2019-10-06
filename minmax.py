@@ -288,14 +288,14 @@ def minMaxWeight(horses, verbose=False):
             minWeight=kg
     return [minWeight, maxWeight]
 
-def normaliseWeightMinMax(weight, minMaxWeight):
+def normaliseWeightMinMax(weight, minMaxWeightList):
     """ normalise the weight based on min (worse)
     max(best) values"""
     oldValue=convertWeightKilos(weight)
 
     # Now normalise this trainers performance next to the max and min
-    minWeight=minMaxWeight[0]
-    maxWeight=minMaxWeight[1]
+    minWeight=minMaxWeightList[0]
+    maxWeight=minMaxWeightList[1]
     oldRange = (maxWeight - minWeight)
     newMin=-1.0
     newMax=1.0
@@ -312,7 +312,7 @@ def minMaxJockey(jockeys):
     maxJockey=0
 
     for jockey in jockeys:
-        meanFinishes=jockey
+        meanFinishes = jockeys[jockey]
         if meanFinishes > maxJockey:
             maxJockey=meanFinishes
         if meanFinishes < minJockey:
