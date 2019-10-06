@@ -250,7 +250,7 @@ def getWinners(databaseNames, filename, date=-1):
         ResultStuffInstList.append(ResultStuffInst)
         winnerSqlStuffInst.addResultStuffToTable(ResultStuffInst, pos=row[4])
 
-def getWinnersSubsetHorse(races, winnerdb, databaseNames):
+def getWinnersSubsetHorse(races, winnerdb, winners_racesdb, databaseNames):
     """ this function will look in the resultsdb for every
     horse that is in the winnerdb to check it has run at 
     least <races> number of races"""
@@ -259,12 +259,12 @@ def getWinnersSubsetHorse(races, winnerdb, databaseNames):
 
     # save the winners races in a winners_races.db
     winner_racesSqlStuffInst=SqlStuff2()
-    winner_racesSqlStuffInst.connectDatabase("winners_races.db")
+    winner_racesSqlStuffInst.connectDatabase(winners_racesdb)
     winner_racesSqlStuffInst.createResultTable()
 
     # get all the horsenames from the winnerdb
     winnerSqlStuffInst=SqlStuff2()
-    winnerSqlStuffInst.connectDatabase("winners.db")
+    winnerSqlStuffInst.connectDatabase(winnerdb)
     winnerSqlStuffInst.getAllTable()
 
 
@@ -304,7 +304,8 @@ def getWinnersSubsetHorse(races, winnerdb, databaseNames):
                 ResultStuffInst.odds.append(row[15])
                 ResultStuffInstList.append(ResultStuffInst)
                 winner_racesSqlStuffInst.addResultStuffToTable(ResultStuffInst, pos=row[4])
-
+        else:
+            winnerSqlStuffInst.delHorse(horseName)
 
 def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=False):
     """ create a text file of all the inputs to the net"""
@@ -313,7 +314,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
     #input 3 draw
     #input 4 going
     #input 5 race length
-    anInput = [None] * 7
+    anInput = [None] * 8
 
     netFilename = "net"
     print "create the DS"
@@ -327,11 +328,28 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
     winnerSqlStuffInst=SqlStuff2()
     winnerSqlStuffInst.connectDatabase(winnerdb)
     firstPlaceHorses=winnerSqlStuffInst.getAllTable()
-    minMaxDrawList = minMaxDraw(firstPlaceHorses)
-    meanStdGoingList = meanStdGoing(firstPlaceHorses)
-    minMaxRaceLengthList = minMaxRaceLength(firstPlaceHorses)
-    minMaxWeightList = minMaxWeight(firstPlaceHorses)
-    minMaxSpeedList = minMaxSpeed(firstPlaceHorses)
+
+    #base the min max values on all the databases (not just the winners)
+    allHorseSqlStuffInst=SqlStuff2()
+    allHorses=[]
+    try:
+        databaseNamesList=map(str, databaseNames.strip('[]').split(','))
+        for databaseName in databaseNamesList:
+            allHorseSqlStuffInst.connectDatabase(databaseName)
+            allHorses=allHorses + allHorseSqlStuffInst.getHorse(horseName)
+
+    except Exception,e:
+        print "problem with the database in testFunction"
+        print "databaseNames is %s" % databaseNames
+        print str(e)
+        raise Exception
+
+    minMaxDrawList = minMaxDraw(allHorses)
+    meanStdGoingList = meanStdGoing(allHorses)
+    minMaxRaceLengthList = minMaxRaceLength(allHorses)
+    minMaxWeightList = minMaxWeight(allHorses)
+    minMaxSpeedList = minMaxSpeed(allHorses)
+    minMaxJockeyList, jockeyDict = minMaxJockey(allHorses,databaseNamesList)
     # save the winners races in a winners_races.db
     winner_racesSqlStuffInst=SqlStuff2()
     winner_racesSqlStuffInst.connectDatabase(winner_racesdb)
@@ -389,6 +407,14 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
                 continue
 
 
+            try:
+                jockeyName=horseInfo[7]
+                anInput[7] = normaliseJockey(jockeyDict[jockeyName], minMaxWeightsList)
+            except Exception,e:
+                print "problem with the jockey normalise"
+                sys.exit()
+                print str(e)
+                continue
             # get the output speed
             output = normaliseSpeed(horseInfo, minMaxSpeedList)
 

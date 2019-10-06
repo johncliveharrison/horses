@@ -371,6 +371,11 @@ def viewNewestDate(databaseName):
     SqlStuffInst.connectDatabase(databaseName)
     SqlStuffInst.viewNewestDate()
 
+def viewOldestDate(databaseName):
+    SqlStuffInst=SqlStuff2()
+    SqlStuffInst.connectDatabase(databaseName)
+    SqlStuffInst.viewOldestDate()
+
 def delDate(date, databaseName):
     SqlStuffInst=SqlStuff2()
     SqlStuffInst.connectDatabase(databaseName)

@@ -68,6 +68,11 @@ class SqlStuff2:
         for row in self.rows:
             print row
 
+    def delHorse(self, horseName):
+        self.sql_str="DELETE from RESULTS_INFO where HORSENAME='{}'".format(horseName)
+        self.conn.execute(self.sql_str)
+        self.conn.commit()
+
     def delDate(self, date):
         self.sql_str="DELETE from RESULTS_INFO where RACEDATE='{}'".format(date)
         self.conn.execute(self.sql_str)
@@ -214,6 +219,12 @@ class SqlStuff2:
 
     def viewNewestDate(self):
         self.sql_str="SELECT *, max(RACEDATE) as MaxDate from RESULTS_INFO"
+        self.cursor=self.conn.execute(self.sql_str)
+        self.rows=self.cursor.fetchall()
+        print self.rows
+
+    def viewOldestDate(self):
+        self.sql_str="SELECT *, min(RACEDATE) as MaxDate from RESULTS_INFO"
         self.cursor=self.conn.execute(self.sql_str)
         self.rows=self.cursor.fetchall()
         print self.rows
