@@ -69,7 +69,8 @@ class SqlStuff2:
             print row
 
     def delHorse(self, horseName):
-        self.sql_str="DELETE from RESULTS_INFO where HORSENAME='{}'".format(horseName)
+        #print "horseName in delHorse is %s" % horseName
+        self.sql_str="DELETE from RESULTS_INFO where HORSENAME='{}'"..format(horseName.replace("'", "''"))
         self.conn.execute(self.sql_str)
         self.conn.commit()
 
