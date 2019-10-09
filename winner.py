@@ -419,7 +419,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
     meanStdGoingList = meanStdGoing(allHorses)
     minMaxRaceLengthList = minMaxRaceLength(allHorses)
     minMaxWeightList = minMaxWeight(allHorses)
-    minMaxSpeedList = minMaxSpeed(allHorses)
+    minMaxSpeedList = minMaxSpeed(firstPlaceHorses)
     jockeyDict=minMaxJockeyTrainer(allHorses, databaseNamesList,jockeyTrainer="jockey")
     minMaxJockeyList = minMaxJockey(jockeyDict)
     trainerDict=minMaxJockeyTrainer(allHorses, databaseNamesList,jockeyTrainer="trainer")
@@ -432,7 +432,9 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
         print "found network training file"
         net = NetworkReader.readFrom(netFilename) 
     else:
-        for idx, horseInfo in enumerate(winnerSqlStuffInst.rows[0:10000]):
+        for idx, horseInfo in enumerate(winnerSqlStuffInst.rows):
+            if idx%1000==0:
+                print "Net input %d generated" % idx
             horseName= horseInfo[1]
             date=horseInfo[9]
             horse= []
