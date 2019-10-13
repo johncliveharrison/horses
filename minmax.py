@@ -24,9 +24,13 @@ def minMaxDraw(horses, verbose=False):
 def normaliseDrawMinMax(draw, minMax):
     """ normalise the jockey performance based on min (worse)
     max(best) values"""
-    oldValue=float(draw)
-    maxDraw=float(minMax[1])
-    minDraw=float(minMax[0])
+    try:
+        oldValue=float(draw)
+        maxDraw=float(minMax[1])
+        minDraw=float(minMax[0])
+    except Exception,e:
+        print "problem in normaliseDrawMinMax"
+        raise Exception(str(e))
     # Now normalise this draw next to the max and min
     oldRange = (maxDraw - minDraw)
     newMin=-1.0
@@ -208,11 +212,12 @@ def minMaxSpeed(horses):
         lengthm=float(convertRaceLengthMetres(horse[5]))
         try:
             times = float(horse[14].strip('[]'))
-        except AttributeError,e:
+        except (AttributeError,ValueError), e:
             try:
                 times = float(horse[14])
             except Exception,e:
-                print "problem with the number of horses field in minmaxSpeed"
+                print str(horse)
+                print "problem with the finish time field in minmaxSpeed"
                 print str(e)
                 continue
         if times == 0:
@@ -227,7 +232,14 @@ def minMaxSpeed(horses):
 
 def normaliseSpeed(horse, minMaxSpeedList):
     """ normalise the horse speed """
-    oldValue=float(horse[14].strip('[]'))
+    if isinstance(horse[14], (float, int)):
+        oldValue=float(horse[14])
+    else:
+        try:
+            oldValue=float(horse[14].strip('[]'))
+        except Exception,e:
+            print "problem getting speed from the horse"
+            raise Exception(str(e))
     maxSpeed=minMaxSpeedList[1]
     minSpeed=minMaxSpeedList[0]
 
