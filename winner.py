@@ -215,7 +215,8 @@ def testFunction(databaseNames, horseName, jockeyName, trainerName, raceLength, 
         raise Exception(str(e))
     if verbose:
         print "after the trainer"
-    print str(anInput)
+    if verbose:
+        print str(anInput)
     return anInput
 
 
@@ -278,10 +279,10 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
                 if verbose:
                     print "after sort"
             except Exception, e:
-                #if verbose:
-                print "something not correct in testFunction"
-                print str(e)
-                #skipFileWrite=1
+                if verbose:
+                    print "something not correct in testFunction"
+                    print str(e)
+                skipFileWrite=1
 
         if skipFileWrite==0:
             
@@ -559,5 +560,5 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
         # save the net params
         NetworkWriter.writeToFile(net, netFilename)
     
-    neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, makeResult = False, date=dateIn)
+    neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, makeResult = True, date=dateIn)
     

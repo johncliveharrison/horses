@@ -521,7 +521,7 @@ class ResultStuff:
         except:
             print "couldn't get raceLength or going"
 
-    def getRaceFinishingTimes(self, verbose=0):
+    def getRaceFinishingTimes(self, verbose=False):
         """function to get the race finishing time from the result popup"""
         ref=10000
         minutes=0
@@ -539,27 +539,41 @@ class ResultStuff:
             self.finishingTime=0
             raise Exception(str(e))
         try:
-            self.span=self.li.findAll("span", {"class":"rp-raceInfo__value"})[0].find(text=True).strip()
+            self.span=self.li.findAll("span", {"class":"rp-raceInfo__value"})
         except:
             print "missing time - probable void race"
             self.finishingTime=0
             raise Exception(str(e))
-            
-        #print "race finish time is " + str(self.span)
-        self.raceFinishTime=str(self.span)
-        for ii, self.info in enumerate(self.raceFinishTime.split()):
-            if ii==0:
-                minutes=self.info.split("m")[0]
-                if len(self.info.split("m"))==1:
-                    minutes=float(0)
-                    seconds=float(self.info.split("s")[0])
-                    break
-            if ii==1:
-                seconds=float(self.info.split("s")[0])
-        #if verbose!=0:
-            #print "minutes " + str(minutes)
-            #print "seconds " + str(seconds)
-        time = 60*float(minutes)+seconds
+ 
+        if verbose:
+            print "found %d rp-raceInfo__value fields" % len(self.span)
+        for value in self.span:
+
+            self.raceFinishTime=str(value.find(text=True).strip())
+            if verbose:
+                print "race finish time is " + str(self.raceFinishTime)
+
+            try:
+                for ii, self.info in enumerate(self.raceFinishTime.split()):
+                    if ii==0:
+                        minutes=self.info.split("m")[0]
+                        if len(self.info.split("m"))==1:
+                            minutes=float(0)
+                            seconds=float(self.info.split("s")[0])
+                            break
+                    if ii==1:
+                        seconds=float(self.info.split("s")[0])
+            except Exception,e:
+                continue
+
+            if verbose:
+                print "minutes " + str(minutes)
+                print "seconds " + str(seconds)
+            time = 60*float(minutes)+seconds
+            if verbose:
+                print "time is " + str(time)
+            if time > 0:
+                break
         self.finishingTime=time
 
     def remove(soup, tagname):
