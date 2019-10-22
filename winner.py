@@ -124,11 +124,11 @@ def sortResult(decimalResult, horse, extra1, extra2, extra3, sortList, sortDecim
 
     return sortDecimal, sortList, sortHorse
 
-def testFunction(databaseNames, horseName, jockeyName, trainerName, raceLength, going, draw, weight, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, date, verbose=False):
+def testFunction(databaseNames, horseName, jockeyName, trainerName, raceLength, going, draw, weight, odds, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, date, verbose=False):
     """This function will determine the inputs for the neural net for a horse"""
     if verbose:
         print "first line in the testfunction"
-    anInput = [None] * 9
+    anInput = [None] * 10
     horse = []
     if verbose:
         print "now going to make a new sql object"
@@ -215,6 +215,16 @@ def testFunction(databaseNames, horseName, jockeyName, trainerName, raceLength, 
         raise Exception(str(e))
     if verbose:
         print "after the trainer"
+    try:
+        #odds=horseInfo[15]
+        anInput[9] = float(odds.split("/")[0])/float(odds.split("/")[1])
+    except Exception,e:
+        print "problem with the odds %s" % str(odds)
+        print str(odds.split("/"))
+        print str(e)
+        raise Exception(str(e))
+
+
     if verbose:
         print str(anInput)
     return anInput
@@ -229,7 +239,7 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
     try:
         if date >= datetime.datetime.today().strftime('%Y-%m-%d'):
             print "trying to make a test card from the days test card as date is today or later"
-            horses, jockeys, lengths, weights, goings, draws, trainers, todaysRaceTimes, todaysRaceVenues=makeATestcard(date)
+            horses, jockeys, lengths, weights, goings, draws, trainers, odds, todaysRaceTimes, todaysRaceVenues=makeATestcard(date)
         else:
             print "tring to make a test card from past results"
             horses, jockeys, lengths, weights, goings, draws, trainers, todaysRaceTimes, todaysRaceVenues, odds=makeATestcardFromResults(date)
@@ -269,7 +279,7 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
             try:
                 if verbose:
                     print "calling test function"
-                testinput=testFunction(databaseNames, horses[raceNo][idx],jockeys[raceNo][idx],trainers[raceNo][idx],lengths[raceNo],goings[raceNo], draws[raceNo][idx], weights[raceNo][idx], minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict,date)
+                testinput=testFunction(databaseNames, horses[raceNo][idx],jockeys[raceNo][idx],trainers[raceNo][idx],lengths[raceNo],goings[raceNo], draws[raceNo][idx], weights[raceNo][idx], odds[raceNo][idx], minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict,date)
                 if verbose:
                     print "after test function / before net"
                 result=net.activate(testinput)
@@ -414,14 +424,14 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
     #input 3 draw
     #input 4 going
     #input 5 race length
-    anInput = [None] * 9
+    anInput = [None] * 10
 
     netFilename = "net"
     print "create the DS"
     DS = SupervisedDataSet(len(anInput), 1)
-    hiddenLayer0=6 #(len(anInput)+1)/2
-    hiddenLayer1=3 #(len(anInput)+1)/2 -1
-    hiddenLayer2=0 #(len(anInput)+1)/2 -1
+    hiddenLayer0=8 #(len(anInput)+1)/2
+    hiddenLayer1=6 #(len(anInput)+1)/2 -1
+    hiddenLayer2=4 #(len(anInput)+1)/2 -1
     netFilename = netFilename + "_" + str(hiddenLayer0) + "_" + str(hiddenLayer1) + "_" + str(hiddenLayer2) +".xml"
 
     # get all the winner horses from the winnerdb
@@ -532,6 +542,15 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
                 print str(e)
                 continue
 
+
+            try:
+                odds=horseInfo[15]
+                anInput[9] = float(odds.split("/")[0])/float(odds.split("/")[1])
+            except Exception,e:
+                print "problem with the odds %s" % str(odds)
+                print str(odds.split("/"))
+                continue
+
             # get the output speed
             try:
                 output = normaliseSpeed(horseInfo, minMaxSpeedList)
@@ -549,7 +568,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
         print "length of tstdata is " + str(len(tstdata))
         # number of hidden layers and nodes
 
-        net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
+        net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
         trainer=BackpropTrainer(net,trndata, momentum=0.1, verbose=True, learningrate=0.01)
 
         aux=trainer.trainUntilConvergence(dataset=DS, maxEpochs=30, verbose=True, continueEpochs=2, validationProportion=0.25)
@@ -560,5 +579,5 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
         # save the net params
         NetworkWriter.writeToFile(net, netFilename)
     
-    neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, makeResult = True, date=dateIn)
+    neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, makeResult = False, date=dateIn)
     

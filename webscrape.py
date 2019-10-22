@@ -1,5 +1,12 @@
 import urllib2,  time, re
 #from bs4 import BeautifulSoup
+
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+
+import time
+
+#import dryscrape
 from BeautifulSoup import BeautifulSoup
 import datetime
 from string import whitespace
@@ -153,7 +160,8 @@ class HrefStuff:
         trainer=[]
         weight=[]
         draw=[]
-        self.url="http://www.racingpost.com" + href + "&raceTabs=lc_"
+        odd=[]
+        self.url="https://www.racingpost.com" + href + "&raceTabs=lc_"
         try:
             self.soup=self.webscrapePolite(self.url)
         except Exception, e:
@@ -215,16 +223,59 @@ class HrefStuff:
                     cardTableRows.append(rows)
         if verbose:
             print "got this far 3"
+
+        try:
+            CHROME_PATH = '/usr/bin/google-chrome'
+            CHROMEDRIVER_PATH = '/usr/bin/chromedriver'
+            WINDOW_SIZE = "1920,1080"
+
+            chrome_options = Options()  
+            chrome_options.add_argument("--headless")  
+            chrome_options.add_argument("--window-size=%s" % WINDOW_SIZE)
+            chrome_options.binary_location = CHROME_PATH
+            
+            driver = webdriver.Chrome(executable_path=CHROMEDRIVER_PATH,
+                                      chrome_options=chrome_options)  
+            #driver = webdriver.Chrome()
+            driver.get(self.url)
+            time.sleep(15)
+            htmlSource = driver.page_source
+            soup = BeautifulSoup(htmlSource)
+        except Exception, e:
+            print "problem with selenium"
+            raise Exception(str(e))
+
         for cardTableRow in cardTableRows:
-            #horseName
+
             runnerCardWrapper=cardTableRow.find("div",{"class":"RC-runnerCardWrapper"})
 
+            #horseName
             runnerRowHorseWrapper=runnerCardWrapper.find("div",{"class":"RC-runnerRowHorseWrapper"})
             runnerMainWrapper=runnerRowHorseWrapper.find("div",{"class":"RC-runnerMainWrapper"})
             a=runnerMainWrapper.find("a").find(text=True).strip()
             horseName.append(a)
             if verbose:
                 print "horse name is " + str(a)
+            #odds
+            # get the javascript elements
+            try:
+                odds = soup.find("div",{"data-diffusion-horsename":str(a)})
+                odds = odds.find("a").attrs
+                print odds[0]
+                odds = odds[4]
+                #odds = odds.find("a", {"data-diffusion-fractional").find(text=True)
+                #uibtn=htmlSource.find_element_by_class_name('ui-btn')
+
+                print str(a)
+                print odds[1]
+                odd.append(odds[1])
+
+            except Exception,e:
+                print "error from selenium"
+                print str(self.url)
+                print str(e)
+                raise Exception(str(e))
+
             #jockey
             runnerRowInfoWrapper=runnerCardWrapper.find("div",{"class":"RC-runnerRowInfoWrapper"})
             runnerInfoWrapper=runnerRowInfoWrapper.find("div",{"class":"RC-runnerInfoWrapper"})
@@ -266,7 +317,7 @@ class HrefStuff:
             print going
         self.going=" ".join(going)
 
-        return (horseName, jockey, self.raceLength, weight, self.going, draw, trainer)
+        return (horseName, jockey, self.raceLength, weight, self.going, draw, trainer, odd)
 
     def getFullResultHrefs(self, date):
         """function to get the hrefs for the specified date"""
