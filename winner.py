@@ -231,7 +231,7 @@ def testFunction(databaseNames, horseName, jockeyName, trainerName, raceLength, 
 
 
 
-def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, makeResult = False, date=time.strftime("%Y-%m-%d"), verbose=False):
+def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, result = False, date=time.strftime("%Y-%m-%d"), verbose=False):
     #lengths=[]
     #draws=[]
     print "the date is " + str(date)
@@ -240,9 +240,11 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
         if date >= datetime.datetime.today().strftime('%Y-%m-%d'):
             print "trying to make a test card from the days test card as date is today or later"
             horses, jockeys, lengths, weights, goings, draws, trainers, odds, todaysRaceTimes, todaysRaceVenues=makeATestcard(date)
+            makeResult = False
         else:
             print "tring to make a test card from past results"
             horses, jockeys, lengths, weights, goings, draws, trainers, todaysRaceTimes, todaysRaceVenues, odds=makeATestcardFromResults(date)
+            makeResult = result
     except Exception:
         print "making a testcard from results failed"
 
@@ -579,5 +581,5 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
         # save the net params
         NetworkWriter.writeToFile(net, netFilename)
     
-    neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, makeResult = False, date=dateIn)
+    neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, result = True, date=dateIn)
     
