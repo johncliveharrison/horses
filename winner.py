@@ -3,6 +3,7 @@ import os
 import time
 import datetime
 import pickle
+from common import daterange
 from minmax import minMaxDraw
 from minmax import meanStdGoing
 from minmax import minMaxRaceLength
@@ -126,20 +127,12 @@ def sortResult(decimalResult, horse, extra1, extra2, extra3, sortList, sortDecim
 
 def testFunction(databaseNames, horseName, jockeyName, trainerName, raceLength, going, draw, weight, odds, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, date, verbose=False):
     """This function will determine the inputs for the neural net for a horse"""
-    if verbose:
-        print "first line in the testfunction"
     anInput = [None] * 10
     horse = []
-    if verbose:
-        print "now going to make a new sql object"
     SqlStuffInst=SqlStuff2()
     try:
-        if verbose:
-            print "going to make a databaseNameList"
         databaseNamesList=map(str, databaseNames.strip('[]').split(','))
         for databaseName in databaseNamesList:
-            if verbose:
-                print str(databaseName)
             SqlStuffInst.connectDatabase(databaseName)
             horse=horse + SqlStuffInst.getHorse(horseName,date)
             if len(horse) > 2:
@@ -149,8 +142,7 @@ def testFunction(databaseNames, horseName, jockeyName, trainerName, raceLength, 
         print "databaseNames is %s" % databaseNames
         print str(e)
         raise Exception(str(e))
-    if verbose:
-        print "after the database stuff"
+
     try:
         anInput[0] = normaliseFinish(horse[-1][4],horse[-1][6])
         anInput[1] = normaliseFinish(horse[-2][4],horse[-2][6])
@@ -161,8 +153,6 @@ def testFunction(databaseNames, horseName, jockeyName, trainerName, raceLength, 
             print "found %d entries" % (int(len(horse)))
             print str(horse)
         raise Exception(str(e))
-    if verbose:
-        print "after the previous finishes"
     # get the draw
     try:
         anInput[3] = normaliseDrawMinMax(draw,minMaxDrawList)
@@ -172,8 +162,6 @@ def testFunction(databaseNames, horseName, jockeyName, trainerName, raceLength, 
             print "the draw is %s" % (str(draw))
             print "the minMaxDrawList is %s" % (str(minMaxDrawList))
         raise Exception(str(e))
-    if verbose:
-        print "after the draw"
     # get the going
     try:
         anInput[4] = normaliseGoing(getGoing(going), meanStdGoingList)
@@ -181,8 +169,6 @@ def testFunction(databaseNames, horseName, jockeyName, trainerName, raceLength, 
         if verbose:
             print "skipping horse %s with no going" % (horseName)
         raise Exception(str(e))
-    if verbose:
-        print "after the going"
     # get the race length
     try:
         anInput[5] = normaliseRaceLengthMinMax(raceLength, minMaxRaceLengthList)
@@ -190,8 +176,6 @@ def testFunction(databaseNames, horseName, jockeyName, trainerName, raceLength, 
         if verbose:
             print "skipping horse %s with no or bad racelength" % (horseName)
         raise Exception(str(e))
-    if verbose:
-        print "after the race length"
     # get the weight
     try:
         anInput[6] = normaliseWeightMinMax(weight, minMaxWeightList)
@@ -199,24 +183,20 @@ def testFunction(databaseNames, horseName, jockeyName, trainerName, raceLength, 
         if verbose:
             print "skipping horse %s with no or bad weight" % (horseName)
         raise Exception(str(e))
-    if verbose:
-        print "after the weight"
+    # get the jockey
     try:
         anInput[7]= normaliseJockeyMinMax(jockeyDict[jockeyName], minMaxJockeyList)
     except Exception,e:
         print "problem with the jockey normalise in the testfunction"
         raise Exception(str(e))
-    if verbose:
-        print "after the jockey"
+    # get the trainer
     try:
         anInput[8]= normaliseJockeyMinMax(trainerDict[trainerName], minMaxTrainerList)
     except Exception,e:
         print "problem with the trainer normalise in the testfunction"
         raise Exception(str(e))
-    if verbose:
-        print "after the trainer"
+    # get the odds
     try:
-        #odds=horseInfo[15]
         anInput[9] = float(odds.split("/")[0])/float(odds.split("/")[1])
     except Exception,e:
         print "problem with the odds %s" % str(odds)
@@ -225,8 +205,8 @@ def testFunction(databaseNames, horseName, jockeyName, trainerName, raceLength, 
         raise Exception(str(e))
 
 
-    if verbose:
-        print str(anInput)
+    #if verbose:
+    #    print str(anInput)
     return anInput
 
 
@@ -287,7 +267,7 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
                 result=net.activate(testinput)
                 if verbose:
                     print "after net / before sort"
-                sortDecimal, sortList, sortHorse=sortResult(result, str(horse), str(0), str(0), str(0), sortList, sortDecimal, sortHorse)
+                sortDecimal, sortList, sortHorse=sortResult(result, str(horse), str(odds[raceNo][idx]), str(0), str(0), sortList, sortDecimal, sortHorse)
                 if verbose:
                     print "after sort"
             except Exception, e:
@@ -314,6 +294,100 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
                     """if there are none finishers this will be the exception"""
 
     return returnSortHorse, returnResults
+
+
+
+def checkResults(netOut, results):
+
+    fpFpOdds =[]
+    spFpOdds =[]
+    fpEwOdds =[]
+    spEwOdds =[]
+
+    if len(results) == 0 or len(netOut) == 0:
+        print "No results to check"
+        return 0
+
+    for net, result in zip(netOut, results):
+
+        try:
+            if net[0]==result.horseNames[0]:
+                odd_split=result.odds[0].split("/")
+                fpFpOdds.append((float(odd_split[0])/float(odd_split[1])))
+        except Exception,e:
+            print "problem with fpFpOdds"
+            pass
+
+        try:
+            if net[1]==result.horseNames[0]:
+                odd_split=result.odds[0].split("/")
+                spFpOdds.append((float(odd_split[0])/float(odd_split[1])))
+        except Exception,e:
+            print "problem with fpFpOdds"
+            pass
+    # do the each way oodds too
+    fpEwOdds=fpEwOdds + fpFpOdds
+    spEwOdds=spEwOdds + spFpOdds
+    for net, result in zip(netOut, results):
+        try:
+            if net[0]==result.horseNames[1]:
+                odd_split=result.odds[1].split("/")
+                fpEwOdds.append((float(odd_split[0])/float(odd_split[1]))/2.0)
+            if net[0]==result.horseNames[2]:
+                odd_split=result.odds[2].split("/")
+                fpEwOdds.append((float(odd_split[0])/float(odd_split[1]))/2.0)
+        except Exception,e:
+            print "problem with fpEwOdds"
+            pass
+
+
+        try:
+            if net[1]==result.horseNames[1]:
+                odd_split=result.odds[1].split("/")
+                spEwOdds.append((float(odd_split[0])/float(odd_split[1]))/2.0)
+            if net[1]==result.horseNames[2]:
+                odd_split=result.odds[2].split("/")
+                spEwOdds.append((float(odd_split[0])/float(odd_split[1]))/2.0)
+        except Exception,e:
+            print "problem with spEwOdds"
+            pass
+
+    try:
+        print "1st place prediction won %d times with average odds %f" % (len(fpFpOdds), sum(fpFpOdds)/len(fpFpOdds))
+    except ZeroDivisionError:
+        pass
+    try:
+        print "1st place prediction came top 3 %d times with average odds %f" % (len(fpEwOdds), sum(fpEwOdds)/len(fpEwOdds))
+    except ZeroDivisionError:
+        pass
+    try:
+        print "2nd place prediction won %d times with average odds %f" % (len(spFpOdds), sum(spFpOdds)/len(spFpOdds))
+    except ZeroDivisionError:
+        pass
+    try:
+        print "2nd place prediction came top 3 %d times with average odds %f" % (len(spEwOdds), sum(spEwOdds)/len(spEwOdds))
+    except ZeroDivisionError:
+        pass
+
+    print "The total number of races was %d" % len(netOut)
+    print "So the average odds over all races....."
+    
+    try:
+        print "1st place prediction won %d times with average odds %f" % (len(fpFpOdds), sum(fpFpOdds)/len(netOut))
+    except ZeroDivisionError:
+        pass
+    try:
+        print "1st place prediction came top 3 %d times with average odds %f" % (len(fpEwOdds), sum(fpEwOdds)/len(netOut))
+    except ZeroDivisionError:
+        pass
+    try:
+        print "2nd place prediction won %d times with average odds %f" % (len(spFpOdds), sum(spFpOdds)/len(netOut))
+    except ZeroDivisionError:
+        pass
+    try:
+        print "2nd place prediction came top 3 %d times with average odds %f" % (len(spEwOdds), sum(spEwOdds)/len(netOut))
+    except ZeroDivisionError:
+        pass
 
 
 
@@ -419,9 +493,11 @@ def getWinnersSubsetHorse(races, winnerdb, winners_racesdb, databaseNames):
         else:
             winnerSqlStuffInst.delHorse(horseName)
 
-def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=False):
+def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEnd=False, verbose=False):
     """ create a text file of all the inputs to the net"""
 
+    if not dateEnd:
+        dateEnd=dateStart
     #input 0,1,2 the past positions of this horse when it won
     #input 3 draw
     #input 4 going
@@ -580,6 +656,16 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateIn, verbose=F
 
         # save the net params
         NetworkWriter.writeToFile(net, netFilename)
+
+    dateStartSplit=dateStart.split('-')
+    dateEndSplit=dateEnd.split('-')
+
+    for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2]))):
+
+        dateIn=time.strftime("%Y-%m-%d", single_date.timetuple())       
+        print dateIn
+
+        netOut, results = neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, result = True, date=dateIn)
     
-    neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, result = True, date=dateIn)
-    
+        checkResults(netOut, results)
+
