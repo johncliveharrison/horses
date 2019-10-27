@@ -13,6 +13,8 @@ import webscrape_legacy
 import webscrape_legacy2
 import time
 from common import daterange
+from minmax import convertRaceLengthMetres
+from minmax import convertWeightKilos
 
 def tryLegacy(date):
     """try the legacy result format and if it fails try the current. 
@@ -350,11 +352,13 @@ def viewTopWinners(databaseName):
     SqlStuffInst.connectDatabase(databaseName)
     SqlStuffInst.getTopWinners()
 
-def viewHorse(horseName, databaseName):
-    print "ID,  HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE, ODDS"
+
+def viewHorse(horseName, databaseName, verbose=True):
+    if verbose:
+        print "ID,  HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE, ODDS"
     SqlStuffInst=SqlStuff2()
     SqlStuffInst.connectDatabase(databaseName)
-    SqlStuffInst.viewHorse(horseName)
+    return SqlStuffInst.viewHorse(horseName, verbose)
 
 def viewJockey(jockeyName, databaseName):
     print "ID,  HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE, ODDS"
@@ -395,3 +399,72 @@ def delDateRange(dateStart, dateStop, databaseName):
     for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateStopSplit[0]),int(dateStopSplit[1]),int(dateStopSplit[2]))):
         print single_date
         delDate(single_date, databaseName)
+
+def countWinners(databaseNames):
+    firstPlaces = []
+    firstPlaceIntDraws = []
+    firstPlaceValidDraws = []
+    firstPlaceValidOdds = []
+    firstPlaceValidRaceLength = []
+    firstPlaceValidWeight = []
+    firstPlaceValidHorse = []
+    try:
+        databaseNamesList=map(str, databaseNames.strip('[]').split(','))
+        for databaseName in databaseNamesList:
+    
+            SqlStuffInst=SqlStuff2()
+            SqlStuffInst.connectDatabase(databaseName)
+            firstPlaces = firstPlaces + SqlStuffInst.getPosition(1)
+    except Exception,e:
+        print str(e)
+    for firstPlace in firstPlaces:
+        if isinstance(firstPlace[12], int):
+            firstPlaceIntDraws.append(firstPlace)
+            if firstPlace[12] != 255:
+                firstPlaceValidDraws.append(firstPlace)
+
+    for firstPlace in firstPlaceValidDraws:
+        if "/" in firstPlace[15]:
+            firstPlaceValidOdds.append(firstPlace)
+
+    for firstPlace in firstPlaceValidOdds:
+        try:
+            meters = convertRaceLengthMetres(firstPlace[5])
+            if meters > 0:
+                firstPlaceValidRaceLength.append(firstPlace)
+        except Exception, e:
+            print str(e)
+            continue
+
+    for firstPlace in firstPlaceValidRaceLength:
+        try:
+            weight = convertWeightKilos(firstPlace[3])
+            if weight != 60.0:
+                firstPlaceValidWeight.append(firstPlace)
+        except Exception,e:
+            print str(e)
+            continue
+
+
+
+    for firstPlace in firstPlaceValidWeight:
+        horse = []
+        for databaseName in databaseNamesList:        
+            try:
+                horse = horse + viewHorse(firstPlace[1], databaseName, verbose=False)
+                if len(horse) > 2:
+                    firstPlaceValidHorse.append(firstPlace)
+                    break
+            except Exception,e:
+                #print str(e)
+                continue
+            
+
+    print "There are %d winners" % len(firstPlaces)
+    print "There are %d winners with integer draws" % len(firstPlaceIntDraws)
+    print "There are %d winners with valid draws" % len(firstPlaceValidDraws)
+    print "There are %d winners with valid draws and odds" % len(firstPlaceValidOdds)
+    print "There are %d winners with valid draws, odds and racelength" % len(firstPlaceValidRaceLength)
+    print "There are %d winners with valid draws, odds, raceLength and weight" % len(firstPlaceValidWeight)
+    print "There are %d winners with valid draws, odds, raceLength, weight and 3 runs" % len(firstPlaceValidHorse)
+

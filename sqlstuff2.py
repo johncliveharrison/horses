@@ -201,12 +201,14 @@ class SqlStuff2:
 
     
    
-    def viewHorse(self, horseName):        
+    def viewHorse(self, horseName, verbose=True):        
         self.rows=self.getHorse(horseName)
-        for self.row in self.rows:
-            print self.row
-            print str(self.convertRaceLengthMetres(self.row[5]))
-            print str(self.convertRaceLengthMetres(self.row[5])/self.row[14])
+        if verbose:
+            for self.row in self.rows:
+                print self.row
+                print str(self.convertRaceLengthMetres(self.row[5]))
+                print str(self.convertRaceLengthMetres(self.row[5])/self.row[14])
+        return self.rows
 
     def viewJockey(self, jockeyName):
         self.rows=self.getJockey(jockeyName)

@@ -7,11 +7,15 @@ values for a field in the winners list"""
 def minMaxDraw(horses, verbose=False):
     minDraw=100000
     maxDraw=0
+    numberOfHorses=[]
     for ii, horse in enumerate(horses):
         try:
             tmp=horse[12]+1
         except Exception, e:
             continue
+
+        numberOfHorses.append(horse[6])
+
         if horse[12] > maxDraw:
             if horse[12] < 50:
                 if verbose:
@@ -19,6 +23,9 @@ def minMaxDraw(horses, verbose=False):
                 maxDraw=horse[12]
         if horse[12] < minDraw:
             minDraw=horse[12]
+    mean = array(numberOfHorses).mean()
+    std = array(numberOfHorses).std()
+    maxDraw = mean + (2*std)
     return [minDraw, maxDraw]
 
 def normaliseDrawMinMax(draw, minMax):
@@ -28,6 +35,10 @@ def normaliseDrawMinMax(draw, minMax):
         oldValue=float(draw)
         maxDraw=float(minMax[1])
         minDraw=float(minMax[0])
+
+        if oldValue > maxDraw:
+            raise Exception("draw %d exceeds maxDraw %d" % (draw, minMax[1]))
+
     except Exception,e:
         print "problem in normaliseDrawMinMax"
         raise Exception(str(e))
@@ -333,7 +344,7 @@ def minMaxJockey(jockeys):
     return [minJockey, maxJockey]
 
 
-def normaliseJockeyMinMax(jockey, minMaxJockey):
+def normaliseJockeyTrainerMinMax(jockey, minMaxJockey):
     """ normalise the jockey performance based on min (worse)
     max(best) values"""
 

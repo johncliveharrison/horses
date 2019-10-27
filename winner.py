@@ -16,7 +16,7 @@ from minmax import normaliseRaceLengthMinMax
 from minmax import normaliseWeightMinMax
 from minmax import normaliseSpeed
 from minmax import normaliseFinish
-from minmax import normaliseJockeyMinMax
+from minmax import normaliseJockeyTrainerMinMax
 from minmax import getGoing
 from sqlstuff2 import SqlStuff2
 from webscrape import ResultStuffObj
@@ -185,13 +185,13 @@ def testFunction(databaseNames, horseName, jockeyName, trainerName, raceLength, 
         raise Exception(str(e))
     # get the jockey
     try:
-        anInput[7]= normaliseJockeyMinMax(jockeyDict[jockeyName], minMaxJockeyList)
+        anInput[7]= normaliseJockeyTrainerMinMax(jockeyDict[jockeyName], minMaxJockeyList)
     except Exception,e:
         print "problem with the jockey normalise in the testfunction"
         raise Exception(str(e))
     # get the trainer
     try:
-        anInput[8]= normaliseJockeyMinMax(trainerDict[trainerName], minMaxTrainerList)
+        anInput[8]= normaliseJockeyTrainerMinMax(trainerDict[trainerName], minMaxTrainerList)
     except Exception,e:
         print "problem with the trainer normalise in the testfunction"
         raise Exception(str(e))
@@ -314,6 +314,7 @@ def checkResults(netOut, results):
             if net[0]==result.horseNames[0]:
                 odd_split=result.odds[0].split("/")
                 fpFpOdds.append((float(odd_split[0])/float(odd_split[1])))
+                fpEwOdds.append((float(odd_split[0])/float(odd_split[1])))
         except Exception,e:
             print "problem with fpFpOdds"
             pass
@@ -322,6 +323,7 @@ def checkResults(netOut, results):
             if net[1]==result.horseNames[0]:
                 odd_split=result.odds[0].split("/")
                 spFpOdds.append((float(odd_split[0])/float(odd_split[1])))
+                spEwOdds.append((float(odd_split[0])/float(odd_split[1])))
         except Exception,e:
             print "problem with fpFpOdds"
             pass
@@ -330,6 +332,9 @@ def checkResults(netOut, results):
     spEwOdds=spEwOdds + spFpOdds
     for net, result in zip(netOut, results):
         try:
+            if net[0]==result.horseNames[0]:
+                odd_split=result.odds[0].split("/")
+                fpEwOdds[-1] = fpEwOdds[-1] + ((float(odd_split[0])/float(odd_split[1]))/2.0)
             if net[0]==result.horseNames[1]:
                 odd_split=result.odds[1].split("/")
                 fpEwOdds.append((float(odd_split[0])/float(odd_split[1]))/2.0)
@@ -342,6 +347,9 @@ def checkResults(netOut, results):
 
 
         try:
+            if net[1]==result.horseNames[0]:
+                odd_split=result.odds[0].split("/")
+                spEwOdds[-1] = spEwOdds[-1] + ((float(odd_split[0])/float(odd_split[1]))/2.0)
             if net[1]==result.horseNames[1]:
                 odd_split=result.odds[1].split("/")
                 spEwOdds.append((float(odd_split[0])/float(odd_split[1]))/2.0)
@@ -510,7 +518,8 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
     hiddenLayer0=8 #(len(anInput)+1)/2
     hiddenLayer1=6 #(len(anInput)+1)/2 -1
     hiddenLayer2=4 #(len(anInput)+1)/2 -1
-    netFilename = netFilename + "_" + str(hiddenLayer0) + "_" + str(hiddenLayer1) + "_" + str(hiddenLayer2) +".xml"
+    hiddenLayer3=4
+    netFilename = netFilename + "_" + str(hiddenLayer0) + "_" + str(hiddenLayer1) + "_" + str(hiddenLayer2) + "_" + str(hiddenLayer3) +".xml"
 
     # get all the winner horses from the winnerdb
     winnerSqlStuffInst=SqlStuff2()
@@ -531,6 +540,18 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
         print "databaseNames is %s" % databaseNames
         print str(e)
         raise Exception
+
+    lessThanThree = 0
+    pastPerf = 0
+    badDraw = 0
+    badGoing = 0
+    badRaceLength = 0
+    badWeight = 0
+    badJockey = 0
+    badTrainer = 0
+    badOdds = 0
+    badSpeed = 0
+
 
     minMaxDrawList = minMaxDraw(allHorses)
     meanStdGoingList = meanStdGoing(allHorses)
@@ -560,6 +581,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
             # if the length of horse is less than 3 then this cannot 
             # be used
             if len(horse) < 3:
+                lessThanThree = lessThanThree+1
                 continue
             # get the positions from the 3 races before the win
             # put the positions into the input list in pos 0,1,2
@@ -572,6 +594,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
             except Exception,e:
                 print "skipping horse %d of %d  with bad form" % (idx, len(winnerSqlStuffInst.rows))   
                 print str(e)
+                pastPerf = pastPerf + 1
                 continue
             # get the draw
             try:
@@ -579,6 +602,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
             except Exception,e:
                 print "skipping horse %d of %d  with bad/no draw" % (idx, len(winnerSqlStuffInst.rows))   
                 print str(e)
+                badDraw = badDraw + 1
                 continue
             # get the going
             try:
@@ -586,12 +610,14 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
             except Exception,e:
                 print "skipping horse %d of %d  with no going" % (idx, len(winnerSqlStuffInst.rows))
                 print str(e)
+                badGoing = badGoing + 1
                 continue
             # get the race length
             try:
                 anInput[5] = normaliseRaceLengthMinMax(horseInfo[5], minMaxRaceLengthList)
             except:
                 print "skipping horse %d of %d  with no length" % (idx, len(winnerSqlStuffInst.rows))
+                badRaceLength = badRaceLength + 1
                 continue
 
             try:
@@ -600,24 +626,27 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
                 print str(e)
                 print "the weight is " + str(horseInfo[3])
                 print "skipping horse %d of %d  with no weight" % (idx, len(winnerSqlStuffInst.rows))
+                badWeight = badWeight + 1
                 continue
 
             try:
                 jockeyName=horseInfo[7]
-                anInput[7] = normaliseJockeyMinMax(jockeyDict[jockeyName], minMaxJockeyList)
+                anInput[7] = normaliseJockeyTrainerMinMax(jockeyDict[jockeyName], minMaxJockeyList)
             except Exception,e:
                 print "problem with the jockey normalise"
                 print "jockey is %s, median is %s.  Min is %s, max is %s" % (str(jockeyName), str(jockeyDict[jockeyName]),str(minMaxJockeyList[0]), str(minMaxJockeyList[1])) 
                 print str(e)
+                badJockey = badJockey + 1
                 continue
 
             try:
                 trainerName=horseInfo[13]
-                anInput[8] = normaliseJockeyMinMax(jockeyDict[jockeyName], minMaxTrainerList)
+                anInput[8] = normaliseJockeyTrainerMinMax(trainerDict[trainerName], minMaxTrainerList)
             except Exception,e:
                 print "problem with the trainer normalise"
                 print "trainer is %s, median is %s.  Min is %s, max is %s" % (str(trainerName), str(trainerDict[trainerName]),str(minMaxTrainerList[0]), str(minMaxTrainerList[1])) 
                 print str(e)
+                badTrainer = badTrainer + 1
                 continue
 
 
@@ -627,6 +656,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
             except Exception,e:
                 print "problem with the odds %s" % str(odds)
                 print str(odds.split("/"))
+                badOdds = badOdds + 1
                 continue
 
             # get the output speed
@@ -635,6 +665,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
             except Exception, e:
                 print "problem normalising speed"
                 print str(e)
+                badSpeed = badSpeed + 1
                 continue
 
             DS.appendLinked(anInput, output) 
@@ -642,11 +673,23 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
         tstdata, trndata = DS.splitWithProportion( 0.25 )
         #trndata=DS
         #tstdata=DS
+        print "winners with less that three runs = %d" % lessThanThree
+        print "bad past performance = %d" % pastPerf
+        print "bad draw = %d" % badDraw
+        print "bad going = %d" % badGoing
+        print "bad race length = %d" % badRaceLength
+        print "bad weight = %d" % badWeight
+        print "bad jockey = %d" % badJockey
+        print "bad trainer = %d" % badTrainer
+        print "bad odds = %d" % badOdds
+        print "bad speed = %d" % badSpeed
+
+
         print "length of trndata is " + str(len(trndata))
         print "length of tstdata is " + str(len(tstdata))
         # number of hidden layers and nodes
 
-        net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
+        net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
         trainer=BackpropTrainer(net,trndata, momentum=0.1, verbose=True, learningrate=0.01)
 
         aux=trainer.trainUntilConvergence(dataset=DS, maxEpochs=30, verbose=True, continueEpochs=2, validationProportion=0.25)
