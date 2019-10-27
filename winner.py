@@ -304,6 +304,9 @@ def checkResults(netOut, results):
     fpEwOdds =[]
     spEwOdds =[]
 
+    fpEwMoney = 0.0
+    spEwMoney= 0.0
+
     if len(results) == 0 or len(netOut) == 0:
         print "No results to check"
         return 0
@@ -315,6 +318,7 @@ def checkResults(netOut, results):
                 odd_split=result.odds[0].split("/")
                 fpFpOdds.append((float(odd_split[0])/float(odd_split[1])))
                 fpEwOdds.append((float(odd_split[0])/float(odd_split[1])))
+                fpEwMoney = fpEwMoney + (10.0 *(float(odd_split[0])/float(odd_split[1])))
         except Exception,e:
             print "problem with fpFpOdds"
             pass
@@ -324,6 +328,7 @@ def checkResults(netOut, results):
                 odd_split=result.odds[0].split("/")
                 spFpOdds.append((float(odd_split[0])/float(odd_split[1])))
                 spEwOdds.append((float(odd_split[0])/float(odd_split[1])))
+                spEwMoney = spEwMoney +(10.0 *(float(odd_split[0])/float(odd_split[1])))
         except Exception,e:
             print "problem with fpFpOdds"
             pass
@@ -332,15 +337,24 @@ def checkResults(netOut, results):
     spEwOdds=spEwOdds + spFpOdds
     for net, result in zip(netOut, results):
         try:
+            fpEwMoney = fpEwMoney - 20.0
+            spEwMoney = spEwMoney - 20.0
+        except Exception, e:
+            print str(e)
+
+        try:
             if net[0]==result.horseNames[0]:
                 odd_split=result.odds[0].split("/")
                 fpEwOdds[-1] = fpEwOdds[-1] + ((float(odd_split[0])/float(odd_split[1]))/2.0)
+                fpEwMoney = fpEwMoney + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/2.0))
             if net[0]==result.horseNames[1]:
                 odd_split=result.odds[1].split("/")
                 fpEwOdds.append((float(odd_split[0])/float(odd_split[1]))/2.0)
+                fpEwMoney = fpEwMoney + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/2.0))
             if net[0]==result.horseNames[2]:
                 odd_split=result.odds[2].split("/")
                 fpEwOdds.append((float(odd_split[0])/float(odd_split[1]))/2.0)
+                fpEwMoney = fpEwMoney + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/2.0))
         except Exception,e:
             print "problem with fpEwOdds"
             pass
@@ -350,12 +364,15 @@ def checkResults(netOut, results):
             if net[1]==result.horseNames[0]:
                 odd_split=result.odds[0].split("/")
                 spEwOdds[-1] = spEwOdds[-1] + ((float(odd_split[0])/float(odd_split[1]))/2.0)
+                spEwMoney = spEwMoney + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/2.0))
             if net[1]==result.horseNames[1]:
                 odd_split=result.odds[1].split("/")
                 spEwOdds.append((float(odd_split[0])/float(odd_split[1]))/2.0)
+                spEwMoney = spEwMoney + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/2.0))
             if net[1]==result.horseNames[2]:
                 odd_split=result.odds[2].split("/")
                 spEwOdds.append((float(odd_split[0])/float(odd_split[1]))/2.0)
+                spEwMoney = spEwMoney + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/2.0))
         except Exception,e:
             print "problem with spEwOdds"
             pass
@@ -396,6 +413,17 @@ def checkResults(netOut, results):
         print "2nd place prediction came top 3 %d times with average odds %f" % (len(spEwOdds), sum(spEwOdds)/len(netOut))
     except ZeroDivisionError:
         pass
+    try:
+        print "the 1st place top 3 prediction made %f" % (fpEwMoney)
+    except Exception, e:
+        pass
+    try:
+        print "the 2nd place top 3 prediction made %f" % (spEwMoney)
+    except Exception, e:
+        pass
+
+
+    return (sum(fpFpOdds), sum(fpEwOdds), sum(spFpOdds), sum(spEwOdds), len(netOut), fpEwMoney, spEwMoney)
 
 
 
@@ -703,6 +731,20 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
     dateStartSplit=dateStart.split('-')
     dateEndSplit=dateEnd.split('-')
 
+    allFpFpOdds = []
+    allFpEwOdds = []
+    allSpFpOdds = []
+    allSpEwOdds = []
+    allLenNetOut = []
+    fpFpOdds = 0.0
+    fpEwOdds = 0.0
+    spFpOdds = 0.0
+    spEwOdds = 0.0
+    lenNetOut = 0.0
+    fpEwMoneyTotal = 0.0
+    spEwMoneyTotal = 0.0
+
+
     for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2]))):
 
         dateIn=time.strftime("%Y-%m-%d", single_date.timetuple())       
@@ -710,5 +752,54 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
 
         netOut, results = neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, result = True, date=dateIn)
     
-        checkResults(netOut, results)
+        fpFpOdds, fpEwOdds, spFpOdds, spEwOdds, lenNetOut, fpEwMoney, spEwMoney = checkResults(netOut, results)
 
+        allFpFpOdds.append(fpFpOdds)
+        allFpEwOdds.append(fpEwOdds)
+        allSpFpOdds.append(spFpOdds)
+        allSpEwOdds.append(spEwOdds)
+        allLenNetOut.append(lenNetOut)
+
+        totalFpFpOdds = sum(allFpFpOdds)
+        totalFpEwOdds = sum(allFpEwOdds)
+        totalSpFpOdds = sum(allSpFpOdds)
+        totalSpEwOdds = sum(allSpEwOdds)
+        totalLenNetOut = sum(allLenNetOut)
+        fpEwMoneyTotal = fpEwMoneyTotal + fpEwMoney
+        spEwMoneyTotal = spEwMoneyTotal + spEwMoney
+
+        try:
+            print "1st place prediction average odds %f" % (float(totalFpFpOdds)/float(totalLenNetOut))
+        except ZeroDivisionError:
+            pass
+        except TypeError:
+            print str(totalFpFpOdds)
+            print str(totalLenNetOut)
+            print str(allFpFpOdds)
+            print str(allLenNetOut)
+        try:
+            print "1st place prediction came top 3 with average odds %f" % (float(totalFpEwOdds)/float(totalLenNetOut))
+        except ZeroDivisionError:
+            pass
+        try:
+            print "2nd place prediction won with average odds %f" % (float(totalSpFpOdds)/float(totalLenNetOut))
+        except ZeroDivisionError:
+            pass
+        try:
+            print "2nd place prediction came top 3 with average odds %f" % (float(totalSpEwOdds)/float(totalLenNetOut))
+        except ZeroDivisionError:
+            pass
+        try:
+            print "the total number of racee is %d" % (int(totalLenNetOut))
+        except Exception,e:
+            print str(e)
+            pass
+        try:
+            print "the total 1st place top 3 money is %f" % (fpEwMoneyTotal)
+        except Exception,e:
+            pass
+        try:
+            print "the total 2nd place top 3 money is %f" % (spEwMoneyTotal)
+        except Exception,e:
+            pass
+        
