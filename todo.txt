@@ -1,3 +1,47 @@
+search/scrape for jumps when creating the card.  Skip all jumps scraping
+
+seach/scrape for abandoned race.  Use Leicester  on the 28th October as example
+
+
+results temp
+
+0 1 2 3 - hidden layer
+8 6 4 4
+the total number of racee is 520
+the total 1st place top 3 money is -1126.843490
+the total 2nd place top 3 money is -548.109848
+make automated exploration of the number of hidden layers / number of nodes in the layers
+
+8 6 4 4 3 - hidden layer
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 NEW
 
 2019

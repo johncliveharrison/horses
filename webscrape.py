@@ -126,6 +126,8 @@ class HrefStuff:
                 continue
             if raceVenue == "Scoop 6":
                 continue
+            if raceVenue == "WORLDWIDE STAKES":
+                continue
                 
             self.raceVenue.append(raceVenue)
             if verbose:
@@ -374,6 +376,21 @@ class HrefStuff:
 
             # loop through the races held at each course
             for rpRaceCoursePanelContainer in self.rpRaceCoursePanelContainer:
+                try:
+                    self.rpRaceCoursePanelRace=rpRaceCoursePanelContainer.find("div", {"coursename":"WORLD WIDE STAKES"})
+                    if len(self.rpRaceCoursePanelRace) > 0:
+                        print "skipping the WORLD WIDE STAKES race"
+                        continue
+                except Exception,e:
+                    pass
+                try:
+                    self.rpRaceCoursePanelRace=rpRaceCoursePanelContainer.find("div", {"coursename":"SCOOP6 RACES"})
+                    if len(self.rpRaceCoursePanelRace) > 0:
+                        print "skipping the SCOOP6 race"
+                        continue
+                except Exception,e:
+                    pass
+                
                 try:
                     self.rpRaceCoursePanelRace=rpRaceCoursePanelContainer.find("div", {"class":"rp-raceCourse__panel__race"})
                 except Exception, e:

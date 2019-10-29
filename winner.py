@@ -318,7 +318,7 @@ def checkResults(netOut, results):
                 odd_split=result.odds[0].split("/")
                 fpFpOdds.append((float(odd_split[0])/float(odd_split[1])))
                 fpEwOdds.append((float(odd_split[0])/float(odd_split[1])))
-                fpEwMoney = fpEwMoney + (10.0 *(float(odd_split[0])/float(odd_split[1])))
+                fpEwMoney = fpEwMoney + 10.0 + (10.0 *(float(odd_split[0])/float(odd_split[1])))
         except Exception,e:
             print "problem with fpFpOdds"
             pass
@@ -328,13 +328,12 @@ def checkResults(netOut, results):
                 odd_split=result.odds[0].split("/")
                 spFpOdds.append((float(odd_split[0])/float(odd_split[1])))
                 spEwOdds.append((float(odd_split[0])/float(odd_split[1])))
-                spEwMoney = spEwMoney +(10.0 *(float(odd_split[0])/float(odd_split[1])))
+                spEwMoney = spEwMoney + 10.0 + (10.0 *(float(odd_split[0])/float(odd_split[1])))
         except Exception,e:
             print "problem with fpFpOdds"
             pass
+
     # do the each way oodds too
-    fpEwOdds=fpEwOdds + fpFpOdds
-    spEwOdds=spEwOdds + spFpOdds
     for net, result in zip(netOut, results):
         try:
             fpEwMoney = fpEwMoney - 20.0
@@ -346,15 +345,15 @@ def checkResults(netOut, results):
             if net[0]==result.horseNames[0]:
                 odd_split=result.odds[0].split("/")
                 fpEwOdds[-1] = fpEwOdds[-1] + ((float(odd_split[0])/float(odd_split[1]))/2.0)
-                fpEwMoney = fpEwMoney + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/2.0))
+                fpEwMoney = fpEwMoney + 10.0 + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/4.0))
             if net[0]==result.horseNames[1]:
                 odd_split=result.odds[1].split("/")
                 fpEwOdds.append((float(odd_split[0])/float(odd_split[1]))/2.0)
-                fpEwMoney = fpEwMoney + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/2.0))
+                fpEwMoney = fpEwMoney + 10.0 + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/4.0))
             if net[0]==result.horseNames[2]:
                 odd_split=result.odds[2].split("/")
                 fpEwOdds.append((float(odd_split[0])/float(odd_split[1]))/2.0)
-                fpEwMoney = fpEwMoney + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/2.0))
+                fpEwMoney = fpEwMoney + 10.0 + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/4.0))
         except Exception,e:
             print "problem with fpEwOdds"
             pass
@@ -364,15 +363,15 @@ def checkResults(netOut, results):
             if net[1]==result.horseNames[0]:
                 odd_split=result.odds[0].split("/")
                 spEwOdds[-1] = spEwOdds[-1] + ((float(odd_split[0])/float(odd_split[1]))/2.0)
-                spEwMoney = spEwMoney + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/2.0))
+                spEwMoney = spEwMoney + 10.0 + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/4.0))
             if net[1]==result.horseNames[1]:
                 odd_split=result.odds[1].split("/")
                 spEwOdds.append((float(odd_split[0])/float(odd_split[1]))/2.0)
-                spEwMoney = spEwMoney + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/2.0))
+                spEwMoney = spEwMoney + 10.0 + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/4.0))
             if net[1]==result.horseNames[2]:
                 odd_split=result.odds[2].split("/")
                 spEwOdds.append((float(odd_split[0])/float(odd_split[1]))/2.0)
-                spEwMoney = spEwMoney + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/2.0))
+                spEwMoney = spEwMoney + 10.0 + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/4.0))
         except Exception,e:
             print "problem with spEwOdds"
             pass
@@ -547,7 +546,9 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
     hiddenLayer1=6 #(len(anInput)+1)/2 -1
     hiddenLayer2=4 #(len(anInput)+1)/2 -1
     hiddenLayer3=4
-    netFilename = netFilename + "_" + str(hiddenLayer0) + "_" + str(hiddenLayer1) + "_" + str(hiddenLayer2) + "_" + str(hiddenLayer3) +".xml"
+    hiddenLayer4=3
+    hiddenLayer5=3
+    netFilename = netFilename + "_" + str(hiddenLayer0) + "_" + str(hiddenLayer1) + "_" + str(hiddenLayer2) + "_" + str(hiddenLayer3) + "_" + str(hiddenLayer4) + "_" + str(hiddenLayer5) + ".xml"
 
     # get all the winner horses from the winnerdb
     winnerSqlStuffInst=SqlStuff2()
@@ -717,7 +718,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
         print "length of tstdata is " + str(len(tstdata))
         # number of hidden layers and nodes
 
-        net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
+        net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, hiddenLayer5, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
         trainer=BackpropTrainer(net,trndata, momentum=0.1, verbose=True, learningrate=0.01)
 
         aux=trainer.trainUntilConvergence(dataset=DS, maxEpochs=30, verbose=True, continueEpochs=2, validationProportion=0.25)
