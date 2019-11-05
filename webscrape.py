@@ -377,14 +377,14 @@ class HrefStuff:
             # loop through the races held at each course
             for rpRaceCoursePanelContainer in self.rpRaceCoursePanelContainer:
                 try:
-                    self.rpRaceCoursePanelRace=rpRaceCoursePanelContainer.find("div", {"coursename":"WORLD WIDE STAKES"})
+                    self.rpRaceCoursePanelRace=rpRaceCoursePanelContainer.find("div", {"data-diffusion-coursename":"WORLD WIDE STAKES"})
                     if len(self.rpRaceCoursePanelRace) > 0:
                         print "skipping the WORLD WIDE STAKES race"
                         continue
                 except Exception,e:
                     pass
                 try:
-                    self.rpRaceCoursePanelRace=rpRaceCoursePanelContainer.find("div", {"coursename":"SCOOP6 RACES"})
+                    self.rpRaceCoursePanelRace=rpRaceCoursePanelContainer.find("div", {"data-diffusion-coursename":"SCOOP6 RACES"})
                     if len(self.rpRaceCoursePanelRace) > 0:
                         print "skipping the SCOOP6 race"
                         continue
