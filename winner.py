@@ -3,6 +3,7 @@ import os
 import time
 import datetime
 import pickle
+from collections import OrderedDict
 from common import daterange
 from minmax import minMaxDraw
 from minmax import meanStdGoing
@@ -211,11 +212,13 @@ def testFunction(databaseNames, horseName, jockeyName, trainerName, raceLength, 
 
 
 
-def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, result = False, date=time.strftime("%Y-%m-%d"), verbose=False):
+def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, daysTestInputs, daysOdds, daysResults, useDaysTestInputs, result = False, date=time.strftime("%Y-%m-%d"), verbose=False):
     #lengths=[]
     #draws=[]
     print "the date is " + str(date)
     print "and todays date is " + str(datetime.datetime.today().strftime('%Y-%m-%d'))
+
+
     try:
         if date >= datetime.datetime.today().strftime('%Y-%m-%d'):
             print "trying to make a test card from the days test card as date is today or later"
@@ -228,6 +231,7 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
     except Exception:
         print "making a testcard from results failed"
 
+
     if makeResult != False:
         todaysResults=makeAResult(date)
     print todaysRaceVenues
@@ -235,6 +239,10 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
     returnSortHorse=[]
     returnPastPerf=[]
     returnResults=[]
+
+    daysTestInputs[str(date)] = {}
+    daysOdds[str(date)] = {}
+    daysResults[str(date)] = {}
 
     for raceNo, race in enumerate(horses):
         if verbose:
@@ -245,6 +253,10 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
         sortDecimal=[]
         sortHorse=[]
         skipFileWrite=0
+    
+        daysTestInputs[str(date)][str(raceNo)]={}
+        daysOdds[str(date)][str(raceNo)]={}
+        daysResults[str(date)][str(raceNo)] = {}
 
         for idx, horse in enumerate(race):
             if verbose:
@@ -261,7 +273,12 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
             try:
                 if verbose:
                     print "calling test function"
+        
                 testinput=testFunction(databaseNames, horses[raceNo][idx],jockeys[raceNo][idx],trainers[raceNo][idx],lengths[raceNo],goings[raceNo], draws[raceNo][idx], weights[raceNo][idx], odds[raceNo][idx], minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict,date)
+                daysTestInputs[str(date)][str(raceNo)][str(horse)]=testinput
+                daysOdds[str(date)][str(raceNo)][str(horse)]=odds[raceNo][idx]
+                # append testinput to the horseTestInputs
+
                 if verbose:
                     print "after test function / before net"
                 result=net.activate(testinput)
@@ -276,12 +293,17 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
                     print str(e)
                 skipFileWrite=1
 
+        if skipFileWrite==1:
+            del(daysTestInputs[str(date)][str(raceNo)])
+            del(daysOdds[str(date)][str(raceNo)])
+
         if skipFileWrite==0:
             
             returnSortHorse.append(sortHorse)
-            
+
             if makeResult == True:
                 returnResults.append(todaysResults[raceNo])
+                daysResults[str(date)][str(raceNo)] = todaysResults[raceNo]
 
             print str(raceNo) + ' ' + str(todaysRaceVenues[raceNo]) + ' ' + str(todaysRaceTimes[raceNo]) 
             for ii, pos in enumerate(sortList):
@@ -293,6 +315,80 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
                 except IndexError:
                     """if there are none finishers this will be the exception"""
 
+    return returnSortHorse, returnResults, daysTestInputs, daysOdds, daysResults
+
+
+
+def neuralNetWithTestInputs(net, daysTestInputs, daysOdds, daysResults, useDaysTestInputs, result = False, date=time.strftime("%Y-%m-%d"), verbose=False):
+    #lengths=[]
+    #draws=[]
+    print "the date is " + str(date)
+    print "and todays date is " + str(datetime.datetime.today().strftime('%Y-%m-%d'))
+    
+    returnSortHorse=[]
+    returnPastPerf=[]
+    returnResults=[]
+    returnRaceNumber=[]
+
+    raceTestInputs = {}
+    raceTestInputs = daysTestInputs[str(date)]
+
+    odds = {}
+    odds = daysOdds[str(date)]
+    
+    todaysResults = daysResults[str(date)]
+
+    # loop through the races on this day
+    for raceNo, horseDict in raceTestInputs.items():
+        if verbose:
+            print str(raceNo) + "is the key"
+        sortList=[]
+        sortDecimal=[]
+        sortHorse=[]
+        skipFileWrite=0
+
+        # loop through the horse in the race
+        for horse, testinput in horseDict.items():
+            if verbose:
+                print str(horse)
+            errors=0
+            yValues=0
+            bO=0
+            if skipFileWrite==1:
+                break;
+            if len(horseDict) > 40:
+                if verbose:
+                    print "skipping race as len(horseDict) is greater than 40"
+                skipFileWrite=1
+                break;
+             
+            try:
+                if verbose:
+                    print "after test function / before net"
+                result=net.activate(testinput)
+                if verbose:
+                    print "after net / before sort"
+                sortDecimal, sortList, sortHorse=sortResult(result, str(horse), str(odds[raceNo][horse]), str(0), str(0), sortList, sortDecimal, sortHorse)
+                if verbose:
+                    print "after sort"
+            except Exception, e:
+                if verbose:
+                    print "something not correct in testFunction"
+                    print str(e)
+                skipFileWrite=1
+
+        if skipFileWrite==0:
+            returnSortHorse.append(sortHorse)
+            returnResults.append(daysResults[str(date)][str(raceNo)])
+            returnRaceNumber.append(str(raceNo))
+            print str(raceNo)
+            for ii, pos in enumerate(sortList):
+                try:
+                    print str(ii+1) + pos + '       ' + str(todaysResults[raceNo].horseNames[ii]) + ' ' + str(todaysResults[raceNo].odds[ii])
+                except IndexError:
+                    """if there are none finishers this will be the exception"""
+                except AttributeError:
+                   break 
     return returnSortHorse, returnResults
 
 
@@ -321,6 +417,7 @@ def checkResults(netOut, results):
                 fpEwMoney = fpEwMoney + 10.0 + (10.0 *(float(odd_split[0])/float(odd_split[1])))
         except Exception,e:
             print "problem with fpFpOdds"
+            print str(e)
             pass
 
         try:
@@ -330,7 +427,8 @@ def checkResults(netOut, results):
                 spEwOdds.append((float(odd_split[0])/float(odd_split[1])))
                 spEwMoney = spEwMoney + 10.0 + (10.0 *(float(odd_split[0])/float(odd_split[1])))
         except Exception,e:
-            print "problem with fpFpOdds"
+            print "problem with spFpOdds"
+            print str(e)
             pass
 
     # do the each way oodds too
@@ -528,7 +626,7 @@ def getWinnersSubsetHorse(races, winnerdb, winners_racesdb, databaseNames):
         else:
             winnerSqlStuffInst.delHorse(horseName)
 
-def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEnd=False, verbose=False):
+def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTestInputs, daysOdds, daysResults, dateEnd=False, verbose=False, useDaysTestInputs = False, inputFpEwMoneyTotal=0.0):
     """ create a text file of all the inputs to the net"""
 
     if not dateEnd:
@@ -597,7 +695,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
     winner_racesSqlStuffInst=SqlStuff2()
     winner_racesSqlStuffInst.connectDatabase(winner_racesdb)
 
-    if os.path.exists(netFilename):
+    if os.path.exists(netFilename) and not useDaysTestInputs:
         print "found network training file"
         net = NetworkReader.readFrom(netFilename) 
     else:
@@ -605,6 +703,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
             print "reading DS from file DS.pk "
             with open ("DS.pk", 'rb') as fp:
                 DS = pickle.load(fp)
+            net = NetworkReader.readFrom(netFilename) 
         else:
             print "create the DS"
             DS = SupervisedDataSet(len(anInput), 1)
@@ -731,7 +830,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
         print "length of tstdata is " + str(len(tstdata))
         # number of hidden layers and nodes
 
-        net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
+        #net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
         trainer=BackpropTrainer(net,trndata, momentum=0.1, verbose=True, learningrate=0.01)
 
         aux=trainer.trainUntilConvergence(dataset=DS, maxEpochs=30, verbose=True, continueEpochs=2, validationProportion=0.25)
@@ -739,9 +838,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
         mse=trainer.testOnData(dataset=tstdata)
         print "Mean Squared Error = " + str(mse)
 
-        # save the net params
-        NetworkWriter.writeToFile(net, netFilename)
-
+        
     dateStartSplit=dateStart.split('-')
     dateEndSplit=dateEnd.split('-')
 
@@ -764,8 +861,14 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
         dateIn=time.strftime("%Y-%m-%d", single_date.timetuple())       
         print dateIn
 
-        netOut, results = neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, result = True, date=dateIn)
+
+        if not useDaysTestInputs:
+            netOut, results, daysTestInputs, daysOdds, daysResults = neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, daysTestInputs, daysOdds, daysResults, useDaysTestInputs, result = True, date=dateIn)
+
+        else:
+            netOut, results = neuralNetWithTestInputs(net, daysTestInputs, daysOdds, daysResults, useDaysTestInputs, result = True, date=dateIn)
     
+
         fpFpOdds, fpEwOdds, spFpOdds, spEwOdds, lenNetOut, fpEwMoney, spEwMoney = checkResults(netOut, results)
 
         allFpFpOdds.append(fpFpOdds)
@@ -817,3 +920,23 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEn
         except Exception,e:
             pass
         
+    if fpEwMoneyTotal > inputFpEwMoneyTotal and useDaysTestInputs:
+        # save the net params
+        NetworkWriter.writeToFile(net, netFilename)
+
+
+    return daysOdds, daysResults, daysTestInputs, max(fpEwMoneyTotal, inputFpEwMoneyTotal)
+
+
+def honeNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEnd=False, verbose=False):
+
+
+    useDaysTestInputs = False
+    daysTestInputs = OrderedDict()
+    daysOdds = OrderedDict()
+    daysResults = OrderedDict()
+    fpEwMoneyTotal = 0.0
+    for ii in range(1000):
+        daysOdds, daysResults, daysTestInputs, fpEwMoneyTotal = getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTestInputs, daysOdds, daysResults, dateEnd=dateEnd, verbose=verbose, useDaysTestInputs=useDaysTestInputs, inputFpEwMoneyTotal = fpEwMoneyTotal)
+        useDaysTestInputs = True
+        print "Best Money So Far = %s" % (str(fpEwMoneyTotal))
