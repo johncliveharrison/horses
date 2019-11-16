@@ -7,7 +7,19 @@ dont't do worldwide stakes - DONE
 save the DS so that it doesn't need to be formed before the net training - DONE
 
 copy the good nets somewhere and then try importing and training them again to see
-if they improve..
+if they improve..  - DONE/ONGOING
+
+save the results and testcards for each day as a file that can be loaded insted of re-scraping
+
+Make common lib for the neural net running and then make tools that use that lib, such as
+repeat train over dates
+repeat train changing hidden layers
+run future predict
+
+update the howto with selenium stuff.
+
+Split the days to be processed into task lists and then run each list
+in a separate class instance
 
 
 results temp
@@ -119,6 +131,39 @@ Mean Squared Error = 0.0219232620536
 the total number of racee is 440
 the total 1st place top 3 money is 421.496254
 the total 2nd place top 3 money is 113.545076
+OCTOBER 1st - 27th
+the total number of racee is 440
+the total 1st place top 3 money is 1189.686730
+the total 2nd place top 3 money is -1067.194643
+SEPTEMBER
+the total number of racee is 607
+the total 1st place top 3 money is 349.513570
+the total 2nd place top 3 money is 64.334353
+AUGUST
+the total number of racee is 707
+the total 1st place top 3 money is -2263.614601
+the total 2nd place top 3 money is 817.286526
+JULY
+the total number of racee is 723
+the total 1st place top 3 money is -841.205357
+the total 2nd place top 3 money is -1289.409965
+----------------------------------------
+SEPTEMBER
+the total number of racee is 607
+the total 1st place top 3 money is -1742.457133
+the total 2nd place top 3 money is -889.522457
+OCTOBER
+the total number of racee is 440
+the total 1st place top 3 money is -1648.509848
+the total 2nd place top 3 money is 110.558171
+AUGUST
+the total number of racee is 707
+the total 1st place top 3 money is 801.202742
+the total 2nd place top 3 money is -2185.000604
+JULY
+the total number of racee is 723
+the total 1st place top 3 money is -224.026550
+the total 2nd place top 3 money is -2572.454545
 
 
 8 4 4 4 3 - hidden layer
