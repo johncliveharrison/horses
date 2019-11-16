@@ -228,12 +228,23 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
             print "tring to make a test card from past results"
             horses, jockeys, lengths, weights, goings, draws, trainers, todaysRaceTimes, todaysRaceVenues, odds=makeATestcardFromResults(date)
             makeResult = result
-    except Exception:
+
+    except Exception,e:
         print "making a testcard from results failed"
+        print str(e)
 
 
     if makeResult != False:
-        todaysResults=makeAResult(date)
+        ResultsFilename = "./resultsFiles/Results" + str(date) + ".sv"
+        if os.path.exists(ResultsFilename):
+            print "reading todaysReuslts from file %s " % (ResultsFilename)
+            with open (ResultsFilename, 'rb') as fp:
+                todaysResults= pickle.load(fp)
+        else:
+            todaysResults=makeAResult(date)
+            with open(ResultsFilename, 'wb') as fp:
+                pickle.dump(todaysResults, fp)
+
     print todaysRaceVenues
     
     returnSortHorse=[]
@@ -695,7 +706,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
     winner_racesSqlStuffInst=SqlStuff2()
     winner_racesSqlStuffInst.connectDatabase(winner_racesdb)
 
-    if os.path.exists(netFilename) and not useDaysTestInputs:
+    if False: #os.path.exists(netFilename) and not useDaysTestInputs:
         print "found network training file"
         net = NetworkReader.readFrom(netFilename) 
     else:
@@ -703,7 +714,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
             print "reading DS from file DS.pk "
             with open ("DS.pk", 'rb') as fp:
                 DS = pickle.load(fp)
-            net = NetworkReader.readFrom(netFilename) 
+            #net = NetworkReader.readFrom(netFilename) 
         else:
             print "create the DS"
             DS = SupervisedDataSet(len(anInput), 1)
@@ -830,10 +841,10 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
         print "length of tstdata is " + str(len(tstdata))
         # number of hidden layers and nodes
 
-        #net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
-        trainer=BackpropTrainer(net,trndata, momentum=0.1, verbose=True, learningrate=0.01)
+        net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
+        trainer=BackpropTrainer(net,DS, momentum=0.9, verbose=True, learningrate=0.001)
 
-        aux=trainer.trainUntilConvergence(dataset=DS, maxEpochs=30, verbose=True, continueEpochs=2, validationProportion=0.25)
+        aux=trainer.trainUntilConvergence(dataset=DS, maxEpochs=100, verbose=True, continueEpochs=10, validationProportion=0.25)
 
         mse=trainer.testOnData(dataset=tstdata)
         print "Mean Squared Error = " + str(mse)
@@ -935,7 +946,7 @@ def honeNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEnd=False, v
     daysTestInputs = OrderedDict()
     daysOdds = OrderedDict()
     daysResults = OrderedDict()
-    fpEwMoneyTotal = 0.0
+    fpEwMoneyTotal = -100000.0
     for ii in range(1000):
         daysOdds, daysResults, daysTestInputs, fpEwMoneyTotal = getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTestInputs, daysOdds, daysResults, dateEnd=dateEnd, verbose=verbose, useDaysTestInputs=useDaysTestInputs, inputFpEwMoneyTotal = fpEwMoneyTotal)
         useDaysTestInputs = True

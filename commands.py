@@ -7,7 +7,9 @@
 #from sqlstuff import SqlStuff
 from sqlstuff2 import SqlStuff2
 import datetime
-#import os.path    
+#import os.path
+import os
+import pickle
 import webscrape
 import webscrape_legacy
 import webscrape_legacy2
@@ -54,47 +56,88 @@ def makeATestcardFromResults(date):
     test cards on the racingpost website are only acvailable on the day and one day in advance of
     a race"""
     print date
-    ResultStuffInsts=[]       
+    ResultStuffInsts=[]
 
-    try:
-        HrefStuffInst, fullResultHrefs, legacy = tryLegacy(date)
-    except Exception, e:
-        print e
-
-    print "legacy is " + str(legacy)
-    horseName=[]       
-    jockeyName=[]       
-    trainerName=[]
-    raceLength=[]       
-    weights=[]       
-    goings=[]       
-    draws=[]       
-    todaysRaceTimes=[]       
-    todaysRaceVenues=[]     
-    odds=[]
-
-    """loop through the number of races and make a ResultStuff object for each"""
-    for fullResultHref in fullResultHrefs:
-        if not fullResultHref:
-            print "skipping abandoned race"
-            continue
+    testCardResultsFilename = "./resultsFiles/testCardResults" + str(date) + ".sv"
+    if os.path.exists(testCardResultsFilename):
         try:
-            HrefStuffInst.getFullResults(fullResultHref)
+            print "reading ResultStuffInsts from file %s " % (testCardResultsFilename)
+            with open (testCardResultsFilename, 'rb') as fp:
+                ResultStuffInsts= pickle.load(fp)
+                horseName=[]       
+                jockeyName=[]       
+                trainerName=[]
+                raceLength=[]       
+                weights=[]       
+                goings=[]       
+                draws=[]       
+                todaysRaceTimes=[]       
+                todaysRaceVenues=[]     
+                odds=[]
+        except Exception, e:
+            print "problem loading the ResultStuffInsts from file"
+            print str(e)
+    else:
+
+        try:
+            HrefStuffInst, fullResultHrefs, legacy = tryLegacy(date)
         except Exception, e:
             print e
-            print "makeATestcardFromResults: skipping this result"
-        #print "got full results webpage for..."
-        fullResult=HrefStuffInst.getFullResultsGrid()
-        fullHeader=HrefStuffInst.getFullResultsHeader()
-        fullInfo=HrefStuffInst.getFullRaceInfo()
-        if legacy == 1:
-            ResultStuffInst=webscrape_legacy.ResultStuff(fullResult, fullHeader, fullInfo, date)
-        elif legacy == 2:
-            ResultStuffInst=webscrape_legacy2.ResultStuff(fullResult, fullHeader, fullInfo, date)
-        else:
-            ResultStuffInst=webscrape.ResultStuff(fullResult, fullHeader, fullInfo, date)
-        ResultStuffInst.getAllResultInfo()            
-        ResultStuffInsts.append(ResultStuffInst)
+
+        print "legacy is " + str(legacy)
+        horseName=[]       
+        jockeyName=[]       
+        trainerName=[]
+        raceLength=[]       
+        weights=[]       
+        goings=[]       
+        draws=[]       
+        todaysRaceTimes=[]       
+        todaysRaceVenues=[]     
+        odds=[]
+
+        """loop through the number of races and make a ResultStuff object for each"""
+        for fullResultHref in fullResultHrefs:
+            if not fullResultHref:
+                print "skipping abandoned race"
+                continue
+            try:
+                HrefStuffInst.getFullResults(fullResultHref)
+            except Exception, e:
+                print e
+                print "makeATestcardFromResults: skipping this result"
+            #print "got full results webpage for..."
+            fullResult=HrefStuffInst.getFullResultsGrid()
+            fullHeader=HrefStuffInst.getFullResultsHeader()
+            fullInfo=HrefStuffInst.getFullRaceInfo()
+            if legacy == 1:
+                ResultStuffInst=webscrape_legacy.ResultStuff(fullResult, fullHeader, fullInfo, date)
+            elif legacy == 2:
+                ResultStuffInst=webscrape_legacy2.ResultStuff(fullResult, fullHeader, fullInfo, date)
+            else:
+                ResultStuffInst=webscrape.ResultStuff(fullResult, fullHeader, fullInfo, date)
+            ResultStuffInst.getAllResultInfo()            
+            ResultStuffObjInst = webscrape.ResultStuffObj()
+
+            ResultStuffObjInst.horseNames= ResultStuffInst.horseNames
+            ResultStuffObjInst.jockeys= ResultStuffInst.jockeys
+            ResultStuffObjInst.trainers= ResultStuffInst.trainers
+            ResultStuffObjInst.raceLength = ResultStuffInst.raceLength
+            ResultStuffObjInst.horseWeights= ResultStuffInst.horseWeights
+            ResultStuffObjInst.going = ResultStuffInst.going
+            ResultStuffObjInst.draw= ResultStuffInst.draw
+            ResultStuffObjInst.raceTime = ResultStuffInst.raceTime
+            ResultStuffObjInst.raceName = ResultStuffInst.raceName
+            ResultStuffObjInst.odds= ResultStuffInst.odds
+
+            ResultStuffInsts.append(ResultStuffObjInst)
+    
+        try:
+            with open(testCardResultsFilename, 'wb') as fp:
+                pickle.dump(ResultStuffInsts, fp)
+        except Exception,e:
+            print "problem dumping ResultStuffInsts to file"
+            print str(e)
     """loop through the ResultStuff class objects and add them to the database"""        
     for ResultStuffInst in ResultStuffInsts:
         horseName.append(ResultStuffInst.horseNames)
@@ -318,7 +361,19 @@ def makeAResult(date):
             ResultStuffInst=webscrape_legacy2.ResultStuff(fullResult, fullHeader, fullInfo, date)
         else:
             ResultStuffInst=webscrape.ResultStuff(fullResult, fullHeader, fullInfo, date)
-        ResultStuffInst.getAllResultInfo()            
+        ResultStuffInst.getAllResultInfo()
+        ResultStuffObjInst = webscrape.ResultStuffObj()
+        ResultStuffObjInst.raceDate = ResultStuffInst.raceDate
+        ResultStuffObjInst.horseNames= ResultStuffInst.horseNames
+        ResultStuffObjInst.odds= ResultStuffInst.odds
+        ResultStuffObjInst.draw= ResultStuffInst.draw
+        ResultStuffObjInst.horseAges= ResultStuffInst.horseAges
+        ResultStuffObjInst.horseWeights= ResultStuffInst.horseWeights
+        ResultStuffObjInst.lengthGoingTypeTemp= ResultStuffInst.lengthGoingTypeTemp
+        ResultStuffObjInst.jockeys= ResultStuffInst.jockeys
+        ResultStuffObjInst.trainers= ResultStuffInst.trainers
+        ResultStuffObjInst.finishingTime= ResultStuffInst.finishingTime
+
         """ResultStuffInst.getRaceDate()
         ResultStuffInst.getHorseNames()
         ResultStuffInst.getNumberOfHorses()
@@ -327,7 +382,7 @@ def makeAResult(date):
         ResultStuffInst.getHorseWeight()
         ResultStuffInst.getJockeyName()
         ResultStuffInst.getGoing()"""
-        ResultStuffInsts.append(ResultStuffInst)
+        ResultStuffInsts.append(ResultStuffObjInst)
     return ResultStuffInsts
 
 def writeAResult(date, filenameAppend):

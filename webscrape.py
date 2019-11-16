@@ -460,6 +460,7 @@ class ResultStuffObj:
         self.jockeys=[]
         self.trainers=[]
         self.finishingTime=[]
+        self.going=[]
 
 class ResultStuff:
     def __init__(self, fullResult, fullHeader, fullInfo, raceDate):
