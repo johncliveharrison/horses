@@ -411,6 +411,10 @@ def checkResults(netOut, results):
     fpEwOdds =[]
     spEwOdds =[]
 
+
+    fpMoney = 0.0
+    spMoney = 0.0
+
     fpEwMoney = 0.0
     spEwMoney= 0.0
 
@@ -425,7 +429,12 @@ def checkResults(netOut, results):
                 odd_split=result.odds[0].split("/")
                 fpFpOdds.append((float(odd_split[0])/float(odd_split[1])))
                 fpEwOdds.append((float(odd_split[0])/float(odd_split[1])))
-                fpEwMoney = fpEwMoney + 10.0 + (10.0 *(float(odd_split[0])/float(odd_split[1])))
+
+                fpMoney = fpMoney + (10.0 *(float(odd_split[0])/float(odd_split[1])))
+                fpEwMoney = fpEwMoney + (10.0 *(float(odd_split[0])/float(odd_split[1])))
+            else:
+                fpMoney = fpMoney - 10.0
+                fpEwMoney = fpEwMoney - 10.0 
         except Exception,e:
             print "problem with fpFpOdds"
             print str(e)
@@ -436,7 +445,12 @@ def checkResults(netOut, results):
                 odd_split=result.odds[0].split("/")
                 spFpOdds.append((float(odd_split[0])/float(odd_split[1])))
                 spEwOdds.append((float(odd_split[0])/float(odd_split[1])))
-                spEwMoney = spEwMoney + 10.0 + (10.0 *(float(odd_split[0])/float(odd_split[1])))
+
+                spMoney = spMoney + (float(odd_split[0])/float(odd_split[1]))
+                spEwMoney = spEwMoney + (10.0 *(float(odd_split[0])/float(odd_split[1])))
+            else:
+                spMoney = spMoney - 10.0
+                spEwMoney = spEwMoney - 10.0
         except Exception,e:
             print "problem with spFpOdds"
             print str(e)
@@ -444,43 +458,43 @@ def checkResults(netOut, results):
 
     # do the each way oodds too
     for net, result in zip(netOut, results):
-        try:
-            fpEwMoney = fpEwMoney - 20.0
-            spEwMoney = spEwMoney - 20.0
-        except Exception, e:
-            print str(e)
 
         try:
-            if net[0]==result.horseNames[0]:
-                odd_split=result.odds[0].split("/")
-                fpEwOdds[-1] = fpEwOdds[-1] + ((float(odd_split[0])/float(odd_split[1]))/2.0)
-                fpEwMoney = fpEwMoney + 10.0 + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/4.0))
-            if net[0]==result.horseNames[1]:
-                odd_split=result.odds[1].split("/")
-                fpEwOdds.append((float(odd_split[0])/float(odd_split[1]))/2.0)
-                fpEwMoney = fpEwMoney + 10.0 + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/4.0))
-            if net[0]==result.horseNames[2]:
-                odd_split=result.odds[2].split("/")
-                fpEwOdds.append((float(odd_split[0])/float(odd_split[1]))/2.0)
-                fpEwMoney = fpEwMoney + 10.0 + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/4.0))
+            for idx, horseName in enumerate(result.horseNames):
+
+                if net[0]==horseName:
+                    odd_split=result.odds[idx].split("/")
+                    if idx < 3:
+                        if idx == 0:
+                            fpEwOdds[-1] = fpEwOdds[-1] + ((float(odd_split[0])/float(odd_split[1]))/4.0)
+                        else:
+                            fpEwOdds.append((float(odd_split[0])/float(odd_split[1]))/4.0)
+
+                        if (float(odd_split[0])/float(odd_split[1])) > 4:
+                            fpEwMoney = fpEwMoney + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/4.0))
+                    else:
+                        if (float(odd_split[0])/float(odd_split[1])) > 4:
+                            fpEwMoney = fpEwMoney - 10.0
         except Exception,e:
             print "problem with fpEwOdds"
             pass
 
 
         try:
-            if net[1]==result.horseNames[0]:
-                odd_split=result.odds[0].split("/")
-                spEwOdds[-1] = spEwOdds[-1] + ((float(odd_split[0])/float(odd_split[1]))/2.0)
-                spEwMoney = spEwMoney + 10.0 + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/4.0))
-            if net[1]==result.horseNames[1]:
-                odd_split=result.odds[1].split("/")
-                spEwOdds.append((float(odd_split[0])/float(odd_split[1]))/2.0)
-                spEwMoney = spEwMoney + 10.0 + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/4.0))
-            if net[1]==result.horseNames[2]:
-                odd_split=result.odds[2].split("/")
-                spEwOdds.append((float(odd_split[0])/float(odd_split[1]))/2.0)
-                spEwMoney = spEwMoney + 10.0 + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/4.0))
+            for idx, horseName in enumerate(result.horseNames):
+                if net[1]==horseName:
+                    odd_split=result.odds[idx].split("/")
+                    if idx < 3:
+                        if idx == 0:
+                            spEwOdds[-1] = spEwOdds[-1] + ((float(odd_split[0])/float(odd_split[1]))/4.0)
+                        else:
+                            spEwOdds.append((float(odd_split[0])/float(odd_split[1]))/4.0)
+
+                        if (float(odd_split[0])/float(odd_split[1])) > 4:
+                            spEwMoney = spEwMoney + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/4.0))
+                    else:
+                        if (float(odd_split[0])/float(odd_split[1])) > 4:
+                            spEwMoney = spEwMoney - 10.0
         except Exception,e:
             print "problem with spEwOdds"
             pass
@@ -522,7 +536,15 @@ def checkResults(netOut, results):
     except ZeroDivisionError:
         pass
     try:
+        print "the 1st place to win prediction made %f" % (fpMoney)
+    except Exception, e:
+        pass
+    try:
         print "the 1st place top 3 prediction made %f" % (fpEwMoney)
+    except Exception, e:
+        pass
+    try:
+        print "the 2nd place to win prediction made %f" % (spMoney)
     except Exception, e:
         pass
     try:
@@ -531,7 +553,7 @@ def checkResults(netOut, results):
         pass
 
 
-    return (sum(fpFpOdds), sum(fpEwOdds), sum(spFpOdds), sum(spEwOdds), len(netOut), fpEwMoney, spEwMoney)
+    return (sum(fpFpOdds), sum(fpEwOdds), sum(spFpOdds), sum(spEwOdds), len(netOut), fpMoney, fpEwMoney, spMoney, spEwMoney)
 
 
 
@@ -706,7 +728,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
     winner_racesSqlStuffInst=SqlStuff2()
     winner_racesSqlStuffInst.connectDatabase(winner_racesdb)
 
-    if False: #os.path.exists(netFilename) and not useDaysTestInputs:
+    if os.path.exists(netFilename) and not useDaysTestInputs:
         print "found network training file"
         net = NetworkReader.readFrom(netFilename) 
     else:
@@ -865,6 +887,8 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
     lenNetOut = 0.0
     fpEwMoneyTotal = 0.0
     spEwMoneyTotal = 0.0
+    fpMoneyTotal = 0.0
+    spMoneyTotal = 0.0
 
 
     for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2]))):
@@ -880,7 +904,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
             netOut, results = neuralNetWithTestInputs(net, daysTestInputs, daysOdds, daysResults, useDaysTestInputs, result = True, date=dateIn)
     
 
-        fpFpOdds, fpEwOdds, spFpOdds, spEwOdds, lenNetOut, fpEwMoney, spEwMoney = checkResults(netOut, results)
+        fpFpOdds, fpEwOdds, spFpOdds, spEwOdds, lenNetOut, fpMoney, fpEwMoney, spMoney, spEwMoney = checkResults(netOut, results)
 
         allFpFpOdds.append(fpFpOdds)
         allFpEwOdds.append(fpEwOdds)
@@ -895,6 +919,9 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
         totalLenNetOut = sum(allLenNetOut)
         fpEwMoneyTotal = fpEwMoneyTotal + fpEwMoney
         spEwMoneyTotal = spEwMoneyTotal + spEwMoney
+        fpMoneyTotal = fpMoneyTotal + fpMoney
+        spMoneyTotal = spMoneyTotal + spMoney
+        
 
         try:
             print "1st place prediction average odds %f" % (float(totalFpFpOdds)/float(totalLenNetOut))
@@ -923,7 +950,15 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
             print str(e)
             pass
         try:
+            print "the total 1st place to win money is %f" % (fpMoneyTotal)
+        except Exception,e:
+            pass
+        try:
             print "the total 1st place top 3 money is %f" % (fpEwMoneyTotal)
+        except Exception,e:
+            pass
+        try:
+            print "the total 2nd place to win money is %f" % (spMoneyTotal)
         except Exception,e:
             pass
         try:
