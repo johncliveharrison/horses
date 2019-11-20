@@ -3,6 +3,7 @@ import os
 import time
 import datetime
 import pickle
+import random
 from collections import OrderedDict
 from common import daterange
 from minmax import minMaxDraw
@@ -470,10 +471,11 @@ def checkResults(netOut, results):
                         else:
                             fpEwOdds.append((float(odd_split[0])/float(odd_split[1]))/4.0)
 
-                        if (float(odd_split[0])/float(odd_split[1])) > 4:
+                        if (float(odd_split[0])/float(odd_split[1])) > 0:
+                            fpEwMoney = fpEwMoney - 10.0
                             fpEwMoney = fpEwMoney + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/4.0))
                     else:
-                        if (float(odd_split[0])/float(odd_split[1])) > 4:
+                        if (float(odd_split[0])/float(odd_split[1])) > 0:
                             fpEwMoney = fpEwMoney - 10.0
         except Exception,e:
             print "problem with fpEwOdds"
@@ -490,10 +492,11 @@ def checkResults(netOut, results):
                         else:
                             spEwOdds.append((float(odd_split[0])/float(odd_split[1]))/4.0)
 
-                        if (float(odd_split[0])/float(odd_split[1])) > 4:
+                        if (float(odd_split[0])/float(odd_split[1])) > 0:
+                            spEwMoney = spEwMoney - 10.0
                             spEwMoney = spEwMoney + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/4.0))
                     else:
-                        if (float(odd_split[0])/float(odd_split[1])) > 4:
+                        if (float(odd_split[0])/float(odd_split[1])) > 0:
                             spEwMoney = spEwMoney - 10.0
         except Exception,e:
             print "problem with spEwOdds"
@@ -659,7 +662,7 @@ def getWinnersSubsetHorse(races, winnerdb, winners_racesdb, databaseNames):
         else:
             winnerSqlStuffInst.delHorse(horseName)
 
-def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTestInputs, daysOdds, daysResults, dateEnd=False, verbose=False, useDaysTestInputs = False, inputFpEwMoneyTotal=0.0):
+def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTestInputs, daysOdds, daysResults, dateEnd=False, verbose=False, useDaysTestInputs = False, inputMoneyTotal=0.0, inputNetFilename = " "):
     """ create a text file of all the inputs to the net"""
 
     if not dateEnd:
@@ -671,16 +674,29 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
     anInput = [None] * 10
 
     netFilename = "net"
-    
-    hiddenLayer0=8 #(len(anInput)+1)/2
-    hiddenLayer1=5 #(len(anInput)+1)/2 -1
-    hiddenLayer2=4 #(len(anInput)+1)/2 -1
-    hiddenLayer3=4
-    hiddenLayer4=3
-    hiddenLayer5=0
-    hiddenLayer6=0
-    netFilename = netFilename + "_" + str(hiddenLayer0) + "_" + str(hiddenLayer1) + "_" + str(hiddenLayer2) + "_" + str(hiddenLayer3) + "_" + str(hiddenLayer4) + ".xml"
-    #"_" + str(hiddenLayer5) + "_" + str(hiddenLayer6) + ".xml"
+    hiddenLayer0=2
+    hiddenLayer1=6
+    hiddenLayer2=14 
+    hiddenLayer3=2
+    hiddenLayer4=9
+    hiddenLayer5=13
+    hiddenLayer6=5
+    """hiddenLayer0=random.randint(1,20)
+    hiddenLayer1=random.randint(0,20)
+    if hiddenLayer1 > 0:
+        hiddenLayer2 = random.randint(0,20)
+    if hiddenLayer2 > 0:
+        hiddenLayer3 = random.randint(0,20)
+    if hiddenLayer3 > 0:
+        hiddenLayer4 = random.randint(0,20)
+    if hiddenLayer4 > 0:
+        hiddenLayer5 = random.randint(0,20)
+    if hiddenLayer5 > 0:
+        hiddenLayer6 = random.randint(0,20)
+    """
+    netFilename = netFilename + "_" + str(hiddenLayer0) + "_" + str(hiddenLayer1) + "_" + str(hiddenLayer2) + "_" + str(hiddenLayer3) + "_" + str(hiddenLayer4) + "_" + str(hiddenLayer5) + "_" + str(hiddenLayer6) + ".xml"
+
+    print netFilename
 
     # get all the winner horses from the winnerdb
     winnerSqlStuffInst=SqlStuff2()
@@ -728,7 +744,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
     winner_racesSqlStuffInst=SqlStuff2()
     winner_racesSqlStuffInst.connectDatabase(winner_racesdb)
 
-    if os.path.exists(netFilename) and not useDaysTestInputs:
+    if False: #os.path.exists(netFilename) and not useDaysTestInputs:
         print "found network training file"
         net = NetworkReader.readFrom(netFilename) 
     else:
@@ -863,10 +879,24 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
         print "length of tstdata is " + str(len(tstdata))
         # number of hidden layers and nodes
 
-        net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer) # 4,10,5,1
-        trainer=BackpropTrainer(net,DS, momentum=0.9, verbose=True, learningrate=0.001)
+        if hiddenLayer1 ==0:
+            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+        elif hiddenLayer2 ==0:
+            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+        elif hiddenLayer3 ==0:
+            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+        elif hiddenLayer4 ==0:
+            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+        elif hiddenLayer5 ==0:
+            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+        elif hiddenLayer6 ==0:
+            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, hiddenLayer5, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+        else:
+            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, hiddenLayer5, hiddenLayer6, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
 
-        aux=trainer.trainUntilConvergence(dataset=DS, maxEpochs=100, verbose=True, continueEpochs=10, validationProportion=0.25)
+        trainer=BackpropTrainer(net,DS, momentum=0.9, verbose=True, learningrate=0.01)
+
+        aux=trainer.trainUntilConvergence(dataset=DS, maxEpochs=30, verbose=True, continueEpochs=5, validationProportion=0.25)
 
         mse=trainer.testOnData(dataset=tstdata)
         print "Mean Squared Error = " + str(mse)
@@ -886,6 +916,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
     spEwOdds = 0.0
     lenNetOut = 0.0
     fpEwMoneyTotal = 0.0
+    spMoneyTotal = 0.0
     spEwMoneyTotal = 0.0
     fpMoneyTotal = 0.0
     spMoneyTotal = 0.0
@@ -917,9 +948,9 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
         totalSpFpOdds = sum(allSpFpOdds)
         totalSpEwOdds = sum(allSpEwOdds)
         totalLenNetOut = sum(allLenNetOut)
+        fpMoneyTotal = fpMoneyTotal + fpMoney
         fpEwMoneyTotal = fpEwMoneyTotal + fpEwMoney
         spEwMoneyTotal = spEwMoneyTotal + spEwMoney
-        fpMoneyTotal = fpMoneyTotal + fpMoney
         spMoneyTotal = spMoneyTotal + spMoney
         
 
@@ -966,12 +997,21 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
         except Exception,e:
             pass
         
-    if fpEwMoneyTotal > inputFpEwMoneyTotal and useDaysTestInputs:
+    if fpEwMoneyTotal > inputMoneyTotal: # and useDaysTestInputs:
         # save the net params
         NetworkWriter.writeToFile(net, netFilename)
+        rNetFilename = netFilename
+        rMoneyTotal = max(fpMoneyTotal, fpEwMoneyTotal)
+    elif fpMoneyTotal > inputMoneyTotal: #and useDaysTestInputs:
+        NetworkWriter.writeToFile(net, netFilename)
+        rNetFilename = netFilename
+        rMoneyTotal = max(fpMoneyTotal, fpEwMoneyTotal)
+    else:
+        rNetFilename = inputNetFilename
+        rMoneyTotal = inputMoneyTotal
 
 
-    return daysOdds, daysResults, daysTestInputs, max(fpEwMoneyTotal, inputFpEwMoneyTotal)
+    return rNetFilename, daysOdds, daysResults, daysTestInputs, rMoneyTotal
 
 
 def honeNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEnd=False, verbose=False):
@@ -981,8 +1021,9 @@ def honeNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEnd=False, v
     daysTestInputs = OrderedDict()
     daysOdds = OrderedDict()
     daysResults = OrderedDict()
-    fpEwMoneyTotal = -100000.0
+    moneyTotal = -100000.0
+    netFilename = " "
     for ii in range(1000):
-        daysOdds, daysResults, daysTestInputs, fpEwMoneyTotal = getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTestInputs, daysOdds, daysResults, dateEnd=dateEnd, verbose=verbose, useDaysTestInputs=useDaysTestInputs, inputFpEwMoneyTotal = fpEwMoneyTotal)
+        netFilename, daysOdds, daysResults, daysTestInputs, moneyTotal = getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTestInputs, daysOdds, daysResults, dateEnd=dateEnd, verbose=verbose, useDaysTestInputs=useDaysTestInputs, inputMoneyTotal = moneyTotal, inputNetFilename = netFilename)
         useDaysTestInputs = True
-        print "Best Money So Far = %s" % (str(fpEwMoneyTotal))
+        print "Best Money So Far = %s using %s" % (str(moneyTotal), netFilename)
