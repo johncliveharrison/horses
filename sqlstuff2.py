@@ -220,11 +220,13 @@ class SqlStuff2:
         for self.row in self.rows:
             print self.row
 
-    def viewNewestDate(self):
+    def viewNewestDate(self, verbose = True):
         self.sql_str="SELECT *, max(RACEDATE) as MaxDate from RESULTS_INFO"
         self.cursor=self.conn.execute(self.sql_str)
         self.rows=self.cursor.fetchall()
-        print self.rows
+        if verbose:
+            print self.rows
+        return self.rows[0][9]
 
     def viewOldestDate(self):
         self.sql_str="SELECT *, min(RACEDATE) as MaxDate from RESULTS_INFO"

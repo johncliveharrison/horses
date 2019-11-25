@@ -427,10 +427,11 @@ def viewDate(date, databaseName):
     SqlStuffInst.connectDatabase(databaseName)
     SqlStuffInst.viewDate(date)
 
-def viewNewestDate(databaseName):
+def viewNewestDate(databaseName, verbose = True):
     SqlStuffInst=SqlStuff2()
     SqlStuffInst.connectDatabase(databaseName)
-    SqlStuffInst.viewNewestDate()
+    newestDate=SqlStuffInst.viewNewestDate(verbose = verbose)
+    return newestDate
 
 def viewOldestDate(databaseName):
     SqlStuffInst=SqlStuff2()

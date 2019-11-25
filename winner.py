@@ -22,7 +22,7 @@ from minmax import normaliseJockeyTrainerMinMax
 from minmax import getGoing
 from sqlstuff2 import SqlStuff2
 from webscrape import ResultStuffObj
-from commands import makeATestcard, makeAResult, makeATestcardFromResults
+from commands import makeATestcard, makeAResult, makeATestcardFromResults, viewNewestDate, makeAPoliteDatabase
 from pybrain.datasets import SupervisedDataSet
 from pybrain.supervised.trainers import BackpropTrainer
 from pybrain.tools.shortcuts import buildNetwork
@@ -1105,3 +1105,28 @@ def honeNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEnd=False, v
         useDaysTestInputs = True
         print "Best Money So Far = %s using %s" % (str(moneyTotal), netFilename)
         
+
+def updateTestFiles(databaseName):
+
+    newestDateStr=viewNewestDate(databaseName, verbose = False)
+    newestDate = datetime.datetime.strptime(newestDateStr, '%Y-%m-%d').date()
+    print "newest date = %s" % str(newestDate)
+    newestDate += datetime.timedelta(days=1)
+    print "incremented date = %s" % str(newestDate)
+    yesterdaysDate=datetime.datetime.today().date() - datetime.timedelta(days=1)
+    print "yesterdays date = %s" % str(yesterdaysDate)
+
+    # update the database
+    if newestDate != yesterdaysDate:
+        makeAPoliteDatabase(str(newestDate), str(yesterdaysDate), databaseName, test = "false")
+
+    # update the winners_races database
+    getWinnersSubsetHorse(3, winnerdb, winners_racesdb, databaseNames)
+
+    # update the jockeys
+
+    # update the trainers
+
+def updateTrainingFiles():
+    """ update all the files needed for training the network
+    DS"""
