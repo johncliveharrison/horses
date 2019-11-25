@@ -93,11 +93,18 @@ def minMaxJockeyTrainer(horses, databaseNamesList,jockeyTrainer="jockey"):
 
 def sortResult(decimalResult, horse, extra1, extra2, extra3, sortList, sortDecimal, sortHorse):
     """ sort the results by date and return the most recent x"""
+    trainError = True
     if len(sortList)==0:
-        sortList.append(str(horse) + '('+str(decimalResult)+')('+str(extra1)+')('+str(extra2)+')('+str(extra3)+')')  # appemd the first horse
+        try:
+            sortList.append("%s (%.20f) (%s)(%s)(%s)" % (str(horse), decimalResult, str(extra1), str(extra2), str(extra3))) 
+        except Exception,e:
+            print "problem adding first entry to the sortList"
+            print str(e)
+            raise Exception
+    #    sortList.append(str(horse) + '('+str(decimalResult)+')('+str(extra1)+')('+str(extra2)+')('+str(extra3)+')')  # appemd the first horse
         sortDecimal.append(decimalResult)
         sortHorse.append(str(horse))
-        return sortDecimal, sortList, sortHorse
+        return sortDecimal, sortList, sortHorse, False
     
     iterations = len(sortList)
     decimal1=decimalResult
@@ -106,26 +113,60 @@ def sortResult(decimalResult, horse, extra1, extra2, extra3, sortList, sortDecim
         decimal0=sortDecimal[idx]
 
         if decimal1==0.0:
-            sortList.append(str(horse) + '('+str(decimal1)+')('+str(extra1)+')('+str(extra2)+')('+str(extra3)+')')
+            try:
+                sortList.append("%s (%.20f) (%s)(%s)(%s)" % (str(horse), decimalResult, str(extra1), str(extra2), str(extra3))) 
+            except Exception,e:
+                print "problem adding to the sortList"
+                print str(e)
+                raise Exception
             sortDecimal.append(decimal1)
             sortHorse.append(str(horse))
+            trainError = False
             break
         elif decimal0==0.0:
-            sortList.insert(idx, str(horse) + '('+str(decimal1)+')('+str(extra1)+')('+str(extra2)+')('+str(extra3)+')')
+            try:
+                sortList.insert(idx, "%s (%.20f) (%s)(%s)(%s)" % (str(horse), decimalResult, str(extra1), str(extra2), str(extra3))) 
+            except Exception,e:
+                print "problem adding to the sortList"
+                print str(e)
+                raise Exception
             sortDecimal.insert(idx,decimal1)
             sortHorse.insert(idx,str(horse))
+            trainError = False
             break
         elif decimal1 > decimal0:
-            sortList.insert(idx, str(horse) + '('+str(decimal1)+')('+str(extra1)+')('+str(extra2)+')('+str(extra3)+')')
+            try:
+                sortList.insert(idx, "%s (%.20f) (%s)(%s)(%s)" % (str(horse), decimalResult, str(extra1), str(extra2), str(extra3))) 
+            except Exception, e:
+                print "problem adding entry to the sortList"
+                print str(e)
+                raise Exception
             sortDecimal.insert(idx,decimal1)
             sortHorse.insert(idx,str(horse))
+            trainError = False
             break
         elif idx == (iterations-1):
-            sortList.append(str(horse) + '('+str(decimal1)+')('+str(extra1)+')('+str(extra2)+')('+str(extra3)+')')
+            if decimal1 != decimal0:
+                trainError = False
+            try:
+                sortList.append("%s (%.20f) (%s)(%s)(%s)" % (str(horse), decimalResult, str(extra1), str(extra2), str(extra3))) 
+            except Exception,e:
+                print "problem adding entry to the sortList"
+                print str(e)
+                raise Exception
             sortDecimal.append(decimal1)
             sortHorse.append(str(horse))
+        else:
+            if decimal1 != decimal0:
+                trainError = False
 
-    return sortDecimal, sortList, sortHorse
+    if len(sortList) < 3:
+        trainError = False
+
+    if trainError:
+        print "returning trainError = True from sortResult"
+
+    return sortDecimal, sortList, sortHorse, trainError
 
 def testFunction(databaseNames, horseName, jockeyName, trainerName, raceLength, going, draw, weight, odds, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, date, verbose=False):
     """This function will determine the inputs for the neural net for a horse"""
@@ -218,7 +259,7 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
     #draws=[]
     print "the date is " + str(date)
     print "and todays date is " + str(datetime.datetime.today().strftime('%Y-%m-%d'))
-
+    trainError = False
 
     try:
         if date >= datetime.datetime.today().strftime('%Y-%m-%d'):
@@ -296,7 +337,7 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
                 result=net.activate(testinput)
                 if verbose:
                     print "after net / before sort"
-                sortDecimal, sortList, sortHorse=sortResult(result, str(horse), str(odds[raceNo][idx]), str(0), str(0), sortList, sortDecimal, sortHorse)
+                sortDecimal, sortList, sortHorse, trainError=sortResult(result, str(horse), str(odds[raceNo][idx]), str(0), str(0), sortList, sortDecimal, sortHorse)
                 if verbose:
                     print "after sort"
             except Exception, e:
@@ -304,6 +345,10 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
                     print "something not correct in testFunction"
                     print str(e)
                 skipFileWrite=1
+
+        if trainError:
+            print "returning trainError = true from the neuralNet function"
+            return returnSortHorse, returnResults, daysTestInputs, daysOdds, daysResults, trainError
 
         if skipFileWrite==1:
             del(daysTestInputs[str(date)][str(raceNo)])
@@ -327,7 +372,7 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
                 except IndexError:
                     """if there are none finishers this will be the exception"""
 
-    return returnSortHorse, returnResults, daysTestInputs, daysOdds, daysResults
+    return returnSortHorse, returnResults, daysTestInputs, daysOdds, daysResults, trainError
 
 
 
@@ -337,6 +382,7 @@ def neuralNetWithTestInputs(net, daysTestInputs, daysOdds, daysResults, useDaysT
     print "the date is " + str(date)
     print "and todays date is " + str(datetime.datetime.today().strftime('%Y-%m-%d'))
     
+    trainError = False
     returnSortHorse=[]
     returnPastPerf=[]
     returnResults=[]
@@ -380,7 +426,7 @@ def neuralNetWithTestInputs(net, daysTestInputs, daysOdds, daysResults, useDaysT
                 result=net.activate(testinput)
                 if verbose:
                     print "after net / before sort"
-                sortDecimal, sortList, sortHorse=sortResult(result, str(horse), str(odds[raceNo][horse]), str(0), str(0), sortList, sortDecimal, sortHorse)
+                sortDecimal, sortList, sortHorse, trainError=sortResult(result, str(horse), str(odds[raceNo][horse]), str(0), str(0), sortList, sortDecimal, sortHorse)
                 if verbose:
                     print "after sort"
             except Exception, e:
@@ -388,6 +434,10 @@ def neuralNetWithTestInputs(net, daysTestInputs, daysOdds, daysResults, useDaysT
                     print "something not correct in testFunction"
                     print str(e)
                 skipFileWrite=1
+
+        if trainError:
+            print "returning trainError = True from neuralNetWithTestInputs"
+            return returnSortHorse, returnResults, trainError
 
         if skipFileWrite==0:
             returnSortHorse.append(sortHorse)
@@ -401,7 +451,7 @@ def neuralNetWithTestInputs(net, daysTestInputs, daysOdds, daysResults, useDaysT
                     """if there are none finishers this will be the exception"""
                 except AttributeError:
                    break 
-    return returnSortHorse, returnResults
+    return returnSortHorse, returnResults, trainError
 
 
 
@@ -674,14 +724,15 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
     anInput = [None] * 10
 
     netFilename = "net"
-    hiddenLayer0=2
-    hiddenLayer1=6
-    hiddenLayer2=14 
-    hiddenLayer3=2
-    hiddenLayer4=9
-    hiddenLayer5=13
-    hiddenLayer6=5
-    """hiddenLayer0=random.randint(1,20)
+    hiddenLayer0=0
+    hiddenLayer1=0
+    hiddenLayer2=0 
+    hiddenLayer3=0
+    hiddenLayer4=0
+    hiddenLayer5=0
+    hiddenLayer6=0
+
+    hiddenLayer0=random.randint(1,20)
     hiddenLayer1=random.randint(0,20)
     if hiddenLayer1 > 0:
         hiddenLayer2 = random.randint(0,20)
@@ -693,7 +744,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
         hiddenLayer5 = random.randint(0,20)
     if hiddenLayer5 > 0:
         hiddenLayer6 = random.randint(0,20)
-    """
+    
     netFilename = netFilename + "_" + str(hiddenLayer0) + "_" + str(hiddenLayer1) + "_" + str(hiddenLayer2) + "_" + str(hiddenLayer3) + "_" + str(hiddenLayer4) + "_" + str(hiddenLayer5) + "_" + str(hiddenLayer6) + ".xml"
 
     print netFilename
@@ -744,9 +795,25 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
     winner_racesSqlStuffInst=SqlStuff2()
     winner_racesSqlStuffInst.connectDatabase(winner_racesdb)
 
-    if False: #os.path.exists(netFilename) and not useDaysTestInputs:
+    if False: #os.path.exists(netFilename): # and not useDaysTestInputs:
         print "found network training file"
         net = NetworkReader.readFrom(netFilename) 
+        """for mod in net.modules:
+            print("Module:", mod.name)
+            if mod.paramdim > 0:
+                print("--parameters:", mod.params)
+            for conn in net.connections[mod]:
+                print("-connection to", conn.outmod.name)
+                if conn.paramdim > 0:
+                    print("- parameters", conn.params)
+            if hasattr(net, "recurrentConns"):
+                print("Recurrent connections")
+                for conn in net.recurrentConns:
+                    print("-", conn.inmod.name, " to", conn.outmod.name)
+                    if conn.paramdim > 0:
+                        print("- parameters", conn.params)
+        sys.exit()"""
+
     else:
         if os.path.exists("DS.pk"):
             print "reading DS from file DS.pk "
@@ -920,7 +987,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
     spEwMoneyTotal = 0.0
     fpMoneyTotal = 0.0
     spMoneyTotal = 0.0
-
+    trainError = False
 
     for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2]))):
 
@@ -929,11 +996,14 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
 
 
         if not useDaysTestInputs:
-            netOut, results, daysTestInputs, daysOdds, daysResults = neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, daysTestInputs, daysOdds, daysResults, useDaysTestInputs, result = True, date=dateIn)
+            netOut, results, daysTestInputs, daysOdds, daysResults, trainError = neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, daysTestInputs, daysOdds, daysResults, useDaysTestInputs, result = True, date=dateIn)
 
         else:
-            netOut, results = neuralNetWithTestInputs(net, daysTestInputs, daysOdds, daysResults, useDaysTestInputs, result = True, date=dateIn)
+            netOut, results, trainError = neuralNetWithTestInputs(net, daysTestInputs, daysOdds, daysResults, useDaysTestInputs, result = True, date=dateIn)
     
+        if trainError:
+            print "trainError was returned True from one of the neuralNet functions"
+            break
 
         fpFpOdds, fpEwOdds, spFpOdds, spEwOdds, lenNetOut, fpMoney, fpEwMoney, spMoney, spEwMoney = checkResults(netOut, results)
 
@@ -997,6 +1067,10 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
         except Exception,e:
             pass
         
+    if trainError:
+        print "returning trainError = True from the getInOutputsToNet function"
+        return inputNetFilename, daysOdds, daysResults, daysTestInputs, inputMoneyTotal, trainError
+
     if fpEwMoneyTotal > inputMoneyTotal: # and useDaysTestInputs:
         # save the net params
         NetworkWriter.writeToFile(net, netFilename)
@@ -1011,12 +1085,12 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
         rMoneyTotal = inputMoneyTotal
 
 
-    return rNetFilename, daysOdds, daysResults, daysTestInputs, rMoneyTotal
+    return rNetFilename, daysOdds, daysResults, daysTestInputs, rMoneyTotal, trainError
 
 
 def honeNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEnd=False, verbose=False):
 
-
+    trainError = False
     useDaysTestInputs = False
     daysTestInputs = OrderedDict()
     daysOdds = OrderedDict()
@@ -1024,6 +1098,10 @@ def honeNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEnd=False, v
     moneyTotal = -100000.0
     netFilename = " "
     for ii in range(1000):
-        netFilename, daysOdds, daysResults, daysTestInputs, moneyTotal = getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTestInputs, daysOdds, daysResults, dateEnd=dateEnd, verbose=verbose, useDaysTestInputs=useDaysTestInputs, inputMoneyTotal = moneyTotal, inputNetFilename = netFilename)
+        netFilename, daysOdds, daysResults, daysTestInputs, moneyTotal, trainError = getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTestInputs, daysOdds, daysResults, dateEnd=dateEnd, verbose=verbose, useDaysTestInputs=useDaysTestInputs, inputMoneyTotal = moneyTotal, inputNetFilename = netFilename)
+        if trainError:
+            print "trainError was returned True to honeNet from getInOutputsToNet"
+            continue
         useDaysTestInputs = True
         print "Best Money So Far = %s using %s" % (str(moneyTotal), netFilename)
+        
