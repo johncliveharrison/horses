@@ -355,7 +355,15 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
             del(daysOdds[str(date)][str(raceNo)])
 
         if skipFileWrite==0:
-            
+    
+            try:
+                # Here we can remove horses that comparison of history suggests have no chance
+                sortList, sortHorse, sortDecimal = checkHistory(databaseNames, sortHorse, sortDecimal, sortList)
+            except Exception,e:
+                print "something wrong in the checkHistory"
+                print str(e)
+                sys.exit()
+        
             returnSortHorse.append(sortHorse)
 
             if makeResult == True:
@@ -724,15 +732,15 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
     anInput = [None] * 10
 
     netFilename = "net"
-    hiddenLayer0=0
-    hiddenLayer1=0
-    hiddenLayer2=0 
-    hiddenLayer3=0
-    hiddenLayer4=0
+    hiddenLayer0=8
+    hiddenLayer1=6
+    hiddenLayer2=4 
+    hiddenLayer3=4
+    hiddenLayer4=3
     hiddenLayer5=0
     hiddenLayer6=0
 
-    hiddenLayer0=random.randint(1,20)
+    """hiddenLayer0=random.randint(1,20)
     hiddenLayer1=random.randint(0,20)
     if hiddenLayer1 > 0:
         hiddenLayer2 = random.randint(0,20)
@@ -744,7 +752,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
         hiddenLayer5 = random.randint(0,20)
     if hiddenLayer5 > 0:
         hiddenLayer6 = random.randint(0,20)
-    
+    """
     netFilename = netFilename + "_" + str(hiddenLayer0) + "_" + str(hiddenLayer1) + "_" + str(hiddenLayer2) + "_" + str(hiddenLayer3) + "_" + str(hiddenLayer4) + "_" + str(hiddenLayer5) + "_" + str(hiddenLayer6) + ".xml"
 
     print netFilename
@@ -795,7 +803,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
     winner_racesSqlStuffInst=SqlStuff2()
     winner_racesSqlStuffInst.connectDatabase(winner_racesdb)
 
-    if False: #os.path.exists(netFilename): # and not useDaysTestInputs:
+    if os.path.exists(netFilename): # and not useDaysTestInputs:
         print "found network training file"
         net = NetworkReader.readFrom(netFilename) 
         """for mod in net.modules:
@@ -1105,6 +1113,81 @@ def honeNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEnd=False, v
         useDaysTestInputs = True
         print "Best Money So Far = %s using %s" % (str(moneyTotal), netFilename)
         
+
+def checkHistory(databaseNames, sortHorse, sortDecimal, sortList):
+    """iterate through the sortHorse list.  Find races that the indexed
+    horse has been in with every other horse in the list.  If the indexed
+    horse has had better position in the common races than any one of the
+    other horse then it stays in the results.  If it has never been in common
+    races then it stays but gets an * put in it's string.  Otherwise if
+    it has done worse than any other horses it races against then remove it"""
+    databaseNamesList=map(str, databaseNames.strip('[]').split(','))
+    SqlStuffInst=SqlStuff2()
+    horseResultsDict = {}
+    asteriskList = []
+    removeList = []
+    betterList = []
+    betterNameList = []
+    betterSortHorse = []
+    betterSortList = []
+    betterSortDecimal = []
+
+    for horseName in sortHorse:
+        horse = []
+        # get all of horseName's races from the dataBase
+        for databaseName in databaseNamesList:
+            SqlStuffInst.connectDatabase(databaseName)
+            horse=horse + SqlStuffInst.getHorse(horseName)
+
+        # add the list of races to a dictionary
+        horseResultsDict[horseName] = horse
+
+    for horseNameAKey, horseNameAValues in horseResultsDict.items():
+        commonRace = False
+        betterA = 0
+        betterB = 0
+        for horseNameBKey, horseNameBValues in horseResultsDict.items():
+            if horseNameAKey == horseNameBKey:
+                continue
+            # now iterate through the races 
+            for raceA in horseNameAValues:
+                for raceB in horseNameBValues:
+                    if raceA[9:12] == raceB[9:12]:
+                        commonRace = True
+                        if raceA[4] < raceB[4]:
+                            betterA = betterA+1
+                        else:
+                            betterB = betterB+1
+        if commonRace == False:
+            asteriskList.append(horseNameAKey)
+        elif betterA == 0:
+            removeList.append(horseNameAKey)
+        else:
+            #betterNameList.append(horseNameAKey)
+            #betterList.append((str(betterA) + "/" + str(betterA+betterB)))
+            betterList.append((float(betterA)/(float(betterA)+float(betterB)), horseNameAKey, str(betterA) + "/" + str(betterA+betterB)))
+
+
+    #for idx, horseName in enumerate(sortHorse):
+    #    if horseName in removeList:
+    #        sortList[idx] = sortList[idx] + " #remove#"
+    #    if horseName in asteriskList:
+    #        sortList[idx] = sortList[idx] + " **not raced**"
+    #    for jdx, horse in enumerate(betterNameList):
+    #        if horseName == horse:
+    #            sortList[idx] = sortList[idx] + betterList[jdx]
+    #print str(betterList)
+    betterList.sort(key=lambda pair: pair[0], reverse=True)
+    for value in betterList:
+        betterSortList.append(value[1] + " (" + value[2] + ")")
+        betterSortHorse.append(value[1])
+        betterSortDecimal.append(value[0])
+
+        
+    return betterSortList, betterSortHorse, betterSortDecimal
+
+
+
 
 def updateTestFiles(databaseName):
 
