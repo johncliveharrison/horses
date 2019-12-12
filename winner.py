@@ -1013,28 +1013,29 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
             print "trainError was returned True from one of the neuralNet functions"
             break
 
-        fpFpOdds, fpEwOdds, spFpOdds, spEwOdds, lenNetOut, fpMoney, fpEwMoney, spMoney, spEwMoney = checkResults(netOut, results)
+        if len(results) > 0:
+            fpFpOdds, fpEwOdds, spFpOdds, spEwOdds, lenNetOut, fpMoney, fpEwMoney, spMoney, spEwMoney = checkResults(netOut, results)
 
-        allFpFpOdds.append(fpFpOdds)
-        allFpEwOdds.append(fpEwOdds)
-        allSpFpOdds.append(spFpOdds)
-        allSpEwOdds.append(spEwOdds)
-        allLenNetOut.append(lenNetOut)
+            allFpFpOdds.append(fpFpOdds)
+            allFpEwOdds.append(fpEwOdds)
+            allSpFpOdds.append(spFpOdds)
+            allSpEwOdds.append(spEwOdds)
+            allLenNetOut.append(lenNetOut)
 
-        totalFpFpOdds = sum(allFpFpOdds)
-        totalFpEwOdds = sum(allFpEwOdds)
-        totalSpFpOdds = sum(allSpFpOdds)
-        totalSpEwOdds = sum(allSpEwOdds)
-        totalLenNetOut = sum(allLenNetOut)
-        fpMoneyTotal = fpMoneyTotal + fpMoney
-        fpEwMoneyTotal = fpEwMoneyTotal + fpEwMoney
-        spEwMoneyTotal = spEwMoneyTotal + spEwMoney
-        spMoneyTotal = spMoneyTotal + spMoney
+            totalFpFpOdds = sum(allFpFpOdds)
+            totalFpEwOdds = sum(allFpEwOdds)
+            totalSpFpOdds = sum(allSpFpOdds)
+            totalSpEwOdds = sum(allSpEwOdds)
+            totalLenNetOut = sum(allLenNetOut)
+            fpMoneyTotal = fpMoneyTotal + fpMoney
+            fpEwMoneyTotal = fpEwMoneyTotal + fpEwMoney
+            spEwMoneyTotal = spEwMoneyTotal + spEwMoney
+            spMoneyTotal = spMoneyTotal + spMoney
         
 
         try:
             print "1st place prediction average odds %f" % (float(totalFpFpOdds)/float(totalLenNetOut))
-        except ZeroDivisionError:
+        except (ZeroDivisionError, UnboundLocalError):
             pass
         except TypeError:
             print str(totalFpFpOdds)
@@ -1043,15 +1044,15 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
             print str(allLenNetOut)
         try:
             print "1st place prediction came top 3 with average odds %f" % (float(totalFpEwOdds)/float(totalLenNetOut))
-        except ZeroDivisionError:
+        except (ZeroDivisionError, UnboundLocalError):
             pass
         try:
             print "2nd place prediction won with average odds %f" % (float(totalSpFpOdds)/float(totalLenNetOut))
-        except ZeroDivisionError:
+        except (ZeroDivisionError, UnboundLocalError):
             pass
         try:
             print "2nd place prediction came top 3 with average odds %f" % (float(totalSpEwOdds)/float(totalLenNetOut))
-        except ZeroDivisionError:
+        except (ZeroDivisionError, UnboundLocalError):
             pass
         try:
             print "the total number of racee is %d" % (int(totalLenNetOut))
@@ -1105,7 +1106,7 @@ def honeNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEnd=False, v
     daysResults = OrderedDict()
     moneyTotal = -100000.0
     netFilename = " "
-    for ii in range(1000):
+    for ii in range(1):
         netFilename, daysOdds, daysResults, daysTestInputs, moneyTotal, trainError = getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTestInputs, daysOdds, daysResults, dateEnd=dateEnd, verbose=verbose, useDaysTestInputs=useDaysTestInputs, inputMoneyTotal = moneyTotal, inputNetFilename = netFilename)
         if trainError:
             print "trainError was returned True to honeNet from getInOutputsToNet"
@@ -1114,7 +1115,7 @@ def honeNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEnd=False, v
         print "Best Money So Far = %s using %s" % (str(moneyTotal), netFilename)
         
 
-def checkHistory(databaseNames, sortHorse, sortDecimal, sortList):
+def checkHistory(databaseNames, sortHorse, sortDecimal, sortList, date):
     """iterate through the sortHorse list.  Find races that the indexed
     horse has been in with every other horse in the list.  If the indexed
     horse has had better position in the common races than any one of the
@@ -1137,7 +1138,7 @@ def checkHistory(databaseNames, sortHorse, sortDecimal, sortList):
         # get all of horseName's races from the dataBase
         for databaseName in databaseNamesList:
             SqlStuffInst.connectDatabase(databaseName)
-            horse=horse + SqlStuffInst.getHorse(horseName)
+            horse=horse + SqlStuffInst.getHorse(horseName,date)
 
         # add the list of races to a dictionary
         horseResultsDict[horseName] = horse
