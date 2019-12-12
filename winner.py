@@ -254,12 +254,10 @@ def testFunction(databaseNames, horseName, jockeyName, trainerName, raceLength, 
 
 
 
-def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, daysTestInputs, daysOdds, daysResults, useDaysTestInputs, result = False, date=time.strftime("%Y-%m-%d"), verbose=False):
-    #lengths=[]
-    #draws=[]
+def neuralNet(databaseNames, result = False, date=time.strftime("%Y-%m-%d"), verbose=False):
+
     print "the date is " + str(date)
     print "and todays date is " + str(datetime.datetime.today().strftime('%Y-%m-%d'))
-    trainError = False
 
     try:
         if date >= datetime.datetime.today().strftime('%Y-%m-%d'):
@@ -290,97 +288,57 @@ def neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLen
     print todaysRaceVenues
     
     returnSortHorse=[]
-    returnPastPerf=[]
     returnResults=[]
 
-    daysTestInputs[str(date)] = {}
-    daysOdds[str(date)] = {}
-    daysResults[str(date)] = {}
 
     for raceNo, race in enumerate(horses):
         if verbose:
             print str(race)
-        numberHorses=len(horses[raceNo])
-        position=[0.0]*numberHorses
+
         sortList=[]
         sortDecimal=[]
         sortHorse=[]
         skipFileWrite=0
     
-        daysTestInputs[str(date)][str(raceNo)]={}
-        daysOdds[str(date)][str(raceNo)]={}
-        daysResults[str(date)][str(raceNo)] = {}
-
-        for idx, horse in enumerate(race):
-            if verbose:
-                print str(horse)
-            errors=0
-            yValues=0
-            bO=0
-            if skipFileWrite==1:
-                break;
-            if len(race) > 40:
-                skipFileWrite=1
-                break;
-             
-            try:
-                if verbose:
-                    print "calling test function"
-        
-                testinput=testFunction(databaseNames, horses[raceNo][idx],jockeys[raceNo][idx],trainers[raceNo][idx],lengths[raceNo],goings[raceNo], draws[raceNo][idx], weights[raceNo][idx], odds[raceNo][idx], minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict,date)
-                daysTestInputs[str(date)][str(raceNo)][str(horse)]=testinput
-                daysOdds[str(date)][str(raceNo)][str(horse)]=odds[raceNo][idx]
-                # append testinput to the horseTestInputs
-
-                if verbose:
-                    print "after test function / before net"
-                result=net.activate(testinput)
-                if verbose:
-                    print "after net / before sort"
-                sortDecimal, sortList, sortHorse, trainError=sortResult(result, str(horse), str(odds[raceNo][idx]), str(0), str(0), sortList, sortDecimal, sortHorse)
-                if verbose:
-                    print "after sort"
-            except Exception, e:
-                if verbose:
-                    print "something not correct in testFunction"
-                    print str(e)
-                skipFileWrite=1
-
-        if trainError:
-            print "returning trainError = true from the neuralNet function"
-            return returnSortHorse, returnResults, daysTestInputs, daysOdds, daysResults, trainError
-
-        if skipFileWrite==1:
-            del(daysTestInputs[str(date)][str(raceNo)])
-            del(daysOdds[str(date)][str(raceNo)])
-
-        if skipFileWrite==0:
+        sortHorse = horses[raceNo]
     
-            try:
-                # Here we can remove horses that comparison of history suggests have no chance
-                sortList, sortHorse, sortDecimal = checkHistory(databaseNames, sortHorse, sortDecimal, sortList)
-            except Exception,e:
-                print "something wrong in the checkHistory"
-                print str(e)
-                sys.exit()
+        try:
+            # Here we can remove horses that comparison of history suggests have no chance
+            sortList, sortHorse, sortDecimal, sortRaces = checkHistory(databaseNames, sortHorse, date)
+        except Exception,e:
+            print "something wrong in the checkHistory"
+            print str(e)
+            sys.exit()
         
-            returnSortHorse.append(sortHorse)
+        if len(sortHorse) == 0:
+            continue
+        if len(sortHorse) < 2:
+            if sortRaces[0] < 8:
+                continue
+        if sortRaces[0] < 4 and sortRaces[1] < 4:
+                continue
+        """winValue = sortDecimal[0]
+        for idx, ii in enumerate(sortDecimal):
+            if ii != winValue:
+                break
+            if sortRaces[idx]
+        """
+        returnSortHorse.append(sortHorse)
 
-            if makeResult == True:
-                returnResults.append(todaysResults[raceNo])
-                daysResults[str(date)][str(raceNo)] = todaysResults[raceNo]
+        if makeResult == True:
+            returnResults.append(todaysResults[raceNo])
 
-            print str(raceNo) + ' ' + str(todaysRaceVenues[raceNo]) + ' ' + str(todaysRaceTimes[raceNo]) 
-            for ii, pos in enumerate(sortList):
-                try:
-                    if makeResult == False:
-                        print str(ii+1) + pos 
-                    else:
-                        print str(ii+1) + pos + '       ' + str(todaysResults[raceNo].horseNames[ii]) + ' ' + str(todaysResults[raceNo].odds[ii])
-                except IndexError:
-                    """if there are none finishers this will be the exception"""
+        print str(raceNo) + ' ' + str(todaysRaceVenues[raceNo]) + ' ' + str(todaysRaceTimes[raceNo]) 
+        for ii, pos in enumerate(sortList):
+            try:
+                if makeResult == False:
+                    print str(ii+1) + pos 
+                else:
+                    print str(ii+1) + pos + '       ' + str(todaysResults[raceNo].horseNames[ii]) + ' ' + str(todaysResults[raceNo].odds[ii])
+            except IndexError:
+                """if there are none finishers this will be the exception"""
 
-    return returnSortHorse, returnResults, daysTestInputs, daysOdds, daysResults, trainError
+    return returnSortHorse, returnResults
 
 
 
@@ -459,7 +417,7 @@ def neuralNetWithTestInputs(net, daysTestInputs, daysOdds, daysResults, useDaysT
                     """if there are none finishers this will be the exception"""
                 except AttributeError:
                    break 
-    return returnSortHorse, returnResults, trainError
+    return returnSortHorse, returnResults
 
 
 
@@ -529,11 +487,11 @@ def checkResults(netOut, results):
                         else:
                             fpEwOdds.append((float(odd_split[0])/float(odd_split[1]))/4.0)
 
-                        if (float(odd_split[0])/float(odd_split[1])) > 0:
+                        if (float(odd_split[0])/float(odd_split[1])) >= 4:
                             fpEwMoney = fpEwMoney - 10.0
                             fpEwMoney = fpEwMoney + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/4.0))
                     else:
-                        if (float(odd_split[0])/float(odd_split[1])) > 0:
+                        if (float(odd_split[0])/float(odd_split[1])) >= 4:
                             fpEwMoney = fpEwMoney - 10.0
         except Exception,e:
             print "problem with fpEwOdds"
@@ -550,11 +508,11 @@ def checkResults(netOut, results):
                         else:
                             spEwOdds.append((float(odd_split[0])/float(odd_split[1]))/4.0)
 
-                        if (float(odd_split[0])/float(odd_split[1])) > 0:
+                        if (float(odd_split[0])/float(odd_split[1])) >= 4:
                             spEwMoney = spEwMoney - 10.0
                             spEwMoney = spEwMoney + (10.0 * ((float(odd_split[0])/float(odd_split[1]))/4.0))
                     else:
-                        if (float(odd_split[0])/float(odd_split[1])) > 0:
+                        if (float(odd_split[0])/float(odd_split[1])) >= 4:
                             spEwMoney = spEwMoney - 10.0
         except Exception,e:
             print "problem with spEwOdds"
@@ -720,262 +678,11 @@ def getWinnersSubsetHorse(races, winnerdb, winners_racesdb, databaseNames):
         else:
             winnerSqlStuffInst.delHorse(horseName)
 
-def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTestInputs, daysOdds, daysResults, dateEnd=False, verbose=False, useDaysTestInputs = False, inputMoneyTotal=0.0, inputNetFilename = " "):
+def getInOutputsToNet(databaseNames, dateStart, dateEnd=False, verbose=False):
     """ create a text file of all the inputs to the net"""
 
     if not dateEnd:
         dateEnd=dateStart
-    #input 0,1,2 the past positions of this horse when it won
-    #input 3 draw
-    #input 4 going
-    #input 5 race length
-    anInput = [None] * 10
-
-    netFilename = "net"
-    hiddenLayer0=8
-    hiddenLayer1=6
-    hiddenLayer2=4 
-    hiddenLayer3=4
-    hiddenLayer4=3
-    hiddenLayer5=0
-    hiddenLayer6=0
-
-    """hiddenLayer0=random.randint(1,20)
-    hiddenLayer1=random.randint(0,20)
-    if hiddenLayer1 > 0:
-        hiddenLayer2 = random.randint(0,20)
-    if hiddenLayer2 > 0:
-        hiddenLayer3 = random.randint(0,20)
-    if hiddenLayer3 > 0:
-        hiddenLayer4 = random.randint(0,20)
-    if hiddenLayer4 > 0:
-        hiddenLayer5 = random.randint(0,20)
-    if hiddenLayer5 > 0:
-        hiddenLayer6 = random.randint(0,20)
-    """
-    netFilename = netFilename + "_" + str(hiddenLayer0) + "_" + str(hiddenLayer1) + "_" + str(hiddenLayer2) + "_" + str(hiddenLayer3) + "_" + str(hiddenLayer4) + "_" + str(hiddenLayer5) + "_" + str(hiddenLayer6) + ".xml"
-
-    print netFilename
-
-    # get all the winner horses from the winnerdb
-    winnerSqlStuffInst=SqlStuff2()
-    winnerSqlStuffInst.connectDatabase(winnerdb)
-    firstPlaceHorses=winnerSqlStuffInst.getAllTable()
-
-    #base the min max values on all the databases (not just the winners)
-    allHorseSqlStuffInst=SqlStuff2()
-    allHorses=[]
-    try:
-        databaseNamesList=map(str, databaseNames.strip('[]').split(','))
-        for databaseName in databaseNamesList:
-            allHorseSqlStuffInst.connectDatabase(databaseName)
-            allHorses=allHorses + allHorseSqlStuffInst.getAllTable()
-
-    except Exception,e:
-        print "problem with the database in testFunction"
-        print "databaseNames is %s" % databaseNames
-        print str(e)
-        raise Exception
-
-    lessThanThree = 0
-    pastPerf = 0
-    badDraw = 0
-    badGoing = 0
-    badRaceLength = 0
-    badWeight = 0
-    badJockey = 0
-    badTrainer = 0
-    badOdds = 0
-    badSpeed = 0
-
-
-    minMaxDrawList = minMaxDraw(allHorses)
-    meanStdGoingList = meanStdGoing(allHorses)
-    minMaxRaceLengthList = minMaxRaceLength(allHorses)
-    minMaxWeightList = minMaxWeight(allHorses)
-    minMaxSpeedList = minMaxSpeed(firstPlaceHorses)
-    jockeyDict=minMaxJockeyTrainer(allHorses, databaseNamesList,jockeyTrainer="jockey")
-    minMaxJockeyList = minMaxJockey(jockeyDict)
-    trainerDict=minMaxJockeyTrainer(allHorses, databaseNamesList,jockeyTrainer="trainer")
-    minMaxTrainerList = minMaxJockey(trainerDict)
-
-    # save the winners races in a winners_races.db
-    winner_racesSqlStuffInst=SqlStuff2()
-    winner_racesSqlStuffInst.connectDatabase(winner_racesdb)
-
-    if os.path.exists(netFilename): # and not useDaysTestInputs:
-        print "found network training file"
-        net = NetworkReader.readFrom(netFilename) 
-        """for mod in net.modules:
-            print("Module:", mod.name)
-            if mod.paramdim > 0:
-                print("--parameters:", mod.params)
-            for conn in net.connections[mod]:
-                print("-connection to", conn.outmod.name)
-                if conn.paramdim > 0:
-                    print("- parameters", conn.params)
-            if hasattr(net, "recurrentConns"):
-                print("Recurrent connections")
-                for conn in net.recurrentConns:
-                    print("-", conn.inmod.name, " to", conn.outmod.name)
-                    if conn.paramdim > 0:
-                        print("- parameters", conn.params)
-        sys.exit()"""
-
-    else:
-        if os.path.exists("DS.pk"):
-            print "reading DS from file DS.pk "
-            with open ("DS.pk", 'rb') as fp:
-                DS = pickle.load(fp)
-            #net = NetworkReader.readFrom(netFilename) 
-        else:
-            print "create the DS"
-            DS = SupervisedDataSet(len(anInput), 1)
-            for idx, horseInfo in enumerate(winnerSqlStuffInst.rows):
-                if idx%1000==0:
-                    print "Net input %d of %d generated" % (idx, len(winnerSqlStuffInst.rows))
-                horseName= horseInfo[1]
-                date=horseInfo[9]
-                horse= []
-                horse=horse + winner_racesSqlStuffInst.getHorse(horseName, date)
-                # if the length of horse is less than 3 then this cannot 
-                # be used
-                if len(horse) < 3:
-                    lessThanThree = lessThanThree+1
-                    continue
-                # get the positions from the 3 races before the win
-                # put the positions into the input list in pos 0,1,2
-                try:
-                    anInput[0] = normaliseFinish(horse[-1][4],horse[-1][6])
-                    anInput[1] = normaliseFinish(horse[-2][4],horse[-2][6])
-                    anInput[2] = normaliseFinish(horse[-3][4],horse[-3][6])
-                    if verbose:
-                        print "horseName %s - dates %s   %s   %s" % (str(horse[-1][1]), str(horse[-1][9]), str(horse[-2][9]), str(horse[-3][9]))
-                except Exception,e:
-                    print "skipping horse %d of %d  with bad form" % (idx, len(winnerSqlStuffInst.rows))   
-                    print str(e)
-                    pastPerf = pastPerf + 1
-                    continue
-                # get the draw
-                try:
-                    anInput[3] = normaliseDrawMinMax(horseInfo[12],minMaxDrawList)
-                except Exception,e:
-                    print "skipping horse %d of %d  with bad/no draw" % (idx, len(winnerSqlStuffInst.rows))   
-                    print str(e)
-                    badDraw = badDraw + 1
-                    continue
-                # get the going
-                try:
-                    anInput[4] = normaliseGoing(getGoing(horseInfo[8]), meanStdGoingList)
-                except Exception,e:
-                    print "skipping horse %d of %d  with no going" % (idx, len(winnerSqlStuffInst.rows))
-                    print str(e)
-                    badGoing = badGoing + 1
-                    continue
-                # get the race length
-                try:
-                    anInput[5] = normaliseRaceLengthMinMax(horseInfo[5], minMaxRaceLengthList)
-                except:
-                    print "skipping horse %d of %d  with no length" % (idx, len(winnerSqlStuffInst.rows))
-                    badRaceLength = badRaceLength + 1
-                    continue
-
-                try:
-                    anInput[6] = normaliseWeightMinMax(horseInfo[3], minMaxWeightList)
-                except Exception, e:
-                    print str(e)
-                    print "the weight is " + str(horseInfo[3])
-                    print "skipping horse %d of %d  with no weight" % (idx, len(winnerSqlStuffInst.rows))
-                    badWeight = badWeight + 1
-                    continue
-
-                try:
-                    jockeyName=horseInfo[7]
-                    anInput[7] = normaliseJockeyTrainerMinMax(jockeyDict[jockeyName], minMaxJockeyList)
-                except Exception,e:
-                    print "problem with the jockey normalise"
-                    print "jockey is %s, median is %s.  Min is %s, max is %s" % (str(jockeyName), str(jockeyDict[jockeyName]),str(minMaxJockeyList[0]), str(minMaxJockeyList[1])) 
-                    print str(e)
-                    badJockey = badJockey + 1
-                    continue
-
-                try:
-                    trainerName=horseInfo[13]
-                    anInput[8] = normaliseJockeyTrainerMinMax(trainerDict[trainerName], minMaxTrainerList)
-                except Exception,e:
-                    print "problem with the trainer normalise"
-                    print "trainer is %s, median is %s.  Min is %s, max is %s" % (str(trainerName), str(trainerDict[trainerName]),str(minMaxTrainerList[0]), str(minMaxTrainerList[1])) 
-                    print str(e)
-                    badTrainer = badTrainer + 1
-                    continue
-
-
-                try:
-                    odds=horseInfo[15]
-                    anInput[9] = float(odds.split("/")[0])/float(odds.split("/")[1])
-                except Exception,e:
-                    print "problem with the odds %s" % str(odds)
-                    print str(odds.split("/"))
-                    badOdds = badOdds + 1
-                    continue
-
-                # get the output speed
-                try:
-                    output = normaliseSpeed(horseInfo, minMaxSpeedList)
-                except Exception, e:
-                    print "problem normalising speed"
-                    print str(e)
-                    badSpeed = badSpeed + 1
-                    continue
-
-                DS.appendLinked(anInput, output) 
-
-            print "winners with less that three runs = %d" % lessThanThree
-            print "bad past performance = %d" % pastPerf
-            print "bad draw = %d" % badDraw
-            print "bad going = %d" % badGoing
-            print "bad race length = %d" % badRaceLength
-            print "bad weight = %d" % badWeight
-            print "bad jockey = %d" % badJockey
-            print "bad trainer = %d" % badTrainer
-            print "bad odds = %d" % badOdds
-            print "bad speed = %d" % badSpeed
-
-            with open("DS.pk", 'wb') as fp:
-                pickle.dump(DS, fp)
-
-
-        tstdata, trndata = DS.splitWithProportion( 0.25 )
-        #trndata=DS
-        #tstdata=DS
-
-
-        print "length of trndata is " + str(len(trndata))
-        print "length of tstdata is " + str(len(tstdata))
-        # number of hidden layers and nodes
-
-        if hiddenLayer1 ==0:
-            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
-        elif hiddenLayer2 ==0:
-            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
-        elif hiddenLayer3 ==0:
-            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
-        elif hiddenLayer4 ==0:
-            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
-        elif hiddenLayer5 ==0:
-            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
-        elif hiddenLayer6 ==0:
-            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, hiddenLayer5, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
-        else:
-            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, hiddenLayer5, hiddenLayer6, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
-
-        trainer=BackpropTrainer(net,DS, momentum=0.9, verbose=True, learningrate=0.01)
-
-        aux=trainer.trainUntilConvergence(dataset=DS, maxEpochs=30, verbose=True, continueEpochs=5, validationProportion=0.25)
-
-        mse=trainer.testOnData(dataset=tstdata)
-        print "Mean Squared Error = " + str(mse)
-
         
     dateStartSplit=dateStart.split('-')
     dateEndSplit=dateEnd.split('-')
@@ -995,7 +702,6 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
     spEwMoneyTotal = 0.0
     fpMoneyTotal = 0.0
     spMoneyTotal = 0.0
-    trainError = False
 
     for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2]))):
 
@@ -1003,15 +709,8 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
         print dateIn
 
 
-        if not useDaysTestInputs:
-            netOut, results, daysTestInputs, daysOdds, daysResults, trainError = neuralNet(net, databaseNames, minMaxDrawList, meanStdGoingList,minMaxRaceLengthList,minMaxWeightList,minMaxJockeyList,minMaxTrainerList,jockeyDict,trainerDict, daysTestInputs, daysOdds, daysResults, useDaysTestInputs, result = True, date=dateIn)
-
-        else:
-            netOut, results, trainError = neuralNetWithTestInputs(net, daysTestInputs, daysOdds, daysResults, useDaysTestInputs, result = True, date=dateIn)
+        netOut, results = neuralNet(databaseNames, result = True, date=dateIn)
     
-        if trainError:
-            print "trainError was returned True from one of the neuralNet functions"
-            break
 
         fpFpOdds, fpEwOdds, spFpOdds, spEwOdds, lenNetOut, fpMoney, fpEwMoney, spMoney, spEwMoney = checkResults(netOut, results)
 
@@ -1074,47 +773,9 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
             print "the total 2nd place top 3 money is %f" % (spEwMoneyTotal)
         except Exception,e:
             pass
-        
-    if trainError:
-        print "returning trainError = True from the getInOutputsToNet function"
-        return inputNetFilename, daysOdds, daysResults, daysTestInputs, inputMoneyTotal, trainError
-
-    if fpEwMoneyTotal > inputMoneyTotal: # and useDaysTestInputs:
-        # save the net params
-        NetworkWriter.writeToFile(net, netFilename)
-        rNetFilename = netFilename
-        rMoneyTotal = max(fpMoneyTotal, fpEwMoneyTotal)
-    elif fpMoneyTotal > inputMoneyTotal: #and useDaysTestInputs:
-        NetworkWriter.writeToFile(net, netFilename)
-        rNetFilename = netFilename
-        rMoneyTotal = max(fpMoneyTotal, fpEwMoneyTotal)
-    else:
-        rNetFilename = inputNetFilename
-        rMoneyTotal = inputMoneyTotal
 
 
-    return rNetFilename, daysOdds, daysResults, daysTestInputs, rMoneyTotal, trainError
-
-
-def honeNet(winnerdb, winner_racesdb, databaseNames, dateStart, dateEnd=False, verbose=False):
-
-    trainError = False
-    useDaysTestInputs = False
-    daysTestInputs = OrderedDict()
-    daysOdds = OrderedDict()
-    daysResults = OrderedDict()
-    moneyTotal = -100000.0
-    netFilename = " "
-    for ii in range(1000):
-        netFilename, daysOdds, daysResults, daysTestInputs, moneyTotal, trainError = getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTestInputs, daysOdds, daysResults, dateEnd=dateEnd, verbose=verbose, useDaysTestInputs=useDaysTestInputs, inputMoneyTotal = moneyTotal, inputNetFilename = netFilename)
-        if trainError:
-            print "trainError was returned True to honeNet from getInOutputsToNet"
-            continue
-        useDaysTestInputs = True
-        print "Best Money So Far = %s using %s" % (str(moneyTotal), netFilename)
-        
-
-def checkHistory(databaseNames, sortHorse, sortDecimal, sortList):
+def checkHistory(databaseNames, sortHorse, date):
     """iterate through the sortHorse list.  Find races that the indexed
     horse has been in with every other horse in the list.  If the indexed
     horse has had better position in the common races than any one of the
@@ -1131,13 +792,14 @@ def checkHistory(databaseNames, sortHorse, sortDecimal, sortList):
     betterSortHorse = []
     betterSortList = []
     betterSortDecimal = []
+    betterSortRaces = []
 
     for horseName in sortHorse:
         horse = []
         # get all of horseName's races from the dataBase
         for databaseName in databaseNamesList:
             SqlStuffInst.connectDatabase(databaseName)
-            horse=horse + SqlStuffInst.getHorse(horseName)
+            horse=horse + SqlStuffInst.getHorse(horseName,date)
 
         # add the list of races to a dictionary
         horseResultsDict[horseName] = horse
@@ -1163,28 +825,39 @@ def checkHistory(databaseNames, sortHorse, sortDecimal, sortList):
         elif betterA == 0:
             removeList.append(horseNameAKey)
         else:
-            #betterNameList.append(horseNameAKey)
-            #betterList.append((str(betterA) + "/" + str(betterA+betterB)))
-            betterList.append((float(betterA)/(float(betterA)+float(betterB)), horseNameAKey, str(betterA) + "/" + str(betterA+betterB)))
+            betterList.append((float(betterA)/(float(betterA)+float(betterB)), horseNameAKey, str(betterA) + "/" + str(betterA+betterB), (betterA + betterB), betterA))
 
 
-    #for idx, horseName in enumerate(sortHorse):
-    #    if horseName in removeList:
-    #        sortList[idx] = sortList[idx] + " #remove#"
-    #    if horseName in asteriskList:
-    #        sortList[idx] = sortList[idx] + " **not raced**"
-    #    for jdx, horse in enumerate(betterNameList):
-    #        if horseName == horse:
-    #            sortList[idx] = sortList[idx] + betterList[jdx]
-    #print str(betterList)
-    betterList.sort(key=lambda pair: pair[0], reverse=True)
+    betterSorted = []
+
     for value in betterList:
+        if len(betterSorted) == 0:
+            betterSorted.append(value)
+            continue
+        for idx, entry in enumerate(betterSorted):
+            denomDiff = value[3] - entry[3]
+            if denomDiff > 0:
+                newTop = float(denomDiff)/2.0 + entry[4]
+                if value[4] >= newTop:
+                    betterSorted.insert(idx, value)
+                    break
+            else:
+                denomDiff = entry[3] - value[3]
+                newTop = float(denomDiff)/2.0 + value[4]
+                if newTop > entry[4]:
+                    betterSorted.insert(idx, value)
+                    break
+            if idx == len(betterSorted) -1:
+                betterSorted.append(value)
+                break
+    #betterList.sort(key=lambda pair: pair[0], reverse=True)
+    for value in betterSorted:
         betterSortList.append(value[1] + " (" + value[2] + ")")
         betterSortHorse.append(value[1])
         betterSortDecimal.append(value[0])
-
+        betterSortRaces.append(value[3])
         
-    return betterSortList, betterSortHorse, betterSortDecimal
+    return betterSortList, betterSortHorse, betterSortDecimal, betterSortRaces
 
 
 

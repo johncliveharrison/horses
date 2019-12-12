@@ -155,7 +155,7 @@ class HrefStuff:
 
         return self.raceHrefs, raceTimes, raceVenue
 
-    def getCardContents(self, href, verbose=False):
+    def getCardContents(self, href, verbose=True):
         """ get the horse, jockey, number of horses and distance"""
         horseName=[]
         jockey=[]
@@ -214,9 +214,12 @@ class HrefStuff:
         #print sectionDiv
         if verbose:
             print "got this far 2"
+
         for card in sectionDiv:
+            print "iterating" + str(card.get("class"))
             if "RC-runnerRowWrapper" in card.get("class"):
                 cardTable=card
+        print cardTable
         cardTableRows=[]
         cardTableDiv=cardTable.findAll("div")
         for rows in cardTableDiv:
