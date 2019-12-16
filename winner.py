@@ -11,7 +11,7 @@ from minmax import meanStdGoing
 from minmax import minMaxRaceLength
 from minmax import minMaxSpeed
 from minmax import minMaxWeight
-from minmax import minMaxJockey
+#from minmax import minMaxJockey
 from minmax import normaliseDrawMinMax
 from minmax import normaliseGoing
 from minmax import normaliseRaceLengthMinMax
@@ -20,6 +20,7 @@ from minmax import normaliseSpeed
 from minmax import normaliseFinish
 from minmax import normaliseJockeyTrainerMinMax
 from minmax import getGoing
+from training import getTraining
 from sqlstuff2 import SqlStuff2
 from webscrape import ResultStuffObj
 from commands import makeATestcard, makeAResult, makeATestcardFromResults, viewNewestDate, makeAPoliteDatabase
@@ -33,62 +34,6 @@ from pybrain.structure import SoftmaxLayer
 from pybrain.tools.customxml.networkwriter import NetworkWriter
 from pybrain.tools.customxml.networkreader import NetworkReader
 
-def minMaxJockeyTrainer(horses, databaseNamesList,jockeyTrainer="jockey"):
-    jockeys={}
-    if jockeyTrainer=="jockey":
-        dbNo=7
-        minMaxJockeyListFilename = "minMaxJockeyList_"
-    else:
-        dbNo=13
-        minMaxJockeyListFilename = "minMaxTrainerList_"
-    for databaseName in databaseNamesList:
-        minMaxJockeyListFilename = minMaxJockeyListFilename + str(databaseName)
-    minMaxJockeyListFilename = minMaxJockeyListFilename + ".mm"
-    SqlStuffInst=SqlStuff2()
-
-    if os.path.exists(minMaxJockeyListFilename):
-        print "reading jockeys/trainers from file in " + minMaxJockeyListFilename
-        with open (minMaxJockeyListFilename, 'rb') as fp:
-            jockeys = pickle.load(fp)
-
-    if not jockeys:
-        # first create a list where each jockey in the DS appears once
-        for idx, horse in enumerate(horses):
-            if idx%1000==0:
-                print "db entry %d of %d" % (idx,len(horses)) 
-            jockey=[]
-            jockeyName=horse[dbNo]
-            if not jockeyName in jockeys.keys():
-                jockeys[jockeyName]= []
-                #now loop through the databases and add all entries in the dict
-                for databaseName in databaseNamesList:
-                    #print "databaseName is " + str(databaseName)
-                    SqlStuffInst.connectDatabase(databaseName)
-                    if jockeyTrainer=="jockey":
-                        jockey=jockey + SqlStuffInst.getJockey(jockeyName)
-                    else:
-                        jockey=jockey + SqlStuffInst.getTrainer(jockeyName)
-                #now loop through the jockey and find the median score
-                finish=0.0
-                for ride in jockey:
-                    OldRange = (ride[6] - 1)
-                    if (OldRange == 0):
-                        NewValue = 0.0
-                    else:
-                        NewRange = (1.0 - 0.0)  
-                        NewValue = (((float(ride[4]) - 1.0) * NewRange) / float(OldRange)) #+ 0
-                        # the 1.0- here makes it so a better jockey has a bigger value
-                    finish=finish+float(1.0-NewValue)            
-                meanFinishes=(finish/len(jockey))
-                #now put this value in the dictionary
-                jockeys[jockeyName]=meanFinishes
-            
-        print "There are " + str(len(jockeys)) + " in the minMaxJockey/Trainer function"
-
-    with open(minMaxJockeyListFilename, 'wb') as fp:
-        pickle.dump(jockeys, fp)
-
-    return jockeys
 
 
 def sortResult(decimalResult, horse, extra1, extra2, extra3, sortList, sortDecimal, sortHorse):
@@ -757,39 +702,9 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
 
     print netFilename
 
-    # get all the winner horses from the winnerdb
-    winnerSqlStuffInst=SqlStuff2()
-    winnerSqlStuffInst.connectDatabase(winnerdb)
-    firstPlaceHorses=winnerSqlStuffInst.getAllTable()
-
-    #base the min max values on all the databases (not just the winners)
-    allHorseSqlStuffInst=SqlStuff2()
-    allHorses=[]
-    try:
-        databaseNamesList=map(str, databaseNames.strip('[]').split(','))
-        for databaseName in databaseNamesList:
-            allHorseSqlStuffInst.connectDatabase(databaseName)
-            allHorses=allHorses + allHorseSqlStuffInst.getAllTable()
-
-    except Exception,e:
-        print "problem with the database in testFunction"
-        print "databaseNames is %s" % databaseNames
-        print str(e)
-        raise Exception
-
-    lessThanThree = 0
-    pastPerf = 0
-    badDraw = 0
-    badGoing = 0
-    badRaceLength = 0
-    badWeight = 0
-    badJockey = 0
-    badTrainer = 0
-    badOdds = 0
-    badSpeed = 0
 
 
-    minMaxDrawList = minMaxDraw(allHorses)
+    """minMaxDrawList = minMaxDraw(allHorses)
     meanStdGoingList = meanStdGoing(allHorses)
     minMaxRaceLengthList = minMaxRaceLength(allHorses)
     minMaxWeightList = minMaxWeight(allHorses)
@@ -798,12 +713,9 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
     minMaxJockeyList = minMaxJockey(jockeyDict)
     trainerDict=minMaxJockeyTrainer(allHorses, databaseNamesList,jockeyTrainer="trainer")
     minMaxTrainerList = minMaxJockey(trainerDict)
+    """
 
-    # save the winners races in a winners_races.db
-    winner_racesSqlStuffInst=SqlStuff2()
-    winner_racesSqlStuffInst.connectDatabase(winner_racesdb)
-
-    if os.path.exists(netFilename): # and not useDaysTestInputs:
+    if False: #os.path.exists(netFilename): # and not useDaysTestInputs:
         print "found network training file"
         net = NetworkReader.readFrom(netFilename) 
         """for mod in net.modules:
@@ -823,127 +735,20 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
         sys.exit()"""
 
     else:
-        if os.path.exists("DS.pk"):
-            print "reading DS from file DS.pk "
-            with open ("DS.pk", 'rb') as fp:
-                DS = pickle.load(fp)
+        if os.path.exists("DSDraw.pk") and os.path.exists("DSNoDraw.pk"):
+            print "reading DS from file DSDraw.pk "
+            with open ("DSDraw.pk", 'rb') as fp:
+                DSDraw = pickle.load(fp)
+            print "reading DSNoDraw from file DSNoDraw.pk "
+            with open ("DSDraw.pk", 'rb') as fp:
+                DSNoDraw = pickle.load(fp)
+
             #net = NetworkReader.readFrom(netFilename) 
         else:
             print "create the DS"
-            DS = SupervisedDataSet(len(anInput), 1)
-            for idx, horseInfo in enumerate(winnerSqlStuffInst.rows):
-                if idx%1000==0:
-                    print "Net input %d of %d generated" % (idx, len(winnerSqlStuffInst.rows))
-                horseName= horseInfo[1]
-                date=horseInfo[9]
-                horse= []
-                horse=horse + winner_racesSqlStuffInst.getHorse(horseName, date)
-                # if the length of horse is less than 3 then this cannot 
-                # be used
-                if len(horse) < 3:
-                    lessThanThree = lessThanThree+1
-                    continue
-                # get the positions from the 3 races before the win
-                # put the positions into the input list in pos 0,1,2
-                try:
-                    anInput[0] = normaliseFinish(horse[-1][4],horse[-1][6])
-                    anInput[1] = normaliseFinish(horse[-2][4],horse[-2][6])
-                    anInput[2] = normaliseFinish(horse[-3][4],horse[-3][6])
-                    if verbose:
-                        print "horseName %s - dates %s   %s   %s" % (str(horse[-1][1]), str(horse[-1][9]), str(horse[-2][9]), str(horse[-3][9]))
-                except Exception,e:
-                    print "skipping horse %d of %d  with bad form" % (idx, len(winnerSqlStuffInst.rows))   
-                    print str(e)
-                    pastPerf = pastPerf + 1
-                    continue
-                # get the draw
-                try:
-                    anInput[3] = normaliseDrawMinMax(horseInfo[12],minMaxDrawList)
-                except Exception,e:
-                    print "skipping horse %d of %d  with bad/no draw" % (idx, len(winnerSqlStuffInst.rows))   
-                    print str(e)
-                    badDraw = badDraw + 1
-                    continue
-                # get the going
-                try:
-                    anInput[4] = normaliseGoing(getGoing(horseInfo[8]), meanStdGoingList)
-                except Exception,e:
-                    print "skipping horse %d of %d  with no going" % (idx, len(winnerSqlStuffInst.rows))
-                    print str(e)
-                    badGoing = badGoing + 1
-                    continue
-                # get the race length
-                try:
-                    anInput[5] = normaliseRaceLengthMinMax(horseInfo[5], minMaxRaceLengthList)
-                except:
-                    print "skipping horse %d of %d  with no length" % (idx, len(winnerSqlStuffInst.rows))
-                    badRaceLength = badRaceLength + 1
-                    continue
-
-                try:
-                    anInput[6] = normaliseWeightMinMax(horseInfo[3], minMaxWeightList)
-                except Exception, e:
-                    print str(e)
-                    print "the weight is " + str(horseInfo[3])
-                    print "skipping horse %d of %d  with no weight" % (idx, len(winnerSqlStuffInst.rows))
-                    badWeight = badWeight + 1
-                    continue
-
-                try:
-                    jockeyName=horseInfo[7]
-                    anInput[7] = normaliseJockeyTrainerMinMax(jockeyDict[jockeyName], minMaxJockeyList)
-                except Exception,e:
-                    print "problem with the jockey normalise"
-                    print "jockey is %s, median is %s.  Min is %s, max is %s" % (str(jockeyName), str(jockeyDict[jockeyName]),str(minMaxJockeyList[0]), str(minMaxJockeyList[1])) 
-                    print str(e)
-                    badJockey = badJockey + 1
-                    continue
-
-                try:
-                    trainerName=horseInfo[13]
-                    anInput[8] = normaliseJockeyTrainerMinMax(trainerDict[trainerName], minMaxTrainerList)
-                except Exception,e:
-                    print "problem with the trainer normalise"
-                    print "trainer is %s, median is %s.  Min is %s, max is %s" % (str(trainerName), str(trainerDict[trainerName]),str(minMaxTrainerList[0]), str(minMaxTrainerList[1])) 
-                    print str(e)
-                    badTrainer = badTrainer + 1
-                    continue
-
-
-                try:
-                    odds=horseInfo[15]
-                    anInput[9] = float(odds.split("/")[0])/float(odds.split("/")[1])
-                except Exception,e:
-                    print "problem with the odds %s" % str(odds)
-                    print str(odds.split("/"))
-                    badOdds = badOdds + 1
-                    continue
-
-                # get the output speed
-                try:
-                    output = normaliseSpeed(horseInfo, minMaxSpeedList)
-                except Exception, e:
-                    print "problem normalising speed"
-                    print str(e)
-                    badSpeed = badSpeed + 1
-                    continue
-
-                DS.appendLinked(anInput, output) 
-
-            print "winners with less that three runs = %d" % lessThanThree
-            print "bad past performance = %d" % pastPerf
-            print "bad draw = %d" % badDraw
-            print "bad going = %d" % badGoing
-            print "bad race length = %d" % badRaceLength
-            print "bad weight = %d" % badWeight
-            print "bad jockey = %d" % badJockey
-            print "bad trainer = %d" % badTrainer
-            print "bad odds = %d" % badOdds
-            print "bad speed = %d" % badSpeed
-
-            with open("DS.pk", 'wb') as fp:
-                pickle.dump(DS, fp)
-
+            DSDraw, DsNoDraw = getTraining(databaseNames)
+            
+            
 
         tstdata, trndata = DS.splitWithProportion( 0.25 )
         #trndata=DS
@@ -954,27 +759,19 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
         print "length of tstdata is " + str(len(tstdata))
         # number of hidden layers and nodes
 
-        if hiddenLayer1 ==0:
-            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
-        elif hiddenLayer2 ==0:
-            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
-        elif hiddenLayer3 ==0:
-            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
-        elif hiddenLayer4 ==0:
-            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
-        elif hiddenLayer5 ==0:
-            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
-        elif hiddenLayer6 ==0:
-            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, hiddenLayer5, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
-        else:
-            net=buildNetwork(len(trndata['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, hiddenLayer5, hiddenLayer6, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+        netDraw = buildNet(hiddenLayers, trndataDraw)
+        netNoDraw = buildNet(hiddenLayers, trndataNoDraw)
 
-        trainer=BackpropTrainer(net,DS, momentum=0.9, verbose=True, learningrate=0.01)
+        trainerDraw=BackpropTrainer(netDraw,DSDraw, momentum=0.9, verbose=True, learningrate=0.01)
+        trainerNoDraw=BackpropTrainer(netNoDraw,DSNoDraw, momentum=0.9, verbose=True, learningrate=0.01)
 
-        aux=trainer.trainUntilConvergence(dataset=DS, maxEpochs=30, verbose=True, continueEpochs=5, validationProportion=0.25)
+        auxDraw=trainerDraw.trainUntilConvergence(dataset=DSDraw, maxEpochs=30, verbose=True, continueEpochs=5, validationProportion=0.25)
+        auxNoDraw=trainerNoDraw.trainUntilConvergence(dataset=DSNoDraw, maxEpochs=30, verbose=True, continueEpochs=5, validationProportion=0.25)
 
-        mse=trainer.testOnData(dataset=tstdata)
-        print "Mean Squared Error = " + str(mse)
+        mseDraw=trainerDraw.testOnData(dataset=tstdataDraw)
+        print "netDraw Mean Squared Error = " + str(mseDraw)
+        mseNoDraw=trainerNoDraw.testOnData(dataset=tstdataNoDraw)
+        print "netNoDraw Mean Squared Error = " + str(mseNoDraw)
 
         
     dateStartSplit=dateStart.split('-')

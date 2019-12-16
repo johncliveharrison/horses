@@ -1,9 +1,64 @@
 import re
 import os
+import datetime
 from numpy import mean, std, array
+import pickle
+from sqlstuff2 import SqlStuff2
 
 """ this file contains the functions required to find the min and max
 values for a field in the winners list"""
+def minMaxRest(raceHorses, previousResultsDict, verbose=False):
+    
+    minRest=10000
+    maxRest=0
+    for raceHorse in raceHorses:
+        horseName = raceHorse[1]
+        raceDate=datetime.datetime.strptime(raceHorse[9], '%Y-%m-%d').date()
+        print "raceDate in minMaxRest is %s" % str(raceDate)
+        horseList = previousResultsDict[horseName]
+        previousHorse = []
+        for horse  in horseList:
+            date=datetime.datetime.strptime(horse[9], '%Y-%m-%d').date()
+            print "append date in minMaxRest %s??" % str(date)
+            if date < raceDate:
+                print "yes"
+                previousHorse.append(horse)
+            else:
+                break
+        prevRaceDate = datetime.datetime.strptime(previousHorse[-1][9], '%Y-%m-%d').date()
+        print "prevRaceDate in minMaxRest is %s" % str(prevRaceDate)
+        rest = (raceDate-prevRaceDate).days
+        print "rest in mixMaxRest is %s" % str(rest)
+        minRest = min(minRest, rest)
+        maxRest = max(maxRest, rest)
+            
+    return [minRest, maxRest]
+
+def normaliseRestDays(rest, minMax):
+    try:
+        oldValue=float(rest)
+        maxRest=float(minMax[1])
+        minRest=float(minMax[0])
+
+        if oldValue > maxRest:
+            raise Exception("rest %d exceeds maxRest %d" % (rest, maxRest))
+
+    except Exception,e:
+        print "problem in normaliseRestDays"
+        raise Exception(str(e))
+    # Now normalise this draw next to the max and min
+    oldRange = (maxRest - minRest)
+    newMin=-1.0
+    newMax=1.0
+
+    if (oldRange == 0):
+        newValue = newMin
+    else:
+        newRange = (newMax - newMin)
+        newValue = (((oldValue - minDraw) * newRange) / oldRange) + newMin
+    return newValue
+
+
 def minMaxDraw(horses, verbose=False):
     minDraw=100000
     maxDraw=0
@@ -330,11 +385,15 @@ def normaliseWeightMinMax(weight, minMaxWeightList):
         newValue = (((oldValue - minWeight) * newRange) / oldRange) + newMin
     return newValue
 
-def minMaxJockey(jockeys):
+def minMaxJockeyTrainer(jockeys, horseList, jockeyTrainer="jockey"):
     minJockey=100000
     maxJockey=0
 
-    for jockey in jockeys:
+    for horse in horseList:
+        if jockeyTrainer=="jockey":
+            jockey = horse[7]
+        else:
+            jockey= horse[13]
         meanFinishes = jockeys[jockey]
         if meanFinishes > maxJockey:
             maxJockey=meanFinishes
@@ -375,3 +434,60 @@ def normaliseJockeyTrainerMinMax(jockey, minMaxJockey):
         print "something up with the normalise jockey calc"
         raise Exception(str(e))
     return newValue
+
+def meansJockeyTrainer(horses, databaseNamesList,jockeyTrainer="jockey"):
+    jockeys={}
+    if jockeyTrainer=="jockey":
+        dbNo=7
+        minMaxJockeyListFilename = "minMaxJockeyList_"
+    else:
+        dbNo=13
+        minMaxJockeyListFilename = "minMaxTrainerList_"
+    for databaseName in databaseNamesList:
+        minMaxJockeyListFilename = minMaxJockeyListFilename + str(databaseName)
+    minMaxJockeyListFilename = minMaxJockeyListFilename + ".mm"
+    SqlStuffInst=SqlStuff2()
+
+    if os.path.exists(minMaxJockeyListFilename):
+        print "reading jockeys/trainers from file in " + minMaxJockeyListFilename
+        with open (minMaxJockeyListFilename, 'rb') as fp:
+            jockeys = pickle.load(fp)
+
+    if not jockeys:
+        # first create a list where each jockey in the DS appears once
+        for idx, horse in enumerate(horses):
+            if idx%1000==0:
+                print "db entry %d of %d" % (idx,len(horses)) 
+            jockey=[]
+            jockeyName=horse[dbNo]
+            if not jockeyName in jockeys.keys():
+                jockeys[jockeyName]= []
+                #now loop through the databases and add all entries in the dict
+                for databaseName in databaseNamesList:
+                    #print "databaseName is " + str(databaseName)
+                    SqlStuffInst.connectDatabase(databaseName)
+                    if jockeyTrainer=="jockey":
+                        jockey=jockey + SqlStuffInst.getJockey(jockeyName)
+                    else:
+                        jockey=jockey + SqlStuffInst.getTrainer(jockeyName)
+                #now loop through the jockey and find the median score
+                finish=0.0
+                for ride in jockey:
+                    OldRange = (ride[6] - 1)
+                    if (OldRange == 0):
+                        NewValue = 0.0
+                    else:
+                        NewRange = (1.0 - 0.0)  
+                        NewValue = (((float(ride[4]) - 1.0) * NewRange) / float(OldRange)) #+ 0
+                        # the 1.0- here makes it so a better jockey has a bigger value
+                    finish=finish+float(1.0-NewValue)            
+                meanFinishes=(finish/len(jockey))
+                #now put this value in the dictionary
+                jockeys[jockeyName]=meanFinishes
+            
+        print "There are " + str(len(jockeys)) + " in the minMaxJockey/Trainer function"
+
+    with open(minMaxJockeyListFilename, 'wb') as fp:
+        pickle.dump(jockeys, fp)
+
+    return jockeys
