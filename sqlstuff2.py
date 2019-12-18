@@ -127,12 +127,13 @@ class SqlStuff2:
         print "the most wins is " + winnerList[greatestIdx][1] + " with " + str(greatest) + "  wins"
         return winnerList
         
-    def getRace(self, raceVenue, raceDate, raceTime):
+    def getRace(self, raceVenue, raceDate, raceTime, verbose=False):
         self.sql_str="SELECT * from RESULTS_INFO where "
         self.sql_str=self.sql_str+"RACEVENUE='{}'".format(raceVenue.replace("'", "''"))
         self.sql_str=self.sql_str+" AND RACEDATE='{}'".format(raceDate)   
         self.sql_str=self.sql_str+" AND RACETIME='{}'".format(raceTime)   
-        print "sql_str = %s" % str(self.sql_str)
+        if verbose:
+            print "sql_str = %s" % str(self.sql_str)
         self.cursor=self.conn.execute(self.sql_str)
         self.rows=self.cursor.fetchall()
         return self.rows

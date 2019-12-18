@@ -19,9 +19,14 @@ from minmax import normaliseFinish
 from minmax import minMaxWeight
 from minmax import minMaxJockeyTrainer
 from minmax import minMaxRest
+from minmax import minMaxDraw
 from minmax import normaliseRestDays
+from minmax import normaliseRaceLengthMinMax
+from minmax import normaliseWeightMinMax
+from minmax import normaliseJockeyTrainerMinMax
+from minmax import normaliseDrawMinMax
 
-def getTraining(databaseNames, verbose = True):
+def getTraining(databaseNames, verbose = False):
     """ check that all criteria are met for this horse to be included in training
     and if they are finally check if there is a draw or not and save the horse in
     a database for use in the training"""
@@ -48,7 +53,7 @@ def getTraining(databaseNames, verbose = True):
     raceTime = ""
     anInput = [None] * 10
     DSDraw = SupervisedDataSet(len(anInput), 1)
-    DsNoDraw = SupervisedDataSet(len(anInput), 1)
+    DSNoDraw = SupervisedDataSet(len(anInput), 1)
     rows = []
     previousResultsFilename = "previousResults.dict"
     previousResultsDict = {}
@@ -81,6 +86,7 @@ def getTraining(databaseNames, verbose = True):
             previousResultsDict= pickle.load(fp)
             fp.close()
         
+                                               
     print "databaseNamesList is " + str(databaseNamesList)
     for databaseName in databaseNamesList:
         SqlStuffInst.connectDatabase(databaseName)
@@ -88,11 +94,13 @@ def getTraining(databaseNames, verbose = True):
         SqlStuffInst.getAllTable()
         rows = rows + SqlStuffInst.rows
 
-    newHorse=False
+    newHorse=0
     for idx, horseInfo in enumerate(rows):
+        #if idx == 111000:
+        #    break
         horseName=horseInfo[1]
-        if idx%100==0 and newHorse==True:
-            newHorse=False
+        if newHorse==100:
+            newHorse=0
             print "horse entry %d of %d" % (idx, len(rows))
             with open(previousResultsFilename+"_tmp", 'wb') as fp:
                 pickle.dump(previousResultsDict, fp)
@@ -101,12 +109,13 @@ def getTraining(databaseNames, verbose = True):
             print "%d %s already in dict" % (idx, horseName)
             continue
         else:
+            print "%d %s not in dict" % (idx, horseName)
             horseList=[]
             for row in rows:
                 if horseName in row:
                     horseList.append(row)
             previousResultsDict[horseName] = horseList
-            newHorse=True
+            newHorse=newHorse+1
     with open(previousResultsFilename, 'wb') as fp:
         pickle.dump(previousResultsDict, fp)
 
@@ -114,18 +123,26 @@ def getTraining(databaseNames, verbose = True):
     jockeyDict=meansJockeyTrainer(rows, databaseNamesList,jockeyTrainer="jockey")
     trainerDict=meansJockeyTrainer(rows, databaseNamesList,jockeyTrainer="trainer")
     minMaxRaceLengthList = minMaxRaceLength(rows)
+    print "min = %d" % minMaxRaceLengthList[0]
+    print "max = %d" % minMaxRaceLengthList[1]
 
 
     for idx, horseInfo in enumerate(rows):
+        if idx % 100 == 0:
+            print "idx=%d, DSDraw=%d, DSNoDraw=%d" % (idx, len(DSDraw), len(DSNoDraw))
+
+
         date=horseInfo[9]
         horseName= horseInfo[1]
         horseList= []
-        print "horse entry %d of %d" % (idx, len(rows))
+        if verbose:
+            print "horse entry %d of %d" % (idx, len(rows))
         #check if horseName is already in the previousResultsDict
         if horseName not in previousResultsDict:
             sys.exit()
         else:
-            print "horse is already in dict"
+            if verbose:
+                print "horse is already in dict"
             horseList = previousResultsDict[horseName]
         #The horse should now be in previous results dict.  Check if 3 of them
         # were before the date of this race
@@ -136,7 +153,8 @@ def getTraining(databaseNames, verbose = True):
             else:
                 break
         if len(previousHorse) < 3:
-            print "horse did not have 3 previous races"
+            if verbose:
+                print "horse did not have 3 previous races"
             continue
 
         try:
@@ -144,7 +162,6 @@ def getTraining(databaseNames, verbose = True):
             anInput[1] = normaliseFinish(previousHorse[-2][4],previousHorse[-2][6])
             anInput[2] = normaliseFinish(previousHorse[-3][4],previousHorse[-3][6])
             if verbose:
-                #print str(previousHorse)
                 print "horseName %s - dates %s   %s   %s" % (str(previousHorse[-1][1]), str(previousHorse[-1][9]), str(previousHorse[-2][9]), str(previousHorse[-3][9]))
         except Exception,e:
             print "skipping horse %d of %d  with bad form" % (idx, len(rows))
@@ -152,9 +169,10 @@ def getTraining(databaseNames, verbose = True):
             pastPerf = pastPerf + 1
             continue
 
+        if verbose:
+            print "horseInfo[11] = %s and raceVenue = %s" % (str(horseInfo[11]), str(raceVenue))
         # in order to get the mixmax lists required for the other inputs the
         # race is required
-        print "horseInfo[11] = %s and raceVenue = %s" % (str(horseInfo[11]), str(raceVenue))
         if horseInfo[11] != raceVenue or horseInfo[9] != raceDate or horseInfo[10] != raceTime:
             skipRace=False
             raceHorseList = []
@@ -181,16 +199,19 @@ def getTraining(databaseNames, verbose = True):
                     break
 
             if skipRace:
-                print "aborting race as not all horse have 3 previous races"
+                if verbose:
+                    print "aborting race as not all horse have 3 previous races"
                 continue
 
             minMaxWeightList = minMaxWeight(raceHorseList)
             minMaxJockeyList = minMaxJockeyTrainer(jockeyDict, raceHorseList)
             minMaxTrainerList = minMaxJockeyTrainer(trainerDict, raceHorseList,jockeyTrainer="Trainer")
             minMaxRestList = minMaxRest(raceHorseList, previousResultsDict)
+            minMaxDrawList = minMaxDraw(raceHorseList)
 
         if skipRace:
-            print "aborting race AGAIN as not all horse have 3 previous races"
+            if verbose:
+                print "aborting race AGAIN as not all horse have 3 previous races"
             continue
 
         # get the days since last race and normalize from -1 to 1
@@ -207,9 +228,15 @@ def getTraining(databaseNames, verbose = True):
 
         # get the race length
         try:
+            if verbose:
+                print "length = %s" % str(horseInfo[5])
+                print "min = %d" % minMaxRaceLengthList[0]
+                print "max = %d" % minMaxRaceLengthList[1]
             anInput[5] = normaliseRaceLengthMinMax(horseInfo[5], minMaxRaceLengthList)
-        except:
-            print "skipping horse %d of %d  with no length" % (idx, len(winnerSqlStuffInst.rows))
+        except Exception, e:
+            print str(e)
+            print str(horseInfo)
+            print "skipping horse %d of %d  with no length" % (idx, len(rows))
             badRaceLength = badRaceLength + 1
             continue
 
@@ -219,7 +246,7 @@ def getTraining(databaseNames, verbose = True):
         except Exception, e:
             print str(e)
             print "the weight is " + str(horseInfo[3])
-            print "skipping horse %d of %d  with no weight" % (idx, len(winnerSqlStuffInst.rows))
+            print "skipping horse %d of %d  with no weight" % (idx, len(rows))
             badWeight = badWeight + 1
             continue
 
@@ -271,17 +298,19 @@ def getTraining(databaseNames, verbose = True):
 
         # get the draw
         try:
-            anInput[3] = normaliseDrawMinMax(horseInfo[12],minMaxDrawList)
-            DSDraw.appendLinked(anInput, output) 
+            anInput[3], hasDraw = normaliseDrawMinMax(horseInfo[12],minMaxDrawList)
         except Exception,e:
-            anInput[3] = 0.0
-            DSNoDraw.appendLinked(anInput, output) 
-            print "skipping horse %d of %d  with bad/no draw" % (idx, len(winnerSqlStuffInst.rows))   
+            print "skipping horse %d of %d  with bad/no draw" % (idx, len(rows))   
             print str(e)
             badDraw = badDraw + 1
             continue
 
-
+        if hasDraw:
+            DSDraw.appendLinked(anInput, output)
+            print "normalised draw is %d from draw %s min/max %s/%s" % (anInput[3], str(horseInfo[12]), str(minMaxDrawList[0]), str(minMaxDrawList[1]))
+        else:
+            DSNoDraw.appendLinked(anInput, output) 
+            
     print "bad past performance = %d" % pastPerf
     print "bad draw = %d" % badDraw
     print "bad going = %d" % badGoing

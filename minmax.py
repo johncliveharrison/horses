@@ -14,21 +14,26 @@ def minMaxRest(raceHorses, previousResultsDict, verbose=False):
     for raceHorse in raceHorses:
         horseName = raceHorse[1]
         raceDate=datetime.datetime.strptime(raceHorse[9], '%Y-%m-%d').date()
-        print "raceDate in minMaxRest is %s" % str(raceDate)
+        if verbose:
+            print "raceDate in minMaxRest is %s" % str(raceDate)
         horseList = previousResultsDict[horseName]
         previousHorse = []
         for horse  in horseList:
             date=datetime.datetime.strptime(horse[9], '%Y-%m-%d').date()
-            print "append date in minMaxRest %s??" % str(date)
+            if verbose:
+                print "append date in minMaxRest %s??" % str(date)
             if date < raceDate:
-                print "yes"
+                if verbose:
+                    print "yes"
                 previousHorse.append(horse)
             else:
                 break
         prevRaceDate = datetime.datetime.strptime(previousHorse[-1][9], '%Y-%m-%d').date()
-        print "prevRaceDate in minMaxRest is %s" % str(prevRaceDate)
+        if verbose:
+            print "prevRaceDate in minMaxRest is %s" % str(prevRaceDate)
         rest = (raceDate-prevRaceDate).days
-        print "rest in mixMaxRest is %s" % str(rest)
+        if verbose:
+            print "rest in mixMaxRest is %s" % str(rest)
         minRest = min(minRest, rest)
         maxRest = max(maxRest, rest)
             
@@ -55,32 +60,32 @@ def normaliseRestDays(rest, minMax):
         newValue = newMin
     else:
         newRange = (newMax - newMin)
-        newValue = (((oldValue - minDraw) * newRange) / oldRange) + newMin
+        newValue = (((oldValue - minRest) * newRange) / oldRange) + newMin
     return newValue
 
 
 def minMaxDraw(horses, verbose=False):
     minDraw=100000
     maxDraw=0
-    numberOfHorses=[]
+    #numberOfHorses=[]
     for ii, horse in enumerate(horses):
         try:
             tmp=horse[12]+1
         except Exception, e:
             continue
 
-        numberOfHorses.append(horse[6])
+        #numberOfHorses.append(horse[6])
 
         if horse[12] > maxDraw:
             if horse[12] < 50:
                 if verbose:
                     print "set the maxDraw to " + str(horse[12])
-                maxDraw=horse[12]
+            maxDraw=horse[12]
         if horse[12] < minDraw:
             minDraw=horse[12]
-    mean = array(numberOfHorses).mean()
-    std = array(numberOfHorses).std()
-    maxDraw = mean + (2*std)
+    #mean = array(numberOfHorses).mean()
+    #std = array(numberOfHorses).std()
+    #maxDraw = mean + (2*std)
     return [minDraw, maxDraw]
 
 def normaliseDrawMinMax(draw, minMax):
@@ -88,6 +93,10 @@ def normaliseDrawMinMax(draw, minMax):
     max(best) values"""
     try:
         oldValue=float(draw)
+    except ValueError, e:
+        return 0.0, False
+
+    try:
         maxDraw=float(minMax[1])
         minDraw=float(minMax[0])
 
@@ -107,7 +116,7 @@ def normaliseDrawMinMax(draw, minMax):
     else:
         newRange = (newMax - newMin)
         newValue = (((oldValue - minDraw) * newRange) / oldRange) + newMin
-    return newValue
+    return newValue, True
 
 def getGoing(goingIn):
     possibleSurfaces=["Hard", "Firm", "Good", "Soft", "Heavy", "Frozen"]
