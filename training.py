@@ -13,6 +13,8 @@ from pybrain.structure import TanhLayer
 from pybrain.structure import LinearLayer
 from pybrain.structure import SoftmaxLayer
 from sqlstuff2 import SqlStuff2
+from minmax import getGoing
+from minmax import meanStdGoing
 from minmax import meansJockeyTrainer
 from minmax import minMaxRaceLength
 from minmax import normaliseFinish
@@ -20,6 +22,7 @@ from minmax import minMaxWeight
 from minmax import minMaxJockeyTrainer
 from minmax import minMaxRest
 from minmax import minMaxDraw
+from minmax import normaliseGoing
 from minmax import normaliseRestDays
 from minmax import normaliseRaceLengthMinMax
 from minmax import normaliseWeightMinMax
@@ -51,7 +54,7 @@ def getTraining(databaseNames, verbose = False):
     raceVenue = ""
     raceDate = ""
     raceTime = ""
-    anInput = [None] * 10
+    anInput = [None] * 12
     DSDraw = SupervisedDataSet(len(anInput), 1)
     DSNoDraw = SupervisedDataSet(len(anInput), 1)
     rows = []
@@ -80,9 +83,9 @@ def getTraining(databaseNames, verbose = False):
 
 
     # check to see if there is a partial dict of previous results
-    if os.path.exists(previousResultsFilename+"_tmp"):
-        print "reading a partial previousResults file file %s " % (previousResultsFilename+"_tmp")
-        with open (previousResultsFilename+"_tmp", 'rb') as fp:
+    if os.path.exists(previousResultsFilename):
+        print "reading a partial previousResults file file %s " % (previousResultsFilename)
+        with open (previousResultsFilename, 'rb') as fp:
             previousResultsDict= pickle.load(fp)
             fp.close()
         
@@ -95,9 +98,13 @@ def getTraining(databaseNames, verbose = False):
         rows = rows + SqlStuffInst.rows
 
     newHorse=0
+    saveFinalResult=False
+    forceNumRows=len(rows)+1
     for idx, horseInfo in enumerate(rows):
-        #if idx == 111000:
-        #    break
+        if idx == forceNumRows:
+            break
+        if idx == len(rows):
+            saveFinalResult = True
         horseName=horseInfo[1]
         if newHorse==100:
             newHorse=0
@@ -106,7 +113,8 @@ def getTraining(databaseNames, verbose = False):
                 pickle.dump(previousResultsDict, fp)
 
         if horseName in previousResultsDict:
-            print "%d %s already in dict" % (idx, horseName)
+            if verbose:
+                print "%d %s already in dict" % (idx, horseName)
             continue
         else:
             print "%d %s not in dict" % (idx, horseName)
@@ -116,13 +124,15 @@ def getTraining(databaseNames, verbose = False):
                     horseList.append(row)
             previousResultsDict[horseName] = horseList
             newHorse=newHorse+1
-    with open(previousResultsFilename, 'wb') as fp:
-        pickle.dump(previousResultsDict, fp)
+    if saveFinalResult:
+        with open(previousResultsFilename, 'wb') as fp:
+            pickle.dump(previousResultsDict, fp)
 
     # load or create the jockey and trainer dictionaries 
     jockeyDict=meansJockeyTrainer(rows, databaseNamesList,jockeyTrainer="jockey")
     trainerDict=meansJockeyTrainer(rows, databaseNamesList,jockeyTrainer="trainer")
     minMaxRaceLengthList = minMaxRaceLength(rows)
+    meanStdGoingList = meanStdGoing(rows)
     print "min = %d" % minMaxRaceLengthList[0]
     print "max = %d" % minMaxRaceLengthList[1]
 
@@ -130,6 +140,8 @@ def getTraining(databaseNames, verbose = False):
     for idx, horseInfo in enumerate(rows):
         if idx % 100 == 0:
             print "idx=%d, DSDraw=%d, DSNoDraw=%d" % (idx, len(DSDraw), len(DSNoDraw))
+        if idx == forceNumRows:
+            break
 
 
         date=horseInfo[9]
@@ -139,6 +151,7 @@ def getTraining(databaseNames, verbose = False):
             print "horse entry %d of %d" % (idx, len(rows))
         #check if horseName is already in the previousResultsDict
         if horseName not in previousResultsDict:
+            print "horse %d not in loaded dict - exiting" % idx
             sys.exit()
         else:
             if verbose:
@@ -283,6 +296,25 @@ def getTraining(databaseNames, verbose = False):
             continue
 
 
+        # the number of horses where the max number of horses where we stop
+        # differentiating number of horses is 30
+        try:
+            anInput[10] = min(1.0, float(horseInfo[6]/30.0))
+        except Exception,e:
+            print "problem finding the number of horses in training"
+            print str(e)
+            continue
+
+        # get the going
+        try:
+            anInput[11] = normaliseGoing(getGoing(horseInfo[8]), meanStdGoingList)
+        except Exception,e:
+            print "skipping horse %s with no going" % (horseName)
+            print str(e)
+            continue
+
+
+
         # get the output result (1 for a win 0 for all others)
         try:
             if horseInfo[4] == 1:
@@ -307,7 +339,7 @@ def getTraining(databaseNames, verbose = False):
 
         if hasDraw:
             DSDraw.appendLinked(anInput, output)
-            print "normalised draw is %d from draw %s min/max %s/%s" % (anInput[3], str(horseInfo[12]), str(minMaxDrawList[0]), str(minMaxDrawList[1]))
+            print "normalised draw is %f from draw %s min/max %s/%s" % (anInput[3], str(horseInfo[12]), str(minMaxDrawList[0]), str(minMaxDrawList[1]))
         else:
             DSNoDraw.appendLinked(anInput, output) 
             

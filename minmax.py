@@ -74,6 +74,13 @@ def minMaxDraw(horses, verbose=False):
         except Exception, e:
             continue
 
+        # In the earier db's I set no draw to be 255 instead of 
+        # leaving a blank.  This deals with that!
+        # return invalid values to make sure an error is thrown
+        # if they are used anywhere
+        if horse[12] == 255:
+            return ['-', '-']
+
         #numberOfHorses.append(horse[6])
 
         if horse[12] > maxDraw:
@@ -95,6 +102,12 @@ def normaliseDrawMinMax(draw, minMax):
         oldValue=float(draw)
     except ValueError, e:
         return 0.0, False
+
+    # In the earier db's I set no draw to be 255 instead of 
+    # leaving a blank.  This deals with that!
+    if draw == 255:
+        return 0.0, False
+
 
     try:
         maxDraw=float(minMax[1])

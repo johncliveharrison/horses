@@ -740,7 +740,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
             with open ("DSDraw.pk", 'rb') as fp:
                 DSDraw = pickle.load(fp)
             print "reading DSNoDraw from file DSNoDraw.pk "
-            with open ("DSDraw.pk", 'rb') as fp:
+            with open ("DSNoDraw.pk", 'rb') as fp:
                 DSNoDraw = pickle.load(fp)
 
             #net = NetworkReader.readFrom(netFilename) 
@@ -750,17 +750,42 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
             
             
 
-        tstdata, trndata = DS.splitWithProportion( 0.25 )
+        # train with the draw and without the draw
+        tstdataDraw, trndataDraw = DSDraw.splitWithProportion( 0.25 )
+        tstdataNoDraw, trndataNoDraw = DSNoDraw.splitWithProportion( 0.25 )
         #trndata=DS
         #tstdata=DS
 
 
-        print "length of trndata is " + str(len(trndata))
-        print "length of tstdata is " + str(len(tstdata))
-        # number of hidden layers and nodes
+        print "length of draw trndata is " + str(len(trndataDraw))
+        print "length of draw tstdata is " + str(len(tstdataDraw))
+        print "length of no draw trndata is " + str(len(trndataNoDraw))
+        print "length of no draw tstdata is " + str(len(tstdataNoDraw))
 
-        netDraw = buildNet(hiddenLayers, trndataDraw)
-        netNoDraw = buildNet(hiddenLayers, trndataNoDraw)
+        # number of hidden layers and nodes
+        if hiddenLayer1 ==0:
+            netDraw=buildNetwork(len(trndataDraw['input'][0]), hiddenLayer0, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+            netNoDraw=buildNetwork(len(trndataNoDraw['input'][0]), hiddenLayer0, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+        elif hiddenLayer2 ==0:
+            netDraw=buildNetwork(len(trndataDraw['input'][0]), hiddenLayer0, hiddenLayer1, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+            netNoDraw=buildNetwork(len(trndataNoDraw['input'][0]), hiddenLayer0, hiddenLayer1, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+        elif hiddenLayer3 ==0:
+            netDraw=buildNetwork(len(trndataDraw['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+            netNoDraw=buildNetwork(len(trndataNoDraw['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+        elif hiddenLayer4 ==0:
+            netDraw=buildNetwork(len(trndataDraw['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+            netNoDraw=buildNetwork(len(trndataNoDraw['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+        elif hiddenLayer5 ==0:
+            netDraw=buildNetwork(len(trndataDraw['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+            netNoDraw=buildNetwork(len(trndataNoDraw['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+        elif hiddenLayer6 ==0:
+            netDraw=buildNetwork(len(trndataDraw['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, hiddenLayer5, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+            netNoDraw=buildNetwork(len(trndataNoDraw['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, hiddenLayer5, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+        else:
+            netDraw=buildNetwork(len(trndataDraw['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, hiddenLayer5, hiddenLayer6, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+            netNoDraw=buildNetwork(len(trndataNoDraw['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, hiddenLayer5, hiddenLayer6, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+
+
 
         trainerDraw=BackpropTrainer(netDraw,DSDraw, momentum=0.9, verbose=True, learningrate=0.01)
         trainerNoDraw=BackpropTrainer(netNoDraw,DSNoDraw, momentum=0.9, verbose=True, learningrate=0.01)
