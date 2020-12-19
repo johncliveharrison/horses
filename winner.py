@@ -776,7 +776,7 @@ def getInOutputsToNet(winnerdb, winner_racesdb, databaseNames, dateStart, daysTe
             netDraw=buildNetwork(len(trndataDraw['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
             netNoDraw=buildNetwork(len(trndataNoDraw['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
         elif hiddenLayer5 ==0:
-            netDraw=buildNetwork(len(trndataDraw['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
+            netDraw=buildNetwork(len(trndataDraw['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, 1, bias=True, outclass=SigmoidLayer, hiddenclass=SigmoidLayer)
             netNoDraw=buildNetwork(len(trndataNoDraw['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)
         elif hiddenLayer6 ==0:
             netDraw=buildNetwork(len(trndataDraw['input'][0]), hiddenLayer0, hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, hiddenLayer5, 1, bias=True, outclass=LinearLayer, hiddenclass=TanhLayer)

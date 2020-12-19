@@ -1,11 +1,11 @@
-import urllib2,  time, re
-#from bs4 import BeautifulSoup
-from BeautifulSoup import BeautifulSoup
+import time, re
+from bs4 import BeautifulSoup
+#from BeautifulSoup import BeautifulSoup
 import datetime
 from string import whitespace
 import sys
-from sqlstuff2 import SqlStuff2
-from neuralnetworks import NeuralNetwork
+#from sqlstuff2 import SqlStuff2
+#from neuralnetworks import NeuralNetwork
 import os.path    
 from random import randint
             
@@ -41,7 +41,7 @@ class HrefStuff_legacy:
         """ get todays test card link"""
         self.date=date #time.strftime("%Y-%m-%d")
 #        self.date="2014-08-03"
-        print self.date
+        print (self.date)
         self.url="http://www.racingpost.com/horses2/cards/home.sd?r_date=" + self.date
         return self.url
 
@@ -128,7 +128,7 @@ class HrefStuff_legacy:
                 weight.append(self.tdWeight.find(text=True))
             except AttributeError:
                 weight.append("9-0")
-                print "failed to find weight"
+                print ("failed to find weight")
         self.ul=self.divBody.find("ul", {"class":"results clearfix"})
         self.li=self.ul.findAll("li")[2]
         self.length=self.li.find("strong").find(text=True)
@@ -208,7 +208,7 @@ class ResultStuff:
             self.raceNameDate=self.h1.split('Result')
             self.raceName=self.raceNameDate[0]
         except AttributeError:
-            print "no RaceName found"
+            print ("no RaceName found")
 
     def getRaceTime(self):
         """ get the time of the race"""
@@ -220,7 +220,7 @@ class ResultStuff:
             self.raceTime=spanStr[colonPos-1:colonPos+3]
             #print self.raceTime
         except AttributeError:
-            print "no race time found"
+            print ("no race time found")
 
     def getRaceDate(self):
         """get the date of the race"""
@@ -230,14 +230,14 @@ class ResultStuff:
             self.raceNameDate=self.h1.split('Result')
             self.raceDate=self.raceNameDate[1]           
         except AttributeError:
-            print "no RaceDate found"
+            print ("no RaceDate found")
 
     def getNumberOfHorses(self):
         """get the number of horses that ran in the race"""
         try:
             self.numberOfHorses=len(self.horseNames)
         except AttributeError:
-            print "no horseNames found cannot get numberOfHorses"
+            print ("no horseNames found cannot get numberOfHorses")
 
     def getRaceLength(self):
         """get the length of the race and convert to metres"""
@@ -255,7 +255,7 @@ class ResultStuff:
             self.raceLength = s.replace('\\xbd', '.5')
             #print self.raceLength
         except AttributeError:
-            print "cound not find the raceLength"
+            print ("cound not find the raceLength")
 
     def getGoing(self):
         """function to find the going conditions for the race"""
@@ -275,7 +275,7 @@ class ResultStuff:
             #print self.lengthGoingTypeTemp[0]
             #print self.going
         except AttributeError:
-            print "cound not find the going"
+            print ("cound not find the going")
 
 
     def isNumber(self, s):
@@ -311,12 +311,12 @@ class ResultStuff:
                         break
                     self.going=str(self.going) + ' ' + str(going)
                 if verbose != 0:
-                    print "going= " + str(self.going)
+                    print ("going= " + str(self.going))
             except IndexError:
                 self.going="?unknown?"
                 self.jumps=255
         except:
-            print "couldn't get raceLength or going"
+            print ("couldn't get raceLength or going")
 
     def getRaceFinishingTimes(self, verbose=0):
         """function to get the race finishing time from the result popup"""
@@ -336,15 +336,15 @@ class ResultStuff:
             if ii==ref+2:
                 seconds=float(self.info.split("s")[0])
         if verbose!=0:
-            print "minutes " + str(minutes)
-            print "seconds " + str(seconds)
+            print ("minutes " + str(minutes))
+            print ("seconds " + str(seconds))
         time = 60*float(minutes)+seconds
         self.finishingTime=time
         #sys.exit(0)
     def remove(soup, tagname):
-        print "heeelllllo!"
+        print ("heeelllllo!")
         for tag in soup.findAll(tagname):
-            print str(tag)
+            print (str(tag))
             contents = tag.contents
             parent = tag.parent
             tag.extract()
@@ -382,7 +382,7 @@ class ResultStuff:
                                 self.odds.append(''.join(re.split(r'(\d+)',self.span.contents[-1])[-4:-1]))
          #   print self.odds
         except AttributeError:
-            print "no odds found"
+            print ("no odds found")
 
 
     def getHorseNames(self):
@@ -397,7 +397,7 @@ class ResultStuff:
                     self.horseNames.append(self.horseInfo.find(text=True))
             #print self.horseNames
         except AttributeError:
-            print "no HorseNames found"
+            print ("no HorseNames found")
 
     def getDraw(self):
         """function to find all of the horse ages in the full result popup"""
@@ -416,7 +416,7 @@ class ResultStuff:
                            self.draw.append("255")
                        #print "draw=" + str(self.tr.find("td", {"class":"nowrap noPad"}).find("span", {"class":"draw"}).find(text=True))
         except AttributeError:
-            print "something went wrong finding the draw"
+            print ("something went wrong finding the draw")
 
 
     def getHorseAge(self):
@@ -432,7 +432,7 @@ class ResultStuff:
                        self.horseAges.append(self.tr.find("td", {"class":"black"}).find(text=True))
             #print self.horseAges
         except AttributeError:
-            print "no HorseAges found"
+            print ("no HorseAges found")
 
     def getHorseWeight(self):
         """functio to find all of the extra weights in the full result popup"""
@@ -446,7 +446,7 @@ class ResultStuff:
                        self.horseWeights.append(self.tr.find("td", {"class":"nowrap black"}).find(text=True).replace(u'\xa0', u' '))                                                                                                                    
             #print self.horseWeights
         except AttributeError:
-            print "no HorseWeights found"
+            print ("no HorseWeights found")
 
     def getTrainerName(self):
         """function to get all of the trainer names in the result popup"""
@@ -460,7 +460,7 @@ class ResultStuff:
                        if clg.find("a"):
                            self.trainers.append(clg.find("a").find(text=True)) 
         except AttributeError:
-            print "No trainers found"
+            print ("No trainers found")
 
                     
 
@@ -478,7 +478,7 @@ class ResultStuff:
                            self.jockeys.append(clg.find("a").find(text=True))                                                                                                                    
             #print self.jockeys
         except AttributeError:
-            print "no jockeys found"
+            print ("no jockeys found")
 
     def getHorseWeightJockeyNameAge(self):
         """function to get the weight jockey and going"""
@@ -528,7 +528,7 @@ class ResultStuff:
                    self.trainers.append("unknown")
                    
         except AttributeError:
-            print "no tbody found in the full result"
+            print ("no tbody found in the full result")
 
     def getAllResultInfo(self):
         """ function to get all of the sql info"""
@@ -542,7 +542,7 @@ class ResultStuff:
         self.getRaceLengthGoingJumps()
         self.getRaceFinishingTimes()
         if self.numberOfHorses != len(self.jockeys):
-            print self.numberOfHorses
-            print self.jockeys
-            print self.horseNames
-            print self.raceName
+            print (self.numberOfHorses)
+            print (self.jockeys)
+            print (self.horseNames)
+            print (self.raceName)

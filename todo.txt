@@ -1,3 +1,10 @@
+13th March - somethin wrong with that import.  Try deleting the files from that day
+and recreate the day in the database.
+
+
+
+
+
 search/scrape for jumps when creating the card.  Skip all jumps scraping
 
 seach/scrape for abandoned race.  Use Leicester  on the 28th October as example

@@ -66,7 +66,7 @@ class SqlStuff2:
     def viewAllTable(self):
         self.getAllTable()
         for row in self.rows:
-            print row
+            print (row)
 
     def delHorse(self, horseName):
         #print "horseName in delHorse is %s" % horseName
@@ -124,7 +124,7 @@ class SqlStuff2:
             if tally[idx] > greatest:
                 greatest = tally[idx]
                 greatestIdx = idx;
-        print "the most wins is " + winnerList[greatestIdx][1] + " with " + str(greatest) + "  wins"
+        print ("the most wins is " + winnerList[greatestIdx][1] + " with " + str(greatest) + "  wins")
         return winnerList
         
     def getRace(self, raceVenue, raceDate, raceTime, verbose=False):
@@ -133,28 +133,79 @@ class SqlStuff2:
         self.sql_str=self.sql_str+" AND RACEDATE='{}'".format(raceDate)   
         self.sql_str=self.sql_str+" AND RACETIME='{}'".format(raceTime)   
         if verbose:
-            print "sql_str = %s" % str(self.sql_str)
+            print ("sql_str = %s" % str(self.sql_str))
         self.cursor=self.conn.execute(self.sql_str)
         self.rows=self.cursor.fetchall()
         return self.rows
 
 
-    def getMultiple(self, horseName=-1, raceLength=-1, raceVenue=-1):
+    def getMultiple(self, horseName="", horseAge="", horseWeight="", position="", raceLength="", numberHorses="", jockeyName="", going="", raceDate="", raceTime="", raceVenue="", draw="", trainerName=""):
         needAnd=False
         self.sql_str="SELECT * from RESULTS_INFO where "
-        if horseName != -1:
+        if horseName != "":
             self.sql_str=self.sql_str+"HORSENAME='{}'".format(horseName.replace("'", "''"))
             needAnd=True
-        if raceLength != -1:
+        if horseAge != "":
+            if needAnd:
+                self.sql_str=self.sql_str+" AND "
+            self.sql_str=self.sql_str+"HORSEAGE='{}'".format(horseAge.replace("'", "''"))
+            needAnd=True
+        if horseWeight != "":
+            if needAnd:
+                self.sql_str=self.sql_str+" AND "
+            self.sql_str=self.sql_str+"HORSEWEIGHT='{}'".format(horseWeight.replace("'", "''"))
+            needAnd=True
+        if position != "":
+            if needAnd:
+                self.sql_str=self.sql_str+" AND "
+            self.sql_str=self.sql_str+"POSITION='{}'".format(position.replace("'", "''"))
+            needAnd=True
+        if raceLength != "":
             if needAnd:
                 self.sql_str=self.sql_str+" AND "
             self.sql_str=self.sql_str+"RACELENGTH='{}'".format(raceLength.replace("'", "''"))
             needAnd=True
-        if raceVenue != -1:
+        if numberHorses != "":
+            if needAnd:
+                self.sql_str=self.sql_str+" AND "
+            self.sql_str=self.sql_str+"NUMBERHORSES='{}'".format(numberHorses.replace("'", "''"))
+            needAnd=True
+        if jockeyName != "":
+            if needAnd:
+                self.sql_str=self.sql_str+" AND "
+            self.sql_str=self.sql_str+"JOCKEYNAME='{}'".format(jockeyName.replace("'", "''"))
+            needAnd=True
+        if going != "":
+            if needAnd:
+                self.sql_str=self.sql_str+" AND "
+            self.sql_str=self.sql_str+"GOING='{}'".format(going.replace("'", "''"))
+            needAnd=True
+        if raceDate != "":
+            if needAnd:
+                self.sql_str=self.sql_str+" AND "
+            self.sql_str=self.sql_str+"RACEDATE='{}'".format(raceDate.replace("'", "''"))
+            needAnd=True
+        if raceTime != "":
+            if needAnd:
+                self.sql_str=self.sql_str+" AND "
+            self.sql_str=self.sql_str+"RACETIME='{}'".format(raceTime.replace("'", "''"))
+            needAnd=True
+        if raceVenue != "":
             if needAnd:
                 self.sql_str=self.sql_str+" AND "
             self.sql_str=self.sql_str+"RACEVENUE='{}'".format(raceVenue.replace("'", "''"))
+            needAnd=True
+        if draw != "":
+            if needAnd:
+                self.sql_str=self.sql_str+" AND "
+            self.sql_str=self.sql_str+"DRAW='{}'".format(draw.replace("'", "''"))
+            needAnd=True
+        if trainerName != "":
+            if needAnd:
+                self.sql_str=self.sql_str+" AND "
+            self.sql_str=self.sql_str+"TRAINERNAME='{}'".format(trainerName.replace("'", "''"))
 
+        print(self.sql_str)
         self.cursor=self.conn.execute(self.sql_str)
         self.rows=self.cursor.fetchall()
         return self.rows
@@ -217,31 +268,32 @@ class SqlStuff2:
         self.rows=self.getHorse(horseName)
         if verbose:
             for self.row in self.rows:
-                print self.row
-                print str(self.convertRaceLengthMetres(self.row[5]))
-                print str(self.convertRaceLengthMetres(self.row[5])/self.row[14])
+                print (self.row)
+                print (str(self.convertRaceLengthMetres(self.row[5])))
+                print (str(self.convertRaceLengthMetres(self.row[5])/self.row[14]))
         return self.rows
 
     def viewJockey(self, jockeyName):
         self.rows=self.getJockey(jockeyName)
         for self.row in self.rows:
-            print self.row
+            print (self.row)
 
     def viewDate(self, date):        
         self.rows=self.getDate(date)
         for self.row in self.rows:
-            print self.row
+            print (self.row)
+        return self.rows
 
     def viewNewestDate(self, verbose = True):
         self.sql_str="SELECT *, max(RACEDATE) as MaxDate from RESULTS_INFO"
         self.cursor=self.conn.execute(self.sql_str)
         self.rows=self.cursor.fetchall()
         if verbose:
-            print self.rows
+            print (self.rows)
         return self.rows[0][9]
 
     def viewOldestDate(self):
         self.sql_str="SELECT *, min(RACEDATE) as MaxDate from RESULTS_INFO"
         self.cursor=self.conn.execute(self.sql_str)
         self.rows=self.cursor.fetchall()
-        print self.rows
+        print (self.rows)

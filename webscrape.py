@@ -1,5 +1,6 @@
-import urllib2,  time, re
-#from bs4 import BeautifulSoup
+import urllib
+import time, re
+from bs4 import BeautifulSoup
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -7,12 +8,12 @@ from selenium.webdriver.chrome.options import Options
 import time
 
 #import dryscrape
-from BeautifulSoup import BeautifulSoup
+#from BeautifulSoup import BeautifulSoup
 import datetime
 from string import whitespace
 import sys
-from sqlstuff2 import SqlStuff2
-from neuralnetworks import NeuralNetwork
+#from sqlstuff2 import SqlStuff2
+#from neuralnetworks import NeuralNetwork
 import os.path    
 from random import randint
             
@@ -31,12 +32,12 @@ class HrefStuff:
         if it hasn't been read previously then insert a wait between 1s and 5 seconds to
         avoid bombarding the website with requests"""
         if verbose:
-            print "href = " + str(href)
+            print ("href = " + str(href))
         href_replace = href.replace("http://www.","")
         href_replace = href_replace.replace(".", "_")
         href_replace = href_replace.replace("/", "_")
         if verbose:
-            print str(href_replace)
+            print (str(href_replace))
         if os.path.isfile("horses_local/"+href_replace+".txt"):
             f=open("horses_local/"+href_replace+".txt", 'r').read()
             self.soup = BeautifulSoup(f)
@@ -46,29 +47,30 @@ class HrefStuff:
                 sys.exit()
             waitint=randint(10,15)
             #time.sleep(waitint)
-            opener = urllib2.build_opener()
+            opener = urllib.request.build_opener()
             opener.addheaders = [('User-agent', 'Mozilla/5.0')]
             while True:
                 try:
-                    content = opener.open(href).read()
+                    content = opener.open(href).read().decode('utf-8')
                     break
-                except Exception, e:
-                    print href
-                    print e
+                except Exception as e:
+                    print (href)
+                    print (e)
                     if str(e).find('404') != -1:
-                        print "webscrapePolite: skipping this result"
+                        print ("webscrapePolite: skipping this result")
+
                         raise Exception(str(e))
                     elif str(e).find('403') != -1:
-                        print "waiting for the 403 to timeout"
+                        print ("waiting for the 403 to timeout")
                         time.sleep(120)
-                        content = opener.open(href).read()
+                        content = opener.open(href).read().decode('utf-8')
                     else:
-                        print e
+                        print (e)
                         raise Exception(str(e))
             f=open("horses_local/"+href_replace+".txt", 'w')
             f.write(content)
             self.soup = BeautifulSoup(content)
-            print "from web and writing file"
+            print ("from web and writing file")
             
         return self.soup
 
@@ -77,7 +79,7 @@ class HrefStuff:
         """ get todays test card link"""
         self.date=date #time.strftime("%Y-%m-%d")
 #        self.date="2014-08-03"
-        print self.date
+        print (self.date)
         self.url="https://www.racingpost.com/racecards/" + self.date
         return self.url
 
@@ -85,8 +87,8 @@ class HrefStuff:
         """ get the hrefs for the races, exclude the terrestrial tv and worldwide stakes"""
         try:
             self.soup=self.webscrapePolite(href)
-        except Exception, e:
-            print "unable to scrape the test card main page"
+        except Exception as e:
+            print ("unable to scrape the test card main page")
             raise Exception(str(e))
         self.divBody=self.soup.body
         self.uiCanvas=self.divBody.find("div", {"class":"ui-canvas js-contentWrapper ui-advertising__skinsWrp ui-advertising__skinsWrp_secNav"})
@@ -131,7 +133,7 @@ class HrefStuff:
                 
             self.raceVenue.append(raceVenue)
             if verbose:
-                print "so I got this far " + str(raceVenue)
+                print ("so I got this far " + str(raceVenue))
 
             courseDescription=table.find("div", {"class":"RC-courseDescription__info"})
             meetingList=table.find("div", {"class":"RC-meetingList"})
@@ -142,7 +144,7 @@ class HrefStuff:
                 time=meetingItem.find("div", {"class":"RC-meetingItem__time"}).find(text=True).strip()
                 self.raceTimes[idx].append(time)
                 if verbose:
-                    print "and the time is " + str(time)
+                    print ("and the time is " + str(time))
         # get the raceTimes and raceVenue into the same format as that returned by the
         # makeATestcardFromResults function
         raceTimes=[]
@@ -166,44 +168,44 @@ class HrefStuff:
         self.url="https://www.racingpost.com" + href + "&raceTabs=lc_"
         try:
             self.soup=self.webscrapePolite(self.url)
-        except Exception, e:
-            print "self.soup=self.webscrapePolite(self.url)"
-            print str(e)
+        except Exception as e:
+            print ("self.soup=self.webscrapePolite(self.url)")
+            print (str(e))
             raise Exception(e);
         try:
             self.divBody=self.soup.body
-        except Exception, e:
-            print "self.divBody=self.soup.body"
-            print str(e)
+        except Exception as e:
+            print ("self.divBody=self.soup.body")
+            print (str(e))
             raise Exception(e)
         try:
             self.uiCanvas=self.divBody.find("div", {"class":"ui-canvas js-contentWrapper ui-advertising__skinsWrp ui-advertising__skinsWrp_secNav"})
-        except Exception, e:
-            print "self.uiCanvas=self.divBody.find(div, {class:ui-canvas js-contentWrapper ui-advertising__skinsWrp ui-advertising__skinsWrp_secNav})"
-            print str(e)
+        except Exception as e:
+            print ("self.uiCanvas=self.divBody.find(div, {class:ui-canvas js-contentWrapper ui-advertising__skinsWrp ui-advertising__skinsWrp_secNav})")
+            print (str(e))
             raise Exception(e)
         try:
             self.uiContent=self.uiCanvas.find("div")#, {"class":"ui-content ui-content_marginless js-ui-content RC-desktop"})
-        except Exception, e:
-            print "self.uiContent=self.uiCanvas.find(div, {class:ui-content ui-content_marginless js-ui-content RC-mobile RC-desktop})"
-            print str(e)
+        except Exception as e:
+            print ("self.uiContent=self.uiCanvas.find(div, {class:ui-content ui-content_marginless js-ui-content RC-mobile RC-desktop})")
+            print (str(e))
             raise Exception(e)
         try:
             main=self.uiContent.find("main")
-        except Exception, e:
-            print "main=self.uiContent.find(main)"
-            print str(e)
+        except Exception as e:
+            print ("main=self.uiContent.find(main)")
+            print (str(e))
             raise Exception(e)
         try:
             section=main.find("section")
-        except Exception, e:
-            print "section=main.find(section)"
-            print str(e)
+        except Exception as e:
+            print ("section=main.find(section)")
+            print (str(e))
             raise Exception(e)
 
         #raceLength
         if verbose:
-            print "got this far 1"
+            print ("got this far 1")
         cardHeader=section.find("div", {"class":"RC-cardHeader"})
         cardHeaderDetails=cardHeader.findAll("div")[-1]
         distance=cardHeaderDetails.find("strong", {"class":"RC-cardHeader__distance"}).find(text=True).strip()
@@ -213,7 +215,7 @@ class HrefStuff:
         sectionDiv=section.findAll("div", recursive=False)#"div", {"class":["RC-runnerRowwrapper", "js-RC-runnerRowWrapper"]})
         #print sectionDiv
         if verbose:
-            print "got this far 2"
+            print ("got this far 2")
         for card in sectionDiv:
             if "RC-runnerRowWrapper" in card.get("class"):
                 cardTable=card
@@ -224,7 +226,7 @@ class HrefStuff:
                 if not "js-runnerNonRunner" in rows.get("class"):
                     cardTableRows.append(rows)
         if verbose:
-            print "got this far 3"
+            print ("got this far 3")
 
         try:
             CHROME_PATH = '/usr/bin/google-chrome'
@@ -243,8 +245,8 @@ class HrefStuff:
             time.sleep(15)
             htmlSource = driver.page_source
             soup = BeautifulSoup(htmlSource)
-        except Exception, e:
-            print "problem with selenium"
+        except Exception as e:
+            print ("problem with selenium")
             raise Exception(str(e))
 
         for cardTableRow in cardTableRows:
@@ -257,25 +259,25 @@ class HrefStuff:
             a=runnerMainWrapper.find("a").find(text=True).strip()
             horseName.append(a)
             if verbose:
-                print "horse name is " + str(a)
+                print ("horse name is " + str(a))
             #odds
             # get the javascript elements
             try:
                 odds = soup.find("div",{"data-diffusion-horsename":str(a)})
                 odds = odds.find("a").attrs
-                print odds[0]
+                print (odds[0])
                 odds = odds[4]
                 #odds = odds.find("a", {"data-diffusion-fractional").find(text=True)
                 #uibtn=htmlSource.find_element_by_class_name('ui-btn')
 
-                print str(a)
-                print odds[1]
+                print (str(a))
+                print (odds[1])
                 odd.append(odds[1])
 
-            except Exception,e:
-                print "error from selenium"
-                print str(self.url)
-                print str(e)
+            except Exception as e:
+                print ("error from selenium")
+                print (str(self.url))
+                print (str(e))
                 raise Exception(str(e))
 
             #jockey
@@ -285,13 +287,13 @@ class HrefStuff:
             a=runnerInfoJockey.find("a").find(text=True).strip()
             jockey.append(a)
             if verbose:
-                print "jockey is " + str(a)
+                print ("jockey is " + str(a))
             #trainer
             runnerInfoTrainer=runnerInfoWrapper.find("div",{"class":"RC-runnerInfo RC-runnerInfo_trainer"})
             a=runnerInfoTrainer.find("a").find(text=True).strip()
             trainer.append(a)
             if verbose:
-                print "trainer is " + str(a)
+                print ("trainer is " + str(a))
             #weight
             runnerWgtOrWrapper=runnerRowInfoWrapper.find("div",{"class":"RC-runnerWgtorWrapper"})
             runnerWgt=runnerWgtOrWrapper.find("div",{"class":"RC-runnerWgt"})
@@ -301,22 +303,22 @@ class HrefStuff:
             Wgt=str(runnerWgtCarriedSt)+"-"+str(runnerWgtCarriedLb)
             weight.append(Wgt)          
             if verbose:
-                print "weight is " + str(Wgt)
+                print ("weight is " + str(Wgt))
             #draw
             runnerNumber=runnerRowHorseWrapper.find("div",{"class":"RC-runnerNumber"})
             s=runnerNumber.find("span",{"class":"RC-runnerNumber__draw"}).find(text=True).strip().strip("()")
             draw.append(s)
             if verbose:
-                print "draw is " + str(s)
+                print ("draw is " + str(s))
         if verbose:
-            print "got this far 4"
+            print ("got this far 4")
         #going
         keyInfo=cardHeader.find("div",{"class":"RC-cardHeader__keyInfo"})
         headerBox=keyInfo.find("div",{"class":"RC-headerBox"})
         infoRow=headerBox.findAll("div",{"class":"RC-headerBox__infoRow"})
         going=infoRow[2].find("div",{"class":"RC-headerBox__infoRow__content"}).find(text=True).split()
         if verbose:
-            print going
+            print (going)
         self.going=" ".join(going)
 
         return (horseName, jockey, self.raceLength, weight, self.going, draw, trainer, odd)
@@ -330,39 +332,39 @@ class HrefStuff:
         self.divBody=self.soup.body
         try:
             self.rpContainer=self.divBody.find("div", {"class":"rp-results rp-container cf js-contentWrapper"})
-        except Exception, e:
-            print "self.rpContainer=self.divBody.find"
+        except Exception as e:
+            print ("self.rpContainer=self.divBody.find")
             raise Exception(str(e))
 
         try:
             self.rpResultsWrapper=self.rpContainer.find("div", {"class":"rp-resultsWrapper__content"})
-        except Exception, e:
-            print "self.rpResultsWrapper=self.rpContainer.find"
+        except Exception as e:
+            print ("self.rpResultsWrapper=self.rpContainer.find")
             raise Exception(str(e))
 
         try:
             self.rpDataDirectiveRaceCourse=self.rpResultsWrapper.find("main", {"data-test-selector":"results-main-container"})
-        except Exception, e:
+        except Exception as e:
             raise Exception(str(e))
 
         try:
             self.rpRaceCourse=self.rpDataDirectiveRaceCourse.find("div", {"class":"rp-raceCourse ui-accordion"})
-        except Exception, e:
-            print "self.rpRaceCourse=self.rpResultsWrapper.find"
+        except Exception as e:
+            print ("self.rpRaceCourse=self.rpResultsWrapper.find")
             raise Exception(str(e))
  
         try:
             self.rpRaceCourseMeeting=self.rpRaceCourse.findAll("section", {"class":"rp-raceCourse__meetingContainer ui-accordion__row"})
-        except Exception, e:
-            print "self.rpRaceCourseMeeting=self.rpRaceCourse.findAll"
+        except Exception as e:
+            print ("self.rpRaceCourseMeeting=self.rpRaceCourse.findAll")
             raise Exception(str(e))
 
        # loop through the race courses for the day
         for rpRaceCourseMeeting in self.rpRaceCourseMeeting:
             try:
                 self.rpRaceCoursePanel=rpRaceCourseMeeting.find("div", {"class":"rp-raceCourse__panel ui-accordion__content hidden"})
-            except Exception, e:
-                print "self.rpRaceCoursePanel=rpRaceCourseMeeting.find"
+            except Exception as e:
+                print ("self.rpRaceCoursePanel=rpRaceCourseMeeting.find")
                 raise Exception(str(e))
                 
             if not self.rpRaceCoursePanel:
@@ -370,8 +372,8 @@ class HrefStuff:
 
             try:
                 self.rpRaceCoursePanelContainer=self.rpRaceCoursePanel.findAll("div", {"class":"rp-raceCourse__panel__container"})
-            except Exception, e:
-                print "self.rpRaceCoursePanelContainer=self.rpRaceCoursePanel.findAll"
+            except Exception as e:
+                print ("self.rpRaceCoursePanelContainer=self.rpRaceCoursePanel.findAll")
                 raise Exception(str(e))
 
             # loop through the races held at each course
@@ -379,27 +381,27 @@ class HrefStuff:
                 try:
                     self.rpRaceCoursePanelRace=rpRaceCoursePanelContainer.find("div", {"data-diffusion-coursename":"WORLD WIDE STAKES"})
                     if len(self.rpRaceCoursePanelRace) > 0:
-                        print "skipping the WORLD WIDE STAKES race"
+                        print ("skipping the WORLD WIDE STAKES race")
                         continue
-                except Exception,e:
+                except Exception as e:
                     pass
                 try:
                     self.rpRaceCoursePanelRace=rpRaceCoursePanelContainer.find("div", {"data-diffusion-coursename":"SCOOP6 RACES"})
                     if len(self.rpRaceCoursePanelRace) > 0:
-                        print "skipping the SCOOP6 race"
+                        print ("skipping the SCOOP6 race")
                         continue
-                except Exception,e:
+                except Exception as e:
                     pass
                 
                 try:
                     self.rpRaceCoursePanelRace=rpRaceCoursePanelContainer.find("div", {"class":"rp-raceCourse__panel__race"})
-                except Exception, e:
-                    print "self.rpRaceCoursePanelRace=rpRaceCoursePanelContainer.find"
+                except Exception as e:
+                    print ("self.rpRaceCoursePanelRace=rpRaceCoursePanelContainer.find")
                     raise Exception(str(e))
                 try:
                     self.fullResultHrefs.append(self.rpRaceCoursePanelRace.get("href")) 
-                except Exception, e:
-                    print "self.fullResultHrefs.append"
+                except Exception as e:
+                    print ("self.fullResultHrefs.append")
                     raise Exception(str(e))
 
                         
@@ -421,7 +423,7 @@ class HrefStuff:
         self.href="http://www.racingpost.com/" + href
         try:
             self.soup=self.webscrapePolite(self.href)
-        except Exception, e:
+        except Exception as e:
             raise Exception(str(e))
         self.divBody=self.soup.body
         self.rpResults=self.divBody.find("div", {"class":"rp-results rp-container cf js-contentWrapper"})
@@ -486,13 +488,12 @@ class ResultStuff:
             if not self.h1:
                 raise ValueError("did not find h1")
 
-
             self.classes=self.h1.findAll("a")
             if not self.classes:
                 raise ValueError("did not find a")
 
             for class_ in self.classes:
-                self.class_=class_.get("class").strip()
+                self.class_=class_.get("class")[-1]#.strip()
                 if self.class_.find("rp-raceTimeCourseName__name") != -1:
                     self.raceName=class_.find(text=True).strip()
 
@@ -500,30 +501,30 @@ class ResultStuff:
                 raise AttributeError
             #print "raceName is " + str(self.raceName)
         except AttributeError:
-            print "no RaceName found"
+            print ("no RaceName found")
 
     def getRaceTime(self):
         """ get the time of the race"""
         try:
             self.h1=self.fullHeader.find("h1")
-        except Exception ,e:
-            print "self.h1=self.fullHeader.find"
+        except Exception  as e:
+            print ("self.h1=self.fullHeader.find")
             raise Exception(str(e));
 
         try:
             self.span=self.h1.find("span", {"class":"rp-raceTimeCourseName__time"})
-        except Exception, e:
-            print "self.span=self.h1.find"
+        except Exception as e:
+            print ("self.span=self.h1.find")
             raise Exception(str(e))
         
         try:
-            spanStr=unicode.join(u'\n',map(unicode,self.span))
+            spanStr=str.join(u'\n',map(str,self.span))
             colonPos=spanStr.index(':')
             self.raceTime=spanStr[colonPos-1:colonPos+3]
             #print "race time is " + str(self.raceTime)
         except AttributeError:
-            print str(self.span)
-            print "no race time found"
+            print (str(self.span))
+            print ("no race time found")
 
 
     def getNumberOfHorses(self):
@@ -531,7 +532,7 @@ class ResultStuff:
         try:
             self.numberOfHorses=len(self.horseNames)
         except AttributeError:
-            print "no horseNames found cannot get numberOfHorses"
+            print ("no horseNames found cannot get numberOfHorses")
 
 
     def isNumber(self, s):
@@ -588,7 +589,7 @@ class ResultStuff:
             self.raceLength = self.raceLength.replace('&frac12;', '.5')"""
             
         except:
-            print "couldn't get raceLength or going"
+            print ("couldn't get raceLength or going")
 
     def getRaceFinishingTimes(self, verbose=False):
         """function to get the race finishing time from the result popup"""
@@ -597,30 +598,30 @@ class ResultStuff:
         seconds=0
         try:
             self.ul=self.fullInfo.find("ul")
-        except Exception, e:
-            print "missing time - probable void race"
+        except Exception as e:
+            print ("missing time - probable void race")
             self.finishingTime=0
             raise Exception(str(e))
         try:
             self.li=self.ul.find("li")
         except:
-            print "missing time - probable void race"
+            print ("missing time - probable void race")
             self.finishingTime=0
             raise Exception(str(e))
         try:
             self.span=self.li.findAll("span", {"class":"rp-raceInfo__value"})
         except:
-            print "missing time - probable void race"
+            print ("missing time - probable void race")
             self.finishingTime=0
             raise Exception(str(e))
  
         if verbose:
-            print "found %d rp-raceInfo__value fields" % len(self.span)
+            print ("found %d rp-raceInfo__value fields" % len(self.span))
         for value in self.span:
 
             self.raceFinishTime=str(value.find(text=True).strip())
             if verbose:
-                print "race finish time is " + str(self.raceFinishTime)
+                print ("race finish time is " + str(self.raceFinishTime))
 
             try:
                 for ii, self.info in enumerate(self.raceFinishTime.split()):
@@ -632,23 +633,23 @@ class ResultStuff:
                             break
                     if ii==1:
                         seconds=float(self.info.split("s")[0])
-            except Exception,e:
+            except Exception as e:
                 continue
 
             if verbose:
-                print "minutes " + str(minutes)
-                print "seconds " + str(seconds)
+                print ("minutes " + str(minutes))
+                print ("seconds " + str(seconds))
             time = 60*float(minutes)+seconds
             if verbose:
-                print "time is " + str(time)
+                print ("time is " + str(time))
             if time > 0:
                 break
         self.finishingTime=time
 
     def remove(soup, tagname):
-        print "heeelllllo!"
+        print ("heeelllllo!")
         for tag in soup.findAll(tagname):
-            print str(tag)
+            print (str(tag))
             contents = tag.contents
             parent = tag.parent
             tag.extract()
@@ -676,7 +677,7 @@ class ResultStuff:
 
             #print self.odds
         except AttributeError:
-            print "no odds found"
+            print ("no odds found")
 
 
     def getHorseNames(self):
@@ -685,11 +686,11 @@ class ResultStuff:
         try:
             self.bodys=self.fullResult.find("tbody")
         except Exception:
-            print "tbody not found"
+            print ("tbody not found")
         try:
             self.trs=self.bodys.findAll("tr", {"class":"rp-horseTable__mainRow"})
         except Exception:
-            print "horseTable__mainRow not found"
+            print ("horseTable__mainRow not found")
         try:
             for self.tr in self.trs:
                 self.td=self.tr.find("td", {"class":"rp-horseTable__horseCell"})
@@ -703,7 +704,7 @@ class ResultStuff:
             #print self.horseNames
                 
         except AttributeError:
-            print "no HorseNames found"
+            print ("no HorseNames found")
 
     def getDraw(self):
         """function to find all of the horse ages in the full result popup"""
@@ -735,7 +736,7 @@ class ResultStuff:
                            self.draw.append("255")
                        #print "draw=" + str(self.tr.find("td", {"class":"nowrap noPad"}).find("span", {"class":"draw"}).find(text=True))"""
         except AttributeError:
-            print "something went wrong finding the draw"
+            print ("something went wrong finding the draw")
 
 
     def getHorseAge(self):
@@ -751,7 +752,7 @@ class ResultStuff:
                        self.horseAges.append(self.tr.find("td", {"class":"black"}).find(text=True))
             #print self.horseAges
         except AttributeError:
-            print "no HorseAges found"
+            print ("no HorseAges found")
 
     def getHorseWeight(self):
         """functio to find all of the extra weights in the full result popup"""
@@ -765,7 +766,7 @@ class ResultStuff:
                        self.horseWeights.append(self.tr.find("td", {"class":"nowrap black"}).find(text=True).replace(u'\xa0', u' '))                                                                                                                    
             #print self.horseWeights
         except AttributeError:
-            print "no HorseWeights found"
+            print ("no HorseWeights found")
 
     def getTrainerName(self):
         """function to get all of the trainer names in the result popup"""
@@ -779,7 +780,7 @@ class ResultStuff:
                        if clg.find("a"):
                            self.trainers.append(clg.find("a").find(text=True)) 
         except AttributeError:
-            print "No trainers found"
+            print ("No trainers found")
 
                     
 
@@ -797,7 +798,7 @@ class ResultStuff:
                            self.jockeys.append(clg.find("a").find(text=True))                                                                                                                    
             #print self.jockeys
         except AttributeError:
-            print "no jockeys found"
+            print ("no jockeys found")
 
     def getWeightAgeJockeyTrainer(self):
         """function to get the weight jockey and going"""
@@ -824,7 +825,7 @@ class ResultStuff:
             #print "ages " + str(self.horseAges)
             #print "weights " + str(self.horseWeights)
         except AttributeError:
-            print "no tbody found in the full result"
+            print ("no tbody found in the full result")
 
     def getAllResultInfo(self):
         """ function to get all of the sql info"""
@@ -841,7 +842,7 @@ class ResultStuff:
         except:
             pass
         if self.numberOfHorses != len(self.jockeys):
-            print self.numberOfHorses
-            print self.jockeys
-            print self.horseNames
-            print self.raceName
+            print (self.numberOfHorses)
+            print (self.jockeys)
+            print (self.horseNames)
+            print (self.raceName)

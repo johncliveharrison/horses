@@ -15,25 +15,25 @@ def minMaxRest(raceHorses, previousResultsDict, verbose=False):
         horseName = raceHorse[1]
         raceDate=datetime.datetime.strptime(raceHorse[9], '%Y-%m-%d').date()
         if verbose:
-            print "raceDate in minMaxRest is %s" % str(raceDate)
+            print ("raceDate in minMaxRest is %s" % str(raceDate))
         horseList = previousResultsDict[horseName]
         previousHorse = []
         for horse  in horseList:
             date=datetime.datetime.strptime(horse[9], '%Y-%m-%d').date()
             if verbose:
-                print "append date in minMaxRest %s??" % str(date)
+                print ("append date in minMaxRest %s??" % str(date))
             if date < raceDate:
                 if verbose:
-                    print "yes"
+                    print ("yes")
                 previousHorse.append(horse)
             else:
                 break
         prevRaceDate = datetime.datetime.strptime(previousHorse[-1][9], '%Y-%m-%d').date()
         if verbose:
-            print "prevRaceDate in minMaxRest is %s" % str(prevRaceDate)
+            print ("prevRaceDate in minMaxRest is %s" % str(prevRaceDate))
         rest = (raceDate-prevRaceDate).days
         if verbose:
-            print "rest in mixMaxRest is %s" % str(rest)
+            print ("rest in mixMaxRest is %s" % str(rest))
         minRest = min(minRest, rest)
         maxRest = max(maxRest, rest)
             
@@ -48,8 +48,8 @@ def normaliseRestDays(rest, minMax):
         if oldValue > maxRest:
             raise Exception("rest %d exceeds maxRest %d" % (rest, maxRest))
 
-    except Exception,e:
-        print "problem in normaliseRestDays"
+    except Exception as e:
+        print ("problem in normaliseRestDays")
         raise Exception(str(e))
     # Now normalise this draw next to the max and min
     oldRange = (maxRest - minRest)
@@ -71,7 +71,7 @@ def minMaxDraw(horses, verbose=False):
     for ii, horse in enumerate(horses):
         try:
             tmp=horse[12]+1
-        except Exception, e:
+        except Exception as e:
             continue
 
         # In the earier db's I set no draw to be 255 instead of 
@@ -86,7 +86,7 @@ def minMaxDraw(horses, verbose=False):
         if horse[12] > maxDraw:
             if horse[12] < 50:
                 if verbose:
-                    print "set the maxDraw to " + str(horse[12])
+                    print ("set the maxDraw to " + str(horse[12]))
             maxDraw=horse[12]
         if horse[12] < minDraw:
             minDraw=horse[12]
@@ -100,7 +100,7 @@ def normaliseDrawMinMax(draw, minMax):
     max(best) values"""
     try:
         oldValue=float(draw)
-    except ValueError, e:
+    except ValueError as e:
         return 0.0, False
 
     # In the earier db's I set no draw to be 255 instead of 
@@ -116,8 +116,8 @@ def normaliseDrawMinMax(draw, minMax):
         if oldValue > maxDraw:
             raise Exception("draw %d exceeds maxDraw %d" % (draw, minMax[1]))
 
-    except Exception,e:
-        print "problem in normaliseDrawMinMax"
+    except Exception as e:
+        print ("problem in normaliseDrawMinMax")
         raise Exception(str(e))
     # Now normalise this draw next to the max and min
     oldRange = (maxDraw - minDraw)
@@ -215,11 +215,11 @@ def meanStdGoing(horses, verbose=0):
     goingMean=array(goings).mean()
     goingStd=array(goings).std()
     if verbose != 0:
-        print possibleSurfaces
-        print possibleASurfaces
-        print goings
-        print goingMean
-        print goingStd
+        print (possibleSurfaces)
+        print (possibleASurfaces)
+        print (goings)
+        print (goingMean)
+        print (goingStd)
     return [goingMean, goingStd]
 
 def normaliseGoing(going, meanStdGoing):
@@ -263,7 +263,7 @@ def convertRaceLengthMetres(distance):
 
 
 def minMaxRaceLength(horses):
-    print "minMaxRaceLength"
+    print ("minMaxRaceLength")
     minRaceLength=100000
     maxRaceLength=0
     for horse in horses:            
@@ -300,13 +300,13 @@ def minMaxSpeed(horses):
         lengthm=float(convertRaceLengthMetres(horse[5]))
         try:
             times = float(horse[14].strip('[]'))
-        except (AttributeError,ValueError), e:
+        except (AttributeError,ValueError) as e:
             try:
                 times = float(horse[14])
-            except Exception,e:
-                print str(horse)
-                print "problem with the finish time field in minmaxSpeed"
-                print str(e)
+            except Exception as e:
+                print (str(horse))
+                print ("problem with the finish time field in minmaxSpeed")
+                print (str(e))
                 continue
         if times == 0:
             continue
@@ -325,8 +325,8 @@ def normaliseSpeed(horse, minMaxSpeedList):
     else:
         try:
             oldValue=float(horse[14].strip('[]'))
-        except Exception,e:
-            print "problem getting speed from the horse"
+        except Exception as e:
+            print ("problem getting speed from the horse")
             raise Exception(str(e))
     maxSpeed=minMaxSpeedList[1]
     minSpeed=minMaxSpeedList[0]
@@ -376,13 +376,13 @@ def minMaxWeight(horses, verbose=False):
         try:
             kg=convertWeightKilos(horse[3])
             weights.append(kg)
-        except Exception,e:
-            print str(e)
-            print "skipping weight %s for horse %s" % (str(horse[3]), str(horse[1]))
+        except Exception as e:
+            print (str(e))
+            print ("skipping weight %s for horse %s" % (str(horse[3]), str(horse[1])))
             continue
         if kg > maxWeight:
             if verbose:
-                print "set the maxWeight to " + str(kg)
+                print ("set the maxWeight to " + str(kg))
                 maxWeight=kg
         if kg < minWeight:
             minWeight=kg
@@ -436,14 +436,14 @@ def normaliseJockeyTrainerMinMax(jockey, minMaxJockey):
         oldRange = (maxJockey - minJockey)
         newMin=-1.0
         newMax=1.0
-    except Exception,e:
-        print "something up with the minmax jockey values passed in"
-        print str(minJockey) + " " + str(maxJockey)
+    except Exception as e:
+        print ("something up with the minmax jockey values passed in")
+        print (str(minJockey) + " " + str(maxJockey))
         raise Exception(str(e))
     try:
         oldValue=jockey
-    except Exception, e:
-        print "something up with the jockey value passed in"
+    except Exception as e:
+        print ("something up with the jockey value passed in")
         raise Exception(str(e))
 
     try:
@@ -452,8 +452,8 @@ def normaliseJockeyTrainerMinMax(jockey, minMaxJockey):
         else:
             newRange = (newMax - newMin)  
             newValue = (((oldValue - minJockey) * newRange) / oldRange) + newMin
-    except Exception,e:
-        print "something up with the normalise jockey calc"
+    except Exception as e:
+        print ("something up with the normalise jockey calc")
         raise Exception(str(e))
     return newValue
 
@@ -471,7 +471,7 @@ def meansJockeyTrainer(horses, databaseNamesList,jockeyTrainer="jockey"):
     SqlStuffInst=SqlStuff2()
 
     if os.path.exists(minMaxJockeyListFilename):
-        print "reading jockeys/trainers from file in " + minMaxJockeyListFilename
+        print ("reading jockeys/trainers from file in " + minMaxJockeyListFilename)
         with open (minMaxJockeyListFilename, 'rb') as fp:
             jockeys = pickle.load(fp)
 
@@ -479,7 +479,7 @@ def meansJockeyTrainer(horses, databaseNamesList,jockeyTrainer="jockey"):
         # first create a list where each jockey in the DS appears once
         for idx, horse in enumerate(horses):
             if idx%1000==0:
-                print "db entry %d of %d" % (idx,len(horses)) 
+                print ("db entry %d of %d" % (idx,len(horses)) )
             jockey=[]
             jockeyName=horse[dbNo]
             if not jockeyName in jockeys.keys():
@@ -507,7 +507,7 @@ def meansJockeyTrainer(horses, databaseNamesList,jockeyTrainer="jockey"):
                 #now put this value in the dictionary
                 jockeys[jockeyName]=meanFinishes
             
-        print "There are " + str(len(jockeys)) + " in the minMaxJockey/Trainer function"
+        print ("There are " + str(len(jockeys)) + " in the minMaxJockey/Trainer function")
 
     with open(minMaxJockeyListFilename, 'wb') as fp:
         pickle.dump(jockeys, fp)
