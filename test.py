@@ -1,9 +1,24 @@
 import tkinter as tk
 import commands
+import plot
 
 databases = ["results_2012.db", "results_2013.db", "results_2014.db",
              "results_2015.db", "results_2016.db", "results_2017.db", 
-             "results_2018.db", "results_2019.db",]
+             "results_2018_2.db", "results_2019_2.db", "results_2020_2.db"]
+
+
+def on_scrollbar(*args):
+    '''Scrolls both text widgets when the scrollbar is moved'''
+    for txt_info_col in txt_info:
+        txt_info_col.yview(*args)
+
+def on_textscroll(*args):
+    '''Moves the scrollbar and scrolls text widgets when the mousewheel
+    is moved on a text widget'''
+    scrollbar.set(*args)
+    on_scrollbar('moveto', args[0])
+
+
 def get_date_info():
     """ get the info about the date from the db and 
     display it in the db text box"""
@@ -31,17 +46,35 @@ def get_info():
     trainerName = ent_trainerName.get()
     print(raceDate)
     print(horseName)
-    txt_info.delete("1.0", tk.END) 
-    headerStr = "ID,  HORSENAME, HORSEAGE, HORSEWEIGHT, POSITION, RACELENGTH, NUMBERHORSES, JOCKEYNAME, GOING, RACEDATE, ODDS"
-    horses = commands.viewMultiple(databases, horseName=horseName, horseAge=horseAge, horseWeight=horseWeight, position=position, raceLength=raceLength, numberHorses=numberHorses, jockeyName=jockeyName, going=going, raceDate=raceDate, raceTime=raceTime, raceVenue=raceVenue, draw=draw, trainerName=trainerName)
-    for horse in horses:
-        txt_info.insert(0.0, str(horse) + "\n")
-    txt_info.insert(0.0, headerStr + "\n")
+    for txt_info_col in txt_info:
+        txt_info_col.delete("1.0", tk.END) 
 
+    horses = commands.viewMultiple(databases, horseName=horseName, horseAge=horseAge, horseWeight=horseWeight, position=position, raceLength=raceLength, numberHorses=numberHorses, jockeyName=jockeyName, going=going, raceDate=raceDate, raceTime=raceTime, raceVenue=raceVenue, draw=draw, trainerName=trainerName)
+    for ii, horse in enumerate(horses):
+        for jj, header in enumerate(headerList):
+            txt_info[jj].insert(0.0, str(horse[jj+1]) + "\n")
+
+    if horseName:
+        rows = commands.viewMultiple(databases,horseName=horseName)
+        #plot.horse_date_plot(rows)
+        plot.days_since_last_race_plot(rows)
+        plot.horse_date_plot(rows)
+        plot.race_length_plot(rows)
+        plot.odds_plot(rows, databases)
+
+    if raceVenue and raceTime and raceDate:
+        horseName_rows = []
+        rows = commands.viewMultiple(databases,raceVenue=raceVenue, raceTime=raceTime, raceDate=raceDate)
+        for row in rows:
+            horseName_row = commands.viewMultiple(databases,horseName=str(row[1]))
+            horseName_rows.append(horseName_row)
+        plot.race_plot(horseName_rows)
 
 def clear_info():
     """ clear the text box displaying the searched for horse"""
-    txt_info.delete("1.0", tk.END) 
+    for txt_info_col in text_info:
+        txt_info_col.delete("1.0", tk.END) 
+
 
 def save_info():
     """ save the data in the text box to a file with the same
@@ -65,8 +98,6 @@ db_frm = tk.Frame(master=window, relief=tk.SUNKEN, borderwidth=5)
 # widgets for the horseinfo frame (frm)
 #frm.rowconfigure(2, weight=1, minsize=50) 
 #frm.columnconfigure(0, weight=1, minsize=75) 
-txt_frm.rowconfigure(0, weight=1, minsize=50) 
-txt_frm.columnconfigure(0, weight=1, minsize=75) 
 
 lbl_horseName = tk.Label(master=frm, 
                         text="Horse Name")
@@ -133,7 +164,31 @@ btn_save = tk.Button(master=frm,
                       text="save",
                       command=save_info)
 
-txt_info = tk.Text(master=txt_frm)
+headerList = ["HORSENAME", "HORSEAGE", "HORSEWEIGHT", "POSITION", "RACELENGTH", "NUMBERHORSES", "JOCKEYNAME", "GOING", "RACEDATE", "RACETIME", "RACEVENUE", "DRAW", "TRAINER", "FINISHTIME", "ODDS"]
+txt_frm.rowconfigure(0, weight=1, minsize=50) 
+
+lbl_header = []
+txt_info = []
+for ii, header in enumerate(headerList):
+    lbl_header.append(tk.Label(master=txt_frm, 
+                               text=header))
+    lbl_header[ii].grid(row=0, column=ii, sticky="nsew")
+    txt_info.append(tk.Text(master=txt_frm))
+    txt_info[ii].grid(row=1, column=ii, sticky="nsew")
+    if ii==1:
+        txt_frm.columnconfigure(ii, weight=1, minsize=8) 
+    else:
+        txt_frm.columnconfigure(ii, weight=1, minsize=15) 
+    # Changing the settings to make the scrolling work
+    txt_info[ii]['yscrollcommand'] = on_textscroll
+
+scrollbar = tk.Scrollbar(master=txt_frm)
+scrollbar.grid(row=1, column = len(headerList), sticky="nsew")
+
+# Changing the settings to make the scrolling work
+scrollbar['command'] = on_scrollbar
+
+
 lbl_horseName.grid(row=0, column=0)
 ent_horseName.grid(row=1, column=0)
 
@@ -177,7 +232,6 @@ ent_trainerName.grid(row=3, column=5)
 btn_info.grid(row=2, column=6)
 btn_clear.grid(row=3, column=6)
 btn_save.grid(row=5, column=1)
-txt_info.grid(row=0, column=0, sticky="nsew")
 
 # widgets for the database frame (db_frm)
 db_frm.rowconfigure(2, weight=1, minsize=50) 

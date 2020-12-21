@@ -119,7 +119,7 @@ class HrefStuff:
             spanDivH2Header=divH2Header.find("span")
             maybeAbandoned=divH2Header.findAll("span")
             if len(maybeAbandoned) > 1:
-                if "abandoned" in maybeAbandoned[1].get("class"):
+                if "abandoned" in maybeAbandoned[1].get("class")[0]:
                     continue
             raceVenue=" ".join(spanDivH2Header.find(text=True).split())
             if raceVenue == "Free to air TV Races":
@@ -263,16 +263,15 @@ class HrefStuff:
             #odds
             # get the javascript elements
             try:
-                odds = soup.find("div",{"data-diffusion-horsename":str(a)})
-                odds = odds.find("a").attrs
-                print (odds[0])
-                odds = odds[4]
+                odds_div = soup.find("div",{"data-diffusion-horsename":str(a)})
+                odds_attrs = odds_div.find("a").attrs
+                odds = odds_attrs["data-diffusion-fractional"]
                 #odds = odds.find("a", {"data-diffusion-fractional").find(text=True)
                 #uibtn=htmlSource.find_element_by_class_name('ui-btn')
 
                 print (str(a))
-                print (odds[1])
-                odd.append(odds[1])
+                print (odds)
+                odd.append(odds)
 
             except Exception as e:
                 print ("error from selenium")
@@ -622,7 +621,8 @@ class ResultStuff:
             self.raceFinishTime=str(value.find(text=True).strip())
             if verbose:
                 print ("race finish time is " + str(self.raceFinishTime))
-
+            if not "s" in self.raceFinishTime and not "m" in self.raceFinishTime:
+                continue
             try:
                 for ii, self.info in enumerate(self.raceFinishTime.split()):
                     if ii==0:
