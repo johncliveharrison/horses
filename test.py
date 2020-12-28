@@ -1,6 +1,7 @@
 import tkinter as tk
 import commands
 import plot
+import training
 
 databases = ["results_2012.db", "results_2013.db", "results_2014.db",
              "results_2015.db", "results_2016.db", "results_2017.db", 
@@ -56,9 +57,8 @@ def get_info():
 
     if horseName:
         rows = commands.viewMultiple(databases,horseName=horseName)
-        #plot.horse_date_plot(rows)
         plot.days_since_last_race_plot(rows)
-        plot.horse_date_plot(rows)
+        #plot.horse_date_plot(rows)
         plot.race_length_plot(rows)
         plot.odds_plot(rows, databases)
 
@@ -69,6 +69,8 @@ def get_info():
             horseName_row = commands.viewMultiple(databases,horseName=str(row[1]))
             horseName_rows.append(horseName_row)
         plot.race_plot(horseName_rows)
+        training.get_predicted_result(horseName_rows, databases, raceDate)
+
 
 def clear_info():
     """ clear the text box displaying the searched for horse"""

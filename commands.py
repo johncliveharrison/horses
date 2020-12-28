@@ -59,6 +59,11 @@ def viewMultiple(databaseName, horseName="", horseAge="", horseWeight="", positi
             SqlStuffInst=SqlStuff2()
             SqlStuffInst.connectDatabase(dbName)
             info = info + SqlStuffInst.getMultiple(horseName=horseName, horseAge=horseAge, horseWeight=horseWeight, position=position, raceLength=raceLength, numberHorses=numberHorses, jockeyName=jockeyName, going=going, raceDate=raceDate, raceTime=raceTime, raceVenue=raceVenue, draw=draw, trainerName=trainerName)
+    else:
+        SqlStuffInst=SqlStuff2()
+        SqlStuffInst.connectDatabase(databaseName)
+        info = info + SqlStuffInst.getMultiple(horseName=horseName, horseAge=horseAge, horseWeight=horseWeight, position=position, raceLength=raceLength, numberHorses=numberHorses, jockeyName=jockeyName, going=going, raceDate=raceDate, raceTime=raceTime, raceVenue=raceVenue, draw=draw, trainerName=trainerName)
+
     return info
 
 def viewDate(date, databaseName):
@@ -109,6 +114,44 @@ def delDateRange(dateStart, dateStop, databaseName):
     for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateStopSplit[0]),int(dateStopSplit[1]),int(dateStopSplit[2]))):
         print (single_date)
         delDate(single_date, databaseName)
+
+
+def get_average_odds(database, year):
+    odds_cumm_list=100*[float(0.0)]
+    odds_hit_list=100*[0]
+    date_start = str(year) + "-01-01"
+    date_end = str(year) + "-12-31"
+    dateStartSplit = date_start.split("-")
+    dateEndSplit = date_end.split("-")
+    for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2]))):
+        date_results = viewMultiple(database, raceDate=str(single_date))
+        raceTime=date_results[0][10]
+        raceVenue=date_results[0][11]
+        race_results = viewMultiple(database, raceDate=str(single_date), raceTime=raceTime, raceVenue=raceVenue)
+        race_odds_list = []
+        for race_result in race_results:
+            odds_str = race_result[15]
+            odds_split = odds_str.split("/")
+            try:
+                odds = float(odds_split[0])/float(odds_split[1])
+            except ValueError as e:
+                print("skipping one odds")
+                continue
+            race_odds_list.append(odds)
+        race_odds_list.sort()
+        for ii, race_odds in enumerate(race_odds_list):
+            odds_cumm_list[ii] = odds_cumm_list[ii] + race_odds
+            odds_hit_list[ii] = odds_hit_list[ii] + 1
+    odds_list = []
+    for ii, entry in enumerate(odds_cumm_list):
+        if odds_hit_list[ii] == 0:
+            continue
+        else:
+            odds_list.append(entry/float(odds_hit_list[ii]))
+    for ii, entry in enumerate(odds_list):
+        print("position %d,   %f" % (ii, entry))
+    print (odds_list)
+
 
 def countWinners(databaseNames):
     firstPlaces = []

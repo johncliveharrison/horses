@@ -52,6 +52,7 @@ def odds_plot(rows, databases):
         race_rows = commands.viewMultiple(databases,raceVenue=raceVenue, raceTime=raceTime, raceDate=raceDate)
         race_odds_list = []
         for race_row in race_rows:
+            print (race_row[15])
             race_odds_split = race_row[15].split("/")
             try:
                 race_odds = float(race_odds_split[0])/float(race_odds_split[1])
@@ -204,4 +205,4 @@ def race_plot(horseName_rows):
         legend_list.append(str(rows[0][1]))
     #legend_list.reverse()
     plt.legend(legend_list, loc='upper left')
-    plt.show()
+    plt.show(block=False)

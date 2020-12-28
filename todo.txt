@@ -1,7 +1,12 @@
+days since last race, last distance, this distance, odds, last result
+	
+
 13th March - somethin wrong with that import.  Try deleting the files from that day
-and recreate the day in the database.
+and recreate the day in the database. -DONE
 
+finishing times in 2020 are number of horses  - DONE
 
+horseage in 2019 are strange symbols  - DONE
 
 
 

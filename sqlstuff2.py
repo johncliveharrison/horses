@@ -205,7 +205,7 @@ class SqlStuff2:
                 self.sql_str=self.sql_str+" AND "
             self.sql_str=self.sql_str+"TRAINERNAME='{}'".format(trainerName.replace("'", "''"))
 
-        print(self.sql_str)
+        #print(self.sql_str)
         self.cursor=self.conn.execute(self.sql_str)
         self.rows=self.cursor.fetchall()
         return self.rows
