@@ -3,10 +3,12 @@ import webscrape_legacy
 import webscrape_legacy2
 from sqlstuff2 import SqlStuff2
 from common import daterange
+import commands
 import datetime
 import time
 
 import pickle
+from collections import defaultdict
 
 
 def tryLegacy(date):
@@ -142,6 +144,20 @@ def makeATestcardFromResults(date):
         odds.append(ResultStuffInst.odds)
 
     return (horseName, jockeyName, raceLength, weights, goings, draws, trainerName, todaysRaceTimes, todaysRaceVenues, odds)    
+
+
+def makeATestcardFromDatabase(date, databases):
+    myDict_card = defaultdict(list)
+    rows = commands.viewMultiple(databases, raceDate=date)
+    for row in rows:
+        raceVenue = row[11]
+        raceTime = row[10]
+        raceName = "%s - %s" % (raceVenue, raceTime)
+        myDict_card[raceName].append(row)
+    return myDict_card
+            
+    
+
 
 
 

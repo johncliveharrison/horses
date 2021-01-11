@@ -2,10 +2,14 @@ import tkinter as tk
 import commands
 import plot
 import training
+from collections import defaultdict
+import sys
 
 databases = ["results_2012.db", "results_2013.db", "results_2014.db",
              "results_2015.db", "results_2016.db", "results_2017.db", 
              "results_2018_2.db", "results_2019_2.db", "results_2020_2.db"]
+
+myDict_net = {}
 
 
 def on_scrollbar(*args):
@@ -28,10 +32,26 @@ def get_date_info():
     for dateInfo in dateInfos:
         txt_dateInfo.insert(0.0, str(dateInfo) + "\n")        
 
+def train_info():
+    global myDict_net
+    myDict_net = training.train_net(databases)
+    net_name = ""
+    for ii, (key, value) in enumerate(myDict_net.items()):
+        if ii != 0:
+            net_name = net_name + " and "
+        net_name = net_name + key
+    net_name_variable.set(net_name)
+
+
 def get_info():
     """ this function will get the horse name from the 
     entry box and then display the results from the 
     lookup function to a text box"""
+    #training.get_length_conversion()
+    #return
+    #training.get_going_conversion()
+    #return
+
     horseName = ent_horseName.get()
     horseAge = ent_horseAge.get()
     horseWeight = ent_horseWeight.get()
@@ -65,12 +85,15 @@ def get_info():
     if raceVenue and raceTime and raceDate:
         horseName_rows = []
         rows = commands.viewMultiple(databases,raceVenue=raceVenue, raceTime=raceTime, raceDate=raceDate)
-        for row in rows:
-            horseName_row = commands.viewMultiple(databases,horseName=str(row[1]))
-            horseName_rows.append(horseName_row)
-        plot.race_plot(horseName_rows)
-        training.get_predicted_result(horseName_rows, databases, raceDate)
-
+        #for row in rows:
+        #    horseName_row = commands.viewMultiple(databases,horseName=str(row[1]))
+        #    horseName_rows.append(horseName_row)
+        #plot.race_plot(horseName_rows)
+        global myDict_net
+        training.runTestDates(databases, "2020-01-01", "2020-02-01", myDict_net)
+        #result, result_horses = training.get_predicted_result(rows, databases, net)
+        #print (result)
+        #print (result_horses)
 
 def clear_info():
     """ clear the text box displaying the searched for horse"""
@@ -87,6 +110,8 @@ def save_info():
         output_file.write(text)
 
 window = tk.Tk()
+net_name_variable = tk.StringVar()
+net_name_variable.set("net not trained")
 
 window.columnconfigure(0, weight=1, minsize=75)
 window.rowconfigure(0, weight=1, minsize=50)
@@ -166,6 +191,14 @@ btn_save = tk.Button(master=frm,
                       text="save",
                       command=save_info)
 
+lbl_netName = tk.Label(master=frm, 
+                       textvariable=net_name_variable)
+
+btn_net = tk.Button(master=frm,
+                    text="train",
+                    command=train_info)
+
+
 headerList = ["HORSENAME", "HORSEAGE", "HORSEWEIGHT", "POSITION", "RACELENGTH", "NUMBERHORSES", "JOCKEYNAME", "GOING", "RACEDATE", "RACETIME", "RACEVENUE", "DRAW", "TRAINER", "FINISHTIME", "ODDS"]
 txt_frm.rowconfigure(0, weight=1, minsize=50) 
 
@@ -235,6 +268,9 @@ btn_info.grid(row=2, column=6)
 btn_clear.grid(row=3, column=6)
 btn_save.grid(row=5, column=1)
 
+lbl_netName.grid(row=1, column=10)
+btn_net.grid(row=0, column=10)
+
 # widgets for the database frame (db_frm)
 db_frm.rowconfigure(2, weight=1, minsize=50) 
 db_frm.columnconfigure(0, weight=1, minsize=75) 
@@ -251,5 +287,5 @@ lbl_newestDate2.grid(row=0, column=1)
 # position the frames
 frm.grid(row=0, column=0, sticky="nsew")
 txt_frm.grid(row=1, column=0, sticky="nsew")
-db_frm.grid(row=0, column=1, sticky="nsew")
+db_frm.grid(row=2, column=0, sticky="nsew")
 window.mainloop()

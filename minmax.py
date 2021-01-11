@@ -253,7 +253,7 @@ def convertRaceLengthMetres(distance):
             meters=meters+(number*(201*8))
             number=(float(ss[idx+1])/10)          
         elif s=="y" or s=="yds":
-            meters=meters+number
+            meters=meters+(number*0.9144)
             number=0
         elif skip==0:
             number=number+float(s)
