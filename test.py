@@ -7,7 +7,8 @@ import sys
 
 databases = ["results_2012.db", "results_2013.db", "results_2014.db",
              "results_2015.db", "results_2016.db", "results_2017.db", 
-             "results_2018_2.db", "results_2019_2.db", "results_2020_2.db"]
+             "results_2018_2.db", "results_2019_2.db", "results_2020_2.db",
+             "results_2021.db"]
 
 myDict_net = {}
 
@@ -41,6 +42,17 @@ def train_info():
             net_name = net_name + " and "
         net_name = net_name + key
     net_name_variable.set(net_name)
+
+def today_info():
+    # clear the display
+    for txt_info_col in txt_info:
+        txt_info_col.delete("1.0", tk.END) 
+
+    global myDict_net
+    horses = training.runToday(databases, myDict_net)
+    for ii, horse in enumerate(horses):
+        for jj, header in enumerate(headerList):
+            txt_info[jj].insert(0.0, str(horse[jj+1]) + "\n")
 
 
 def get_info():
@@ -90,7 +102,7 @@ def get_info():
         #    horseName_rows.append(horseName_row)
         #plot.race_plot(horseName_rows)
         global myDict_net
-        training.runTestDates(databases, "2020-01-01", "2020-02-01", myDict_net)
+        training.runTestDates(databases, "2021-01-01", "2021-01-15", myDict_net)
         #result, result_horses = training.get_predicted_result(rows, databases, net)
         #print (result)
         #print (result_horses)
@@ -198,6 +210,10 @@ btn_net = tk.Button(master=frm,
                     text="train",
                     command=train_info)
 
+btn_today = tk.Button(master=frm,
+                      text="today",
+                      command=today_info)
+
 
 headerList = ["HORSENAME", "HORSEAGE", "HORSEWEIGHT", "POSITION", "RACELENGTH", "NUMBERHORSES", "JOCKEYNAME", "GOING", "RACEDATE", "RACETIME", "RACEVENUE", "DRAW", "TRAINER", "FINISHTIME", "ODDS"]
 txt_frm.rowconfigure(0, weight=1, minsize=50) 
@@ -270,6 +286,7 @@ btn_save.grid(row=5, column=1)
 
 lbl_netName.grid(row=1, column=10)
 btn_net.grid(row=0, column=10)
+btn_today.grid(row=3, column=10)
 
 # widgets for the database frame (db_frm)
 db_frm.rowconfigure(2, weight=1, minsize=50) 

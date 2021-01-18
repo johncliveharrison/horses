@@ -245,6 +245,13 @@ def convertRaceLengthMetres(distance):
         elif s=="m":
             meters=meters+(number*(201*8))
             number=0
+        elif s=="m½f":
+            meters=meters+(number*(201*8))+(0.5*201)
+            number=0
+        elif s=="½f":
+            number=number+0.5
+            meters=meters+(number*201)
+            number=0
         elif s==".":
             number=number+(float(ss[idx+1])/10)
             skip=1
@@ -364,7 +371,8 @@ def convertWeightKilos(weight):
     """convert the stone, pounds weight to kilos"""
     ss=re.findall('\d+|\D+', weight)
     if len(ss) < 3:
-        return 60.0
+        raise Exception("couldn't convert weight %s" % weight)
+        #return 60.0
     else:
         return (float(ss[0])*6.35+float(ss[2])*0.45)
 

@@ -163,6 +163,7 @@ class HrefStuff:
         jockey=[]
         trainer=[]
         weight=[]
+        age = []
         draw=[]
         odd=[]
         self.url="https://www.racingpost.com" + href + "&raceTabs=lc_"
@@ -293,6 +294,10 @@ class HrefStuff:
             trainer.append(a)
             if verbose:
                 print ("trainer is " + str(a))
+            #wage
+            runnerAgeWrapper=runnerRowInfoWrapper.find("div",{"class":"RC-runnerInfo"})
+            runnerAge=runnerAgeWrapper.find("span",{"class":"RC-runnerAge"}).find(text=True).strip()
+            age.append(str(runnerAge))          
             #weight
             runnerWgtOrWrapper=runnerRowInfoWrapper.find("div",{"class":"RC-runnerWgtorWrapper"})
             runnerWgt=runnerWgtOrWrapper.find("div",{"class":"RC-runnerWgt"})
@@ -320,7 +325,7 @@ class HrefStuff:
             print (going)
         self.going=" ".join(going)
 
-        return (horseName, jockey, self.raceLength, weight, self.going, draw, trainer, odd)
+        return (horseName, jockey, self.raceLength, age, weight, self.going, draw, trainer, odd)
 
     def getFullResultHrefs(self, date):
         """function to get the hrefs for the specified date"""

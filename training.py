@@ -1,11 +1,14 @@
 import pandas as pd
+import copy
 import matplotlib.pyplot as plt
 from common import daterange
 import time
+from pybrain.optimization.populationbased.ga import GA
 from pybrain.tools.customxml.networkwriter import NetworkWriter
 from pybrain.tools.customxml.networkreader import NetworkReader
 from collections import defaultdict
 from statistics import mean
+from statistics import median
 import operator
 import makea
 import numpy as np
@@ -44,6 +47,14 @@ from minmax import normaliseJockeyTrainerMinMax
 from minmax import normaliseDrawMinMax
 import minmax
 import commands
+
+def print_net_connections(n):
+    for mod in n.modules:
+        for conn in n.connections[mod]:
+            print (conn)
+            for cc in range(len(conn.params)):
+                print (conn.whichBuffers(cc), conn.params[cc])
+
 
 def getTraining(databaseNames, verbose = False):
     """ check that all criteria are met for this horse to be included in training
@@ -665,17 +676,21 @@ def get_fastest_horse(rows, databases):
         myDict_return[key] = mean(value) 
     return myDict_return
 
-def get_predicted_result(rows, databases, myDict_net):
+def get_predicted_result(rows, databases, myDict_net, DSDraw_norm_dict, DSNoDraw_norm_dict):
 
     myDict_predicted = defaultdict(list)
-    
+    norm_errors = 0
     for row in rows:
         horseName = row[1]
         horseName_row = commands.viewMultiple(databases,horseName=str(row[1]))
 
         try:
-            ds_input, draw = makeTestFromDatabase(databases, horseName_row, row)
+            #ds_input, draw = makeTestFromDatabase(databases, horseName_row, row)
+            ds_input, draw = makeTestFromDatabase_without_normalization(databases, horseName_row, row, DSDraw_norm_dict, DSNoDraw_norm_dict)
         except Exception as e:
+            print("error in normalizations")
+            print(e)
+            norm_errors = norm_errors + 1
             continue
         for key, value in myDict_net.items():
             if not draw:
@@ -685,7 +700,60 @@ def get_predicted_result(rows, databases, myDict_net):
                 if "DSDraw" in key:
                     result = value.activate(ds_input)
         #print (result)
-        print(result)
+        #print(result)
+        myDict_predicted[horseName].append(result[0])
+
+    print("The number of norm errors were %d" % norm_errors)
+    if norm_errors > 1:
+        print("DO NOT BET IN THIS RACE!!!!!!!!!!!!!!!!!!")
+    return myDict_predicted
+
+
+def get_predicted_result_DS(rows, DS_list, myDict_net, verbose = False):
+
+    myDict_predicted = defaultdict(list)
+    
+    for row in rows:
+        horseName = row[1]
+        draw = row[12]
+        if draw:
+            DS = DS_list[0]
+            draw_add = 1
+        else:
+            DS = DS_list[1]
+            draw_add = 0
+
+        for entry in DS:
+            if entry[11+draw_add:] == list(row):
+                ds_input = entry[0:11+draw_add]
+        try:
+            ds_input
+        except Exception as e:
+            #print("didn't find the row in the DS")
+            #print(e)
+            #raise Exception
+            continue
+        for key, value in myDict_net.items():
+            if not draw:
+                if "DSNoDraw" in key:
+                    try:
+                        result = value.activate(ds_input)
+                    except Exception as e:
+                        print("draw is %s" % str(draw))
+                        print(ds_input)
+                        print(e)
+            else:
+                if "DSDraw" in key:
+                    try:
+                        result = value.activate(ds_input)
+                    except Exception as e:
+                        print("draw is %s" % str(draw))
+                        print(ds_input)
+                        print(e)
+        #print (result)
+        del ds_input
+        if verbose:
+            print(result)
         myDict_predicted[horseName].append(result[0])
 
     
@@ -727,6 +795,7 @@ def train_net(databases): #
         prev_raceVenue = 0
         prev_raceTime = 0
         prev_raceDate = 0
+
         for ii, row in enumerate(rows):
             if not ii%10:
                 now_time = time.time()
@@ -738,14 +807,23 @@ def train_net(databases): #
 
             """ for each row need to get the race info and then
             get a list of the odds and find the min max for normalizing"""
+            """
             raceVenue = row[11]
             raceTime = row[10]
             raceDate = row[9]
             if prev_raceVenue != raceVenue or prev_raceTime != raceTime or prev_raceDate != raceDate:
                 race_rows = commands.viewMultiple(databases,raceVenue=raceVenue, raceTime=raceTime, raceDate=raceDate)
                 race_odds_list = []
+                race_weight_list = []
                 for race_row in race_rows:
                     race_odds_split = race_row[15].split("/")
+                    try:
+                        race_weight_kg = minmax.convertWeightKilos(race_row[3])
+                        race_weight_list.append(race_weight_kg)
+                        print (str(race_weight_kg))
+                    except Exception as e:
+                        pass
+
                     try:
                         race_odds = float(race_odds_split[0])/float(race_odds_split[1])
                     except ValueError as e:
@@ -753,6 +831,7 @@ def train_net(databases): #
                         print (e)
                         continue
                     race_odds_list.append(race_odds)
+
                 try:
                     max_odds = max(race_odds_list)
                     min_odds = min(race_odds_list)
@@ -761,12 +840,21 @@ def train_net(databases): #
                     print (e)
                     continue
                 odds_range = max_odds - min_odds
+                try:
+                    max_weight = max(race_weight_list)
+                    min_weight = min(race_weight_list)
+                except ValueError as e:
+                    print ("error getting the min and max weight for normalization")
+                    print (e)
+                    continue
+                weight_range = max_weight - min_weight
                 prev_raceVenue = raceVenue
                 prev_raceTime = raceTime
                 prev_raceDate = raceDate
-            
+            """
             try:
-                ds_input, ds_result, draw = makeTraining(horseName_row, row, databases, odds_range, min_odds)
+                #ds_input, ds_result, draw = makeTraining(horseName_row, row, databases, odds_range, min_odds, weight_range, min_weight)
+                ds_input, ds_result, draw = makeTraining_without_normalization(horseName_row, row, databases)
             except Exception as e:
                 print (e)
                 continue
@@ -792,6 +880,15 @@ def train_net(databases): #
 
         with open("DSNoDraw.pk", 'wb') as fp:
             pickle.dump(DSNoDraw, fp)
+
+    # temporary position for the normalization stuff.  Should normally happen before the DS is saved
+    DSDraw, DSNoDraw = makeNormalization([DSDraw, DSNoDraw])
+    with open("DSDraw_norm.pk", 'wb') as fp:
+        pickle.dump(DSDraw, fp)
+
+    with open("DSNoDraw_norm.pk", 'wb') as fp:
+        pickle.dump(DSNoDraw, fp)
+
 
     print ("The DSDraw is %d input and %d output" % (len(DSDraw['input']), len(DSDraw['target'])))
     print (DSDraw)
@@ -819,124 +916,130 @@ def train_net(databases): #
         tstdata, trndata = DS.splitWithProportion( 0.25 )
         print("The DS being converted is %s" % (DS_name))
         print ("The training_data is %d input and %d output" % (len(trndata['input']), len(trndata['target'])))
-        print (trndata)
+        #print (trndata)
 
 
         test_data = ClassificationDataSet(len(tstdata['input'][0]), 1, nb_classes=2)
         for ii in range(0, tstdata.getLength()):
-            if tstdata.getSample(ii)[1].tolist() == [1,0,0,0]:
-                result = 0
-            #elif tstdata.getSample(ii)[1].tolist() == [0,1,0,0]:
-            #    result = 1
+            if tstdata.getSample(ii)[1].tolist() == [1.0]:
+                result_class = 0
             else:
-                result = 1
-
+                result_class = 1
             input_data = tstdata.getSample(ii)[0].tolist()
-            #input_data.pop(0)
-            test_data.addSample(input_data, result)
+            test_data.addSample(input_data, result_class)
 
         training_data = ClassificationDataSet(len(trndata['input'][0]), 1, nb_classes=2)
         for ii in range(0, trndata.getLength()):
-            if trndata.getSample(ii)[1].tolist() == [1,0,0,0]:
-                result = 0
-            #elif trndata.getSample(ii)[1].tolist() == [0,1,0,0]:
-            #    result = 1
+            if trndata.getSample(ii)[1].tolist() == [1.0]:
+                result_class = 0
             else:
-                result = 1
+                result_class = 1
+            input_data = trndata.getSample(ii)[0].tolist()
+            training_data.addSample(input_data, result_class)
 
-            input_data = trndata.getSample(ii)[0]
-            #input_data.pop(0)
-            training_data.addSample(input_data, result)
-            #training_data.addSample(trndata.getSample(ii)[0], result)
 
         print ("The training_data is %d input and %d output" % (len(training_data['input']), len(training_data['target'])))
-        print (training_data)
+        #print (training_data)
         test_data._convertToOneOfMany()
 
         training_data._convertToOneOfMany()
         print ("The training_data is %d input and %d output" % (len(training_data['input']), len(training_data['target'])))
-        print(training_data)
+        #print(training_data)
         #sys.exit()
-
+        """
         # Now undersample the training and test data
         training_data_win, training_data_lose = training_data.splitByClass(0)
         print ("the size of win data is %d and the size of lose data is %d" % (len(training_data_win), len(training_data_lose)))
         training_data = SupervisedDataSet(len(training_data_win['input'][0]), 1)
-        #training_data = ClassificationDataSet(len(training_data_win['input'][0]), 2, nb_classes=2)
         for ii in range(0, training_data_win.getLength()):
-            result = 1.0 #training_data_win.getSample(ii)[1]
+            result = 1.0
             input_data = training_data_win.getSample(ii)[0]
             training_data.appendLinked(input_data, result)
-            result = 0.0 #training_data_lose.getSample(ii)[1]
+            result = 0.0
             input_data = training_data_lose.getSample(ii)[0]
             training_data.appendLinked(input_data, result)
 
         test_data_win, test_data_lose = test_data.splitByClass(0)
         print ("the size of win data is %d and the size of lose data is %d" % (len(test_data_win), len(test_data_lose)))
         test_data = SupervisedDataSet(len(test_data_win['input'][0]), 1)
-        #test_data = ClassificationDataSet(len(test_data_win['input'][0]), 2, nb_classes=2)
         for ii in range(0, test_data_win.getLength()):
-            result = 1.0 #test_data_win.getSample(ii)[1]
+            result = 1.0 
             input_data = test_data_win.getSample(ii)[0]
             test_data.appendLinked(input_data, result)
-            result = 0.0 #test_data_lose.getSample(ii)[1]
+            result = 0.0 
             input_data = test_data_lose.getSample(ii)[0]
             test_data.appendLinked(input_data, result)
+        """
+
+        # Now oversample the training and test data
+        training_data_win, training_data_lose = training_data.splitByClass(0)
+        print ("the size of win data is %d and the size of lose data is %d" % (len(training_data_win), len(training_data_lose)))
+        training_data = SupervisedDataSet(len(training_data_win['input'][0]), 1)
+        for ii in range(0, training_data_lose.getLength()):
+            result = 1.0
+            input_data = training_data_win.getSample(ii%training_data_win.getLength())[0]
+            training_data.appendLinked(input_data, result)
+            result = 0.0
+            input_data = training_data_lose.getSample(ii)[0]
+            training_data.appendLinked(input_data, result)
+
+        test_data_win, test_data_lose = test_data.splitByClass(0)
+        print ("the size of win data is %d and the size of lose data is %d" % (len(test_data_win), len(test_data_lose)))
+        test_data = SupervisedDataSet(len(test_data_win['input'][0]), 1)
+        for ii in range(0, test_data_lose.getLength()):
+            result = 1.0 
+            input_data = test_data_win.getSample(ii%test_data_win.getLength())[0]
+            training_data.appendLinked(input_data, result)
+            result = 0.0 
+            input_data = test_data_lose.getSample(ii)[0]
+            training_data.appendLinked(input_data, result)
         
 
-        print (training_data)
-        print ("traiing_data dimensions are %d in and %d out" % (training_data.indim, training_data.outdim))
+        #print (training_data)
+        print ("training_data dimensions are %d in and %d out" % (training_data.indim, training_data.outdim))
 
-
-        learningRate = 0.04
+        iteration = 0
+        saved_error = 200.0
+        saved_win = 0
+        saved_loss = 0
+        saved_filename = ""
+        learningRate = 0.0
         momentum = 0.1
-        hiddenLayer0 = int((len(training_data)/10)/(training_data.indim + training_data.outdim))
-        #hiddenLayer1 = 4
-        print("hidden layer neurons = %d" % (hiddenLayer0))
-        #hiddenLayer1 = 4
-        #hiddenLayer2 = 4
-        #hiddenLayer3 = 4
-        #hiddenLayer4 = 4
-        #hiddenLayer5 = 4
-        #hiddenLayer6 = 4
-        netFilename = "sigmoidnet_" + str(learningRate) + "_" + str(momentum) + "_" + DS_name
-        netFilename = netFilename + "_" + str(hiddenLayer0) + ".xml" #+ "_" + str(hiddenLayer1) + "_" + str(hiddenLayer2) + "_" + str(hiddenLayer3) + "_" + str(hiddenLayer4) + "_" + str(hiddenLayer5) + "_" + str(hiddenLayer6) 
+        if True:
+            if (iteration % 10) == 0:
+                learningRate = learningRate + 0.04
 
-        if os.path.exists(netFilename): # and not useDaysTestInputs:
-            print ("found network training file")
-            net = NetworkReader.readFrom(netFilename) 
-            #trainer=BackpropTrainer(net, learningrate = learningRate, momentum = momentum, weightdecay = 0.00001, verbose=True)  
-            win_correct = 0
-            win_sample = 0
-            lose_correct = 0
-            lose_sample = 0
-            for ii in range(0, test_data.getLength()):
-                result = net.activate(test_data['input'][ii])
-                if test_data['target'][ii] == 1.0:
-                    win_sample = win_sample + 1
-                    if result > 0.5:
-                        win_correct = win_correct + 1
+            hiddenLayer0 = 10 #int((len(training_data)/100)/(training_data.indim + training_data.outdim))
+            #if hiddenLayer0 == 48:
+            #    hiddenLayer0 = 49
+            #if hiddenLayer0 == 35 or hiddenLayer0 == 36:
+            #    hiddenLayer0 = 37
+            hiddenLayer1 = 0#hiddenLayer0
+            print("hidden layer neurons = %d" % (hiddenLayer0))
+            #hiddenLayer1 = 4
+            #hiddenLayer2 = 4
+            #hiddenLayer3 = 4
+            #hiddenLayer4 = 4
+            #hiddenLayer5 = 4
+            #hiddenLayer6 = 4
+            iteration = iteration + 1
+            netFilename = str(iteration) + "sigmoidnet_" + str(learningRate) + "_" + str(momentum) + "_" + DS_name
+            netFilename = netFilename + "_" + str(hiddenLayer0) + ".xml" #+ "_" + str(hiddenLayer1) + "_" + str(hiddenLayer2) + "_" + str(hiddenLayer3) + "_" + str(hiddenLayer4) + "_" + str(hiddenLayer5) + "_" + str(hiddenLayer6) 
 
-                else:
-                    lose_sample = lose_sample + 1
-                    if result < 0.5:
-                        lose_correct = lose_correct +1
-            win_error = ((win_sample - win_correct)/win_sample)*100
-            lose_error = ((lose_sample - lose_correct)/lose_sample)*100
-            print('Percent Error on testData - win %f lose %f:' % (win_error, lose_error))
-
-        else:
-            net=buildNetwork(training_data.indim, hiddenLayer0, training_data.outdim, bias=True, hiddenclass=ReluLayer, outclass=SigmoidLayer) 
-            #hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, hiddenLayer5, hiddenLayer6,
-            trainer=BackpropTrainer(net, learningrate = learningRate, momentum = momentum, weightdecay = 0.00001, verbose=True)
-            trnerr, valerr=trainer.trainUntilConvergence(dataset=training_data, maxEpochs=200, verbose=True, continueEpochs=5)
-            NetworkWriter.writeToFile(net, netFilename)
-            try:
-                mse=trainer.testOnData(dataset=test_data)
+            if os.path.exists(netFilename): # and not useDaysTestInputs:
+                print ("found network training file")
+                net = NetworkReader.readFrom(netFilename) 
+                
+                #trainer=BackpropTrainer(net, learningrate = learningRate, momentum = momentum, weightdecay = 0.00001, verbose=True)  
+                #print (net)
+                #print_net_connections(net)
+                #sys.exit()
                 win_correct = 0
                 win_sample = 0
                 lose_correct = 0
                 lose_sample = 0
+
+                """
                 for ii in range(0, test_data.getLength()):
                     result = net.activate(test_data['input'][ii])
                     if test_data['target'][ii] == 1.0:
@@ -951,11 +1054,101 @@ def train_net(databases): #
                 win_error = ((win_sample - win_correct)/win_sample)*100
                 lose_error = ((lose_sample - lose_correct)/lose_sample)*100
                 print('Percent Error on testData - win %f lose %f:' % (win_error, lose_error))
-            except AssertionError as e:
-                print (e)
-                raise Exception
-            errors.append(mse)
-            print ("net Mean Squared Error = " + str(mse))
+                """
+                myDict_net[netFilename] = net
+                #wins = runTestDates(databases, "2020-01-01", "2020-02-01", myDict_net, DS_name)
+                #wins = runTestDates(databases, "2020-02-01", "2020-03-01", myDict_net, DS_name)
+
+
+            else:
+                net=buildNetwork(training_data.indim, hiddenLayer0, training_data.outdim, bias=True, hiddenclass=TanhLayer, outclass=SigmoidLayer) 
+                net.randomize()
+                #hiddenLayer1, hiddenLayer2, hiddenLayer3, hiddenLayer4, hiddenLayer5, hiddenLayer6,
+                prev_wins = 0
+                for jj in range(10):
+                    kk = 0
+                    """
+                    for kk in range (0, int(training_data.getLength()/1000)):
+                        tmp_DS = SupervisedDataSet(len(training_data['input'][0]), 1)
+                        for mm in range(0, 1000):
+                            result = training_data.getSample(((kk*1000)+mm)%training_data.getLength())[1]
+                            input_data = training_data.getSample(((kk*1000)+mm)%training_data.getLength())[0]
+                            tmp_DS.appendLinked(input_data, result)
+
+                        trainer=BackpropTrainer(net, dataset=tmp_DS, learningrate = learningRate, momentum = momentum, weightdecay = 0.00001, verbose=True)
+                        #trnerr, valerr=trainer.trainUntilConvergence(dataset=training_data, maxEpochs=20, verbose=True, continueEpochs=10)
+                    """
+
+                    trainer=BackpropTrainer(net, dataset=training_data, learningrate = learningRate, momentum = momentum, weightdecay = 0.00001, verbose=True)
+                    if True:
+                        trainer.train()
+                        win_correct = 0
+                        win_sample = 0
+                        lose_correct = 0
+                        lose_sample = 0
+                        """
+                        for ii in range(0, test_data.getLength()):
+                            result = net.activate(test_data['input'][ii])
+                            if test_data['target'][ii] == 1.0:
+                                win_sample = win_sample + 1
+                                if result > 0.5:
+                                    win_correct = win_correct + 1
+
+                            else:
+                                lose_sample = lose_sample + 1
+                                if result < 0.5:
+                                    lose_correct = lose_correct +1
+                        win_error = ((win_sample - win_correct)/win_sample)*100
+                        lose_error = ((lose_sample - lose_correct)/lose_sample)*100
+                        print('Percent Error on testData - win %f lose %f:' % (win_error, lose_error))
+                        """
+                        print("This was for learning_rate %f and epoch-sub iteration %d-%d" % (learningRate, jj, kk))
+                        myDict_net[netFilename] = net
+
+                        wins = runTestDates(databases, "2020-01-01", "2020-02-01", myDict_net, DS_name)
+                        if wins > prev_wins:
+                            prev_net = copy.deepcopy(net)
+                            prev_wins = wins
+
+                    if jj > 2:
+                        learningRate = learningRate/2
+
+                try:
+                    """
+                    mse=trainer.testOnData(dataset=test_data)
+                    win_correct = 0
+                    win_sample = 0
+                    lose_correct = 0
+                    lose_sample = 0
+                    for ii in range(0, test_data.getLength()):
+                        result = net.activate(test_data['input'][ii])
+                        if test_data['target'][ii] == 1.0:
+                            win_sample = win_sample + 1
+                            if result > 0.5:
+                                win_correct = win_correct + 1
+
+                        else:
+                            lose_sample = lose_sample + 1
+                            if result < 0.5:
+                                lose_correct = lose_correct +1
+                    win_error = ((win_sample - win_correct)/win_sample)*100
+                    lose_error = ((lose_sample - lose_correct)/lose_sample)*100
+                    print('Percent Error on testData - win %f lose %f:' % (win_error, lose_error))
+                    """
+                    print("This was for learning_rate %f and iteration %d" % (learningRate, iteration))
+                    #if (win_error + lose_error) < saved_error:
+                    NetworkWriter.writeToFile(prev_net, netFilename)
+                    #    saved_error = win_error + lose_error
+                    #    saved_loss = lose_error
+                    #    saved_win = win_error
+                    saved_filename = netFilename
+                    print("current best is %s with win error %f and lose error %f" % (saved_filename, saved_win, saved_loss))
+
+                except AssertionError as e:
+                    print (e)
+                    raise Exception
+                #errors.append(mse)
+                #print ("net Mean Squared Error = " + str(mse))
 
 
         myDict_net[netFilename] = net
@@ -1138,9 +1331,165 @@ def makeTestFromDatabase(databases, horseName_rows, row):
         normalized_draw = float(draw)/float(row[6])
         ds_input.append(normalized_draw)
 
+    # the weight
+    race_weight_list = []
+    for race_row in race_rows:
+        try:
+            race_weight_kg = minmax.convertWeightKilos(race_row[3])
+        except Exception as e:
+            print("problem getting the weight in kg for the normalization")
+            print(e)
+            continue
+        race_weight_list.append(race_weight_kg)
+    max_weight = max(race_weight_list)
+    min_weight = min(race_weight_list)
+    weight_range = max_weight - min_weight
+
+    try:
+        race_weight_kg = minmax.convertWeightKilos(row[3])
+    except Exception as e:
+        print(e)
+        raise Exception
+    normalized_weight = ((float(race_weight_kg - min_weight)/float(weight_range))*0.8)+0.1
+    ds_input.append(float(normalized_weight)) 
+
+    # the age
+    age = float(row[2])/15.0
+    if age > 1.0:
+        raise Exception
+    ds_input.append(age)
+
+
     return ds_input, draw
 
-def makeTraining(horseName_rows, row, databases, odds_range, min_odds):
+
+def makeTestFromDatabase_without_normalization(databases, horseName_rows, row, DSDraw_norm_dict, DSNoDraw_norm_dict):
+    """ make a net input for the given horseName on the
+    given date"""
+    verbose = True
+    draw = row[12]
+    if draw:
+        DS_norm_dict = DSDraw_norm_dict
+    else:
+        DS_norm_dict = DSNoDraw_norm_dict
+    
+    # This should only happen if it is a real result as the horse was not in the database
+    if len(horseName_rows) == 0:
+        if verbose:
+            print("horse was not found in any database")
+        raise Exception
+
+
+    for ii, horseName_row in enumerate(horseName_rows):
+        if ii == 0:
+            if horseName_rows[ii][9] == row[9]:
+                if verbose:
+                    print("This horse %s has no previous form" % str(row[1]))
+                raise Exception
+            continue
+    
+        # only use races before the date in row
+        if horseName_rows[ii][9] == row[9]:
+            prev_row = horseName_rows[ii-1]
+            break
+    try:
+        prev_row
+    except Exception:
+        prev_row = horseName_rows[-1]
+        if verbose:
+            print("the previous race was %s" % str(prev_row))
+
+    ds_input = []
+
+    # input 0 will be the odds, normalized against the
+    # odds of the other horses in the particular race.
+    # These should then be translated to the scale
+    # 0.1 - 0.9
+    """ for each row need to get the race info and then
+    get a list of the odds and find the min max for normalizing"""
+    odds_split = row[15].split("/")
+    try:
+        odds = float(odds_split[0])/float(odds_split[1])
+    except ValueError as e:
+        if verbose:
+            print (e)
+        raise Exception
+    odds_norm = (float(odds) - float(DS_norm_dict['odds'][0]))/(float(DS_norm_dict['odds'][1])-float(DS_norm_dict['odds'][2]))
+    ds_input.append(float(odds_norm)) 
+
+    # input 1 will be the race length in meters
+    length = minmax.convertRaceLengthMetres(row[5])
+    length_norm = (float(length) - float(DS_norm_dict['length'][0]))/(float(DS_norm_dict['length'][1])-float(DS_norm_dict['length'][2]))
+    ds_input.append(float(length_norm)) 
+
+
+    # input 2 will be the last race length in meters,
+    length = minmax.convertRaceLengthMetres(prev_row[5])
+    length_norm = (float(length) - float(DS_norm_dict['prev_length'][0]))/(float(DS_norm_dict['prev_length'][1])-float(DS_norm_dict['prev_length'][2]))
+    ds_input.append(float(length_norm)) 
+
+    # input 3 will be the days since last race.
+    dateStartSplit=row[9].split('-')
+    dateEndSplit=prev_row[9].split('-')
+    dateStart=datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2]))
+    dateEnd=datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2]))
+    days = dateStart - dateEnd
+    days_norm = (float(days.days) - float(DS_norm_dict['days'][0]))/(float(DS_norm_dict['days'][1])-float(DS_norm_dict['days'][2]))
+    ds_input.append(float(days_norm))
+
+    # input 4 will be the  number of horses in the race
+    num_norm = (float(row[6]) - float(DS_norm_dict['num'][0]))/(float(DS_norm_dict['num'][1])-float(DS_norm_dict['num'][2]))
+    ds_input.append(float(num_norm))
+
+    # input 5,6,7,8 will be the result from the previous race in the same format
+    # as the target result
+    if prev_row[4] == 1:
+        ds_input.append(float(1.0))
+    else:
+        ds_input.append(float(0.0)) 
+
+    if prev_row[4] == 2:
+        ds_input.append(float(1.0))
+    else:
+        ds_input.append(float(0.0)) 
+
+    if prev_row[4] == 3:
+        ds_input.append(float(1.0))
+    else:
+        ds_input.append(float(0.0)) 
+
+    if prev_row[4] > 3:
+        ds_input.append(float(1.0))
+    else:
+        ds_input.append(float(0.0)) 
+
+    draw = row[12]
+    if draw:
+        draw_norm = (float(draw) - float(DS_norm_dict['draw'][0]))/(float(DS_norm_dict['draw'][1])-float(DS_norm_dict['draw'][2]))
+        ds_input.append(draw_norm)
+
+    # the weight
+    try:
+        race_weight_kg = minmax.convertWeightKilos(row[3])
+    except Exception as e:
+        if verbose:
+            print("problem getting the weight")
+        print(e)
+        raise Exception
+    weight_norm = (float(race_weight_kg) - float(DS_norm_dict['weight'][0]))/(float(DS_norm_dict['weight'][1])-float(DS_norm_dict['weight'][2]))
+    ds_input.append(float(weight_norm)) 
+
+    # the age
+    age = float(row[2])
+    age_norm = (float(age) - float(DS_norm_dict['age'][0]))/(float(DS_norm_dict['age'][1])-float(DS_norm_dict['age'][2]))
+    ds_input.append(age_norm)
+
+
+    return ds_input, draw
+
+
+
+def makeTraining(horseName_rows, row, databases, odds_range, min_odds, weight_range, min_weight):
     """ make training data set from previous
     races"""
 
@@ -1182,18 +1531,12 @@ def makeTraining(horseName_rows, row, databases, odds_range, min_odds):
 
 
     ds_input = []
-    ds_result = 4*[0.0]
+    ds_result = 1*[0.0]
     if row[4] == 1:
         ds_result[0] = 1.0
-    if row[4] == 2:
-        ds_result[1] = 1.0
-    if row[4] == 3:
-        ds_result[2] = 1.0
-    if row[4] > 3:
-        ds_result[3] = 1.0
-    #float(row[4])/float(row[6]) #result_worth_list[row[4]-1] #
-    #if row[4] > 9:
-    #    ds_result = float(0.9)
+    else:
+        ds_result[0] = 0.0
+
     
     # input 0 will be the odds, normalized against the
     # odds of the other horses in the particular race.
@@ -1255,7 +1598,7 @@ def makeTraining(horseName_rows, row, databases, odds_range, min_odds):
         ds_input.append(float(1.0))
     else:
         ds_input.append(float(0.0)) 
-
+    
     if prev_row[4] == 2:
         ds_input.append(float(1.0))
     else:
@@ -1270,19 +1613,391 @@ def makeTraining(horseName_rows, row, databases, odds_range, min_odds):
         ds_input.append(float(1.0))
     else:
         ds_input.append(float(0.0)) 
-
+    
     # input 9 will be the normalized draw if there was a draw
     draw = row[12]
     if draw:
         normalized_draw = float(draw)/float(row[6])
         ds_input.append(normalized_draw)
 
+    #input 10 will be the weight normalized against all horses in the race
+    try:
+        weight = minmax.convertWeightKilos(row[3])
+    except Exception as e:
+        print (e)
+        raise Exception
+    normalized_weight = ((float(weight - min_weight)/float(weight_range))*0.8)+0.1
+    ds_input.append(float(normalized_weight)) 
+
+    #input 11 wil be the age relative to a 15 year old (assumed to be about the oldest)
+    age = float(row[2])/15.0
+    if age > 1.0:
+        print("age of horse was %d, i.e > 15" % (row[2]))
+        raise Exception
+    ds_input.append(age)
+
     return ds_input, ds_result, draw
+
+def makeNormalize_median_75_25(DS_list):
+    
+    DSDraw_norm_dict = {}
+    DSNoDraw_norm_dict = {}
+    for jj, DS in enumerate(DS_list):
+        odds_list = []
+        length_list = []
+        prev_length_list = []
+        days_list = []
+        num_list = []
+        draw_list = []
+        weight_list = []
+        age_list = []
+
+        # before finding the inputs, find the median and also the 75th and 25th quantile
+        for ii in range(0, DS.getLength()):
+            result= DS.getSample(ii)[1].tolist()
+            input_data = DS.getSample(ii)[0].tolist()
+            # odds
+            odds_list.append(input_data[0])
+            # race length 
+            length_list.append(input_data[1])
+            #previous race length 
+            prev_length_list.append(input_data[2])
+            # days since last race
+            days_list.append(input_data[3])
+            # number of horses in the race
+            num_list.append(input_data[4])
+            if jj == 0:
+                # draw
+                draw_list.append(input_data[9])
+            # weight
+            weight_list.append(input_data[10-jj])
+            # age
+            age_list.append(input_data[11-jj])
+            
+        num_entries = DS.getLength()
+        per_quantile = float(num_entries)/100.0
+        quantile_75 = int(per_quantile*75.0)
+        quantile_25 = int(per_quantile*25.0)
+        odds_list.sort()
+        odds_median = median(odds_list)
+        odds_75 = odds_list[quantile_75]
+        odds_25 = odds_list[quantile_25]
+        if jj == 0:
+            DSDraw_norm_dict['odds'] = [odds_median, odds_75, odds_25]
+        else:
+            DSNoDraw_norm_dict['odds'] = [odds_median, odds_75, odds_25]
+
+        length_list.sort()
+        length_median = median(length_list)
+        length_75 = length_list[quantile_75]
+        length_25 = length_list[quantile_25]
+        if jj == 0:
+            DSDraw_norm_dict['length'] = [length_median, length_75, length_25]
+        else:
+            DSNoDraw_norm_dict['length'] = [length_median, length_75, length_25]
+
+        prev_length_list.sort()
+        prev_length_median = median(prev_length_list)
+        prev_length_75 = prev_length_list[quantile_75]
+        prev_length_25 = prev_length_list[quantile_25]
+        if jj == 0:
+            DSDraw_norm_dict['prev_length'] = [prev_length_median, prev_length_75, prev_length_25]
+        else:
+            DSNoDraw_norm_dict['prev_length'] = [prev_length_median, prev_length_75, prev_length_25]
+
+        days_list.sort()
+        days_median = median(days_list)
+        days_75 = days_list[quantile_75]
+        days_25 = days_list[quantile_25]
+        if jj == 0:
+            DSDraw_norm_dict['days'] = [days_median, days_75, days_25]
+        else:
+            DSNoDraw_norm_dict['days'] = [days_median, days_75, days_25]
+
+        num_list.sort()
+        num_median = median(num_list)
+        num_75 = num_list[quantile_75]
+        num_25 = num_list[quantile_25]
+        if jj == 0:
+            DSDraw_norm_dict['num'] = [num_median, num_75, num_25]
+        else:
+            DSNoDraw_norm_dict['num'] = [num_median, num_75, num_25]
+
+        if jj == 0:
+            draw_list.sort()
+            draw_median = median(draw_list)
+            draw_75 = draw_list[quantile_75]
+            draw_25 = draw_list[quantile_25]
+            DSDraw_norm_dict['draw'] = [draw_median, draw_75, draw_25]
+
+        weight_list.sort()
+        weight_median = median(weight_list)
+        weight_75 = weight_list[quantile_75]
+        weight_25 = weight_list[quantile_25]
+        if jj == 0:
+            DSDraw_norm_dict['weight'] = [weight_median, weight_75, weight_25]
+        else:
+            DSNoDraw_norm_dict['weight'] = [weight_median, weight_75, weight_25]
+
+        age_list.sort()
+        age_median = median(age_list)
+        age_75 = age_list[quantile_75]
+        age_25 = age_list[quantile_25]
+        if jj == 0:
+            DSDraw_norm_dict['age'] = [age_median, age_75, age_25]
+        else:
+            DSNoDraw_norm_dict['age'] = [age_median, age_75, age_25]
+
+    return DSDraw_norm_dict, DSNoDraw_norm_dict
+
+
+
+def makeNormalization(DS_list):
+    """ in DS_list, DSDraw must be entry 0 and DSNODraw must be entry 1"""
+    output_DS_list = []
+    for jj, DS in enumerate(DS_list):
+        odds_list = []
+        length_list = []
+        prev_length_list = []
+        days_list = []
+        num_list = []
+        draw_list = []
+        weight_list = []
+        age_list = []
+
+        # before finding the inputs, find the median and also the 75th and 25th quantile
+        for ii in range(0, DS.getLength()):
+            result= DS.getSample(ii)[1].tolist()
+            input_data = DS.getSample(ii)[0].tolist()
+            # odds
+            odds_list.append(input_data[0])
+            # race length 
+            length_list.append(input_data[1])
+            #previous race length 
+            prev_length_list.append(input_data[2])
+            # days since last race
+            days_list.append(input_data[3])
+            # number of horses in the race
+            num_list.append(input_data[4])
+            if jj == 0:
+                # draw
+                draw_list.append(input_data[9])
+            # weight
+            weight_list.append(input_data[10-jj])
+            # age
+            age_list.append(input_data[11-jj])
+            
+        num_entries = DS.getLength()
+        per_quantile = float(num_entries)/100.0
+        quantile_75 = int(per_quantile*75.0)
+        quantile_25 = int(per_quantile*25.0)
+        odds_list.sort()
+        odds_median = median(odds_list)
+        odds_75 = odds_list[quantile_75]
+        odds_25 = odds_list[quantile_25]
+
+        length_list.sort()
+        length_median = median(length_list)
+        length_75 = length_list[quantile_75]
+        length_25 = length_list[quantile_25]
+
+        prev_length_list.sort()
+        prev_length_median = median(prev_length_list)
+        prev_length_75 = prev_length_list[quantile_75]
+        prev_length_25 = prev_length_list[quantile_25]
+
+        days_list.sort()
+        days_median = median(days_list)
+        days_75 = days_list[quantile_75]
+        days_25 = days_list[quantile_25]
+
+        num_list.sort()
+        num_median = median(num_list)
+        num_75 = num_list[quantile_75]
+        num_25 = num_list[quantile_25]
+
+        if jj == 0:
+            draw_list.sort()
+            draw_median = median(draw_list)
+            draw_75 = draw_list[quantile_75]
+            draw_25 = draw_list[quantile_25]
+
+        weight_list.sort()
+        weight_median = median(weight_list)
+        weight_75 = weight_list[quantile_75]
+        weight_25 = weight_list[quantile_25]
+
+        age_list.sort()
+        age_median = median(age_list)
+        age_75 = age_list[quantile_75]
+        age_25 = age_list[quantile_25]
+
+        output_DS = SupervisedDataSet(len(DS.getSample(0)[0].tolist()), len(DS.getSample(0)[1].tolist()))
+        for ii in range(0, DS.getLength()):
+            output_data = []
+            result= DS.getSample(ii)[1].tolist()
+            input_data = DS.getSample(ii)[0].tolist()
+            output_odds = (float(input_data[0]) - float(odds_median))/(float(odds_75)-float(odds_25))
+            output_data.append(output_odds)
+
+            output_length = (float(input_data[1]) - float(length_median))/(float(length_75)-float(length_25))
+            output_data.append(output_length)
+
+            output_prev_length = (float(input_data[2]) - float(prev_length_median))/(float(prev_length_75)-float(prev_length_25))
+            output_data.append(output_prev_length)
+
+            output_days = (float(input_data[3]) - float(days_median))/(float(days_75) - float(days_25))
+            output_data.append(output_days)
+        
+            output_num = (float(input_data[4])-float(num_median))/(float(num_75)-float(num_25))
+            output_data.append(output_num)
+
+            output_data.append(input_data[5])
+            output_data.append(input_data[6])
+            output_data.append(input_data[7])
+            output_data.append(input_data[8])
+
+            if jj == 0:
+                output_draw = (float(input_data[9])-float(draw_median))/(float(draw_75)-float(draw_25))
+                output_data.append(output_draw)
+
+            output_weight = (float(input_data[10-jj])-float(weight_median))/(float(weight_75)-float(weight_25))
+            output_data.append(output_weight)
+
+            output_age = (float(input_data[11-jj])-float(age_median))/(float(age_75)-float(age_25))
+            output_data.append(output_age)
+
+            output_DS.addSample(output_data, result)
+        output_DS_list.append(output_DS)
+    return output_DS_list
+
+def makeTraining_without_normalization(horseName_rows, row, databases):
+    """ make training data set from previous
+    races"""
+    # the result will be the average odds for finishing
+    # in the postition the horse finished.  Average odds deterined using
+    # commands.get_average_odds("results_2019_2.db", "2019")
+    for ii, horseName_row in enumerate(horseName_rows):
+        if ii == 0:
+            if horseName_rows[ii][9] == row[9]:
+                raise Exception
+            continue
+         
+        # only use races before the date in row
+        if horseName_rows[ii][9] == row[9]:
+            prev_row = horseName_rows[ii-1]
+            break
+
+    ds_input = []
+    ds_result = 1*[0.0]
+    if row[4] == 1:
+        ds_result[0] = 1.0
+    else:
+        ds_result[0] = 0.0
+
+    
+    # input 0 will be the odds
+
+    odds_split = row[15].split("/")
+    try:
+        odds = float(odds_split[0])/float(odds_split[1])
+    except ValueError as e:
+        print (e)
+        raise Exception
+
+    ds_input.append(float(odds)) 
+
+
+    # input 1 will be the race length in meters
+    length = minmax.convertRaceLengthMetres(row[5])
+    ds_input.append(float(length)) 
+
+
+    # input 2 will be the last race length in meters,
+    length = minmax.convertRaceLengthMetres(prev_row[5])
+    ds_input.append(float(length)) 
+
+    # input 3 will be the days since last race.
+    dateStartSplit=row[9].split('-')
+    dateEndSplit=prev_row[9].split('-')
+    dateStart=datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2]))
+    dateEnd=datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2]))
+    days = dateStart - dateEnd
+
+    ds_input.append(float(days.days))
+
+    # input 4 will be the 1-the number of horses in the race
+    ds_input.append(float(row[6]))
+
+    # input 5,6,7,8 will be the result from the previous race in the same format
+    # as the target result
+    if prev_row[4] == 1:
+        ds_input.append(float(1.0))
+    else:
+        ds_input.append(float(0.0)) 
+    
+    if prev_row[4] == 2:
+        ds_input.append(float(1.0))
+    else:
+        ds_input.append(float(0.0)) 
+
+    if prev_row[4] == 3:
+        ds_input.append(float(1.0))
+    else:
+        ds_input.append(float(0.0)) 
+
+    if prev_row[4] > 3:
+        ds_input.append(float(1.0))
+    else:
+        ds_input.append(float(0.0)) 
+    
+    # input 9 will be the draw if there was a draw
+    draw = row[12]
+    if draw:
+        ds_input.append(draw)
+
+    #input 10 will be the weight 
+    try:
+        weight = minmax.convertWeightKilos(row[3])
+    except Exception as e:
+        print (e)
+        raise Exception
+    ds_input.append(float(weight)) 
+
+    #input 11 wil be the age 
+    age = float(row[2])
+    ds_input.append(age)
+
+    return ds_input, ds_result, draw
+
+
+
 
 #def makeTestRace():
 
 #def makeRealRace():
-def runTestDates(databases, dateStart, dateEnd, myDict_net):
+def runTestDates(databases, dateStart, dateEnd, myDict_net, DS_name = "both", verbose = False):
+
+    # check date to see if this date is in a DS or 
+    # whether the database should be used
+    # checkDateDSDatebase(dateStart, dateEnd)
+    useDS = False
+    useDatabase = True
+
+    if dateStart == "2020-01-01" and dateEnd == "2020-02-01":
+        draw_save_list_name = "DSDraw_save_list_01.pk"
+        noDraw_save_list_name = "DSNoDraw_save_list_01.pk"
+        useDS = True
+        useDatabase = False
+    if dateStart == "2020-02-01" and dateEnd == "2020-03-01":
+        draw_save_list_name = "DSDraw_save_list_02.pk"
+        noDraw_save_list_name = "DSNoDraw_save_list_02.pk"
+        useDS = True
+        useDatabase = False
+        
+    #makeTest_DS(databases)
+    #sys.exit()
+
 
     dateStartSplit=dateStart.split('-')
     dateEndSplit=dateEnd.split('-')
@@ -1291,39 +2006,94 @@ def runTestDates(databases, dateStart, dateEnd, myDict_net):
     fastest_winnings = 0
     fastest_loss = 0
     fastest_wins = 0
+    fastest = []
     badOdds = 0
     predicted_win_list = []
     predicted_winnings = 0
+    predicted_secondings = 0
+    predicted_thirdings = 0
     predicted_wins = 0
+    predicted_second = 0
+    predicted_third = 0
     predicted_loss = 0
+    topHorse_win_list = []
+    topHorse_winnings = 0
+    topHorse_wins = 0
+    topHorse_loss = 0
+
+    if useDatabase == True:
+        print ("reading DSDraw from file DSDraw.pk ")
+        with open ("DSDraw.pk", 'rb') as fp:
+            DSDraw = pickle.load(fp)
+        print ("reading DSNoDraw from file DSNoDraw.pk ")
+        with open ("DSNoDraw.pk", 'rb') as fp:
+            DSNoDraw = pickle.load(fp)
+
+    
+        DSDraw_norm_dict, DSNoDraw_norm_dict = makeNormalize_median_75_25([DSDraw, DSNoDraw])
+    else:
+        # open the DS for the dateIn
+        DS_list = []
+        print ("reading DSDraw from file %s " % draw_save_list_name)
+        with open (draw_save_list_name, 'rb') as fp:
+            DS_list.append(pickle.load(fp))
+        print ("reading DSNoDraw from file %s" % noDraw_save_list_name)
+        with open (noDraw_save_list_name, 'rb') as fp:
+            DS_list.append(pickle.load(fp))
+
 
     for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2]))):
         dateIn=time.strftime("%Y-%m-%d", single_date.timetuple())       
 
         myDict_testcard = makea.makeATestcardFromDatabase(dateIn, databases)
-        for key,value in myDict_testcard.items():
-            myDict_fastest = get_fastest_horse(value, databases)
-            myDict_predicted = get_predicted_result(value, databases, myDict_net)
 
-            fastest = sorted(myDict_fastest.items(), key=operator.itemgetter(1))
+        for key,value in myDict_testcard.items():
+            #myDict_fastest = get_fastest_horse(value, databases)
+            if not value[0][12]:
+                if DS_name == "DSDraw":
+                    continue
+            if value[0][12]:
+                if DS_name == "DSNoDraw":
+                    continue
+            if useDatabase == True:
+                myDict_predicted = get_predicted_result(value, databases, myDict_net, DSDraw_norm_dict, DSNoDraw_norm_dict)
+            else:
+                try:
+                    myDict_predicted = get_predicted_result_DS(value, DS_list, myDict_net)
+                except Exception as e:
+                    #skip race
+                    continue
+
+            #fastest = sorted(myDict_fastest.items(), key=operator.itemgetter(1))
             predicted = sorted(myDict_predicted.items(), key=operator.itemgetter(1))
             actual = value.sort(key = lambda x: x[4]) 
 
             #print("fastest horse")
             #for entry in fastest:
             #    print(entry)
-            print ("predicted result")
-            for entry in predicted:
-                print(entry)
+            if verbose:
+                print ("predicted result")
+                for entry in predicted:
+                    print(entry)
             #print ("actual result")
             #for entry in value:
             #    print(entry)
             try:
+                winnings = 0
+                secondings = 0
+                thirdings = 0
+                if int(value[0][4]) != 1:
+                    print("first place not where expected to get odds")
                 odds=value[0][15]
                 winnings = float(odds.split("/")[0])/float(odds.split("/")[1])
+                odds=value[1][15]
+                secondings = float(odds.split("/")[0])/float(odds.split("/")[1])
+                if len(value) > 2:
+                    odds=value[2][15]
+                    thirdings = float(odds.split("/")[0])/float(odds.split("/")[1])
             except Exception as e:
-                print ("problem with the odds %s" % str(odds))
-                print (str(odds.split("/")))
+                #print ("problem with the odds %s" % str(odds))
+                #print (str(odds.split("/")))
                 badOdds = badOdds + 1
                 continue
 
@@ -1340,25 +2110,228 @@ def runTestDates(databases, dateStart, dateEnd, myDict_net):
                         fastest_winnings = fastest_winnings -1
 
             if len(predicted) > 0:
+                # take all horses that were winners
+                #numberOfHorsesToTake = min(3, len(predicted))
+                #for entry in predicted[-1:(0-numberOfHorsesToTake)]:
+                predictedTopHorses_list = []
+                fastestTopHorses_list = []
+                for entry in predicted:
+                    if float(entry[1][0]) > 0.5:
+                        predictedTopHorses_list.append(entry)
+                if len(fastest) > 0 and len(predictedTopHorses_list) > 0:
+                    use_predicted = False
+                    for kk, topHorse in enumerate(predictedTopHorses_list):
+                        found=False
+                        for entry in fastest:
+                            if entry[0] == topHorse[0]:
+                                fastestTopHorses_list.append(entry)
+                                found=True
+                        if not found:
+                            use_predicted = True
+                            break
+                    if not use_predicted:
+                        fastestTopHorses_list.sort(key = lambda x: x[1])
+                        if fastestTopHorses_list[-1][0] == value[0][1]:
+                            topHorse_wins = topHorse_wins + 1
+                            if winnings >= 0:
+                                topHorse_winnings = topHorse_winnings + winnings
+                                topHorse_win_list.append(value[0])
+                        else:
+                            topHorse_loss = topHorse_loss + 1
+                            if winnings >= 0:
+                                topHorse_winnings = topHorse_winnings - 1
+
+                        #print (fastestTopHorses_list)
+                        #print (predictedTopHorses_list)
+                        #print (value)
+                        #sys.exit()
+
                 if predicted[-1][0] == value[0][1]:
                     predicted_wins = predicted_wins + 1
                     if winnings >= 0:
                         predicted_winnings = predicted_winnings + winnings
                         predicted_win_list.append(value[0])
-
+                    if len(predicted) > 1:
+                        predicted_secondings = predicted_secondings -1
+                    if len(predicted) > 2:
+                        predicted_thirdings = predicted_thirdings - 1
                 else:
+                    if len(predicted) > 1:
+                        if predicted[-2][0] == value[0][1]:
+                            predicted_second = predicted_second + 1
+                            predicted_secondings = predicted_secondings + secondings
+                        else:
+                            predicted_secondings = predicted_secondings -1
+                    if len(predicted) > 2:
+                        if predicted[-3][0] == value[0][1]:
+                            predicted_third = predicted_third + 1
+                            predicted_thirdings = predicted_thirdings + thirdings
+                        else:
+                            predicted_thirdings = predicted_thirdings -1
+
                     predicted_loss = predicted_loss + 1
                     if winnings >= 0:
                         predicted_winnings = predicted_winnings - 1
 
-            print("fastest_wins = %d" % fastest_wins)
-            print("fastest_winnings = %f" % fastest_winnings)
-            print("fastest_loss = %d" % fastest_loss)
-            for fastest_win in fastest_win_list:
-                print (fastest_win)
-            print("predicted_wins = %d" % predicted_wins)
-            print("predicted_winnings = %f" % predicted_winnings)
-            print("predicted_loss = %d" % predicted_loss)
-            for predicted_win in predicted_win_list:
-                print (predicted_win)
-            #print(actual)
+                print(str(dateIn))
+                print("predicted_wins = %d" % predicted_wins)
+                print("predicted_second = %d" % predicted_second)
+                print("predicted_third = %d" % predicted_third)
+                print("predicted_winnings = %f" % predicted_winnings)
+                print("predicted_secondings = %f" % predicted_secondings)
+                print("predicted_thirdings = %f" % predicted_thirdings)
+                print("predicted_loss = %d" % predicted_loss)
+
+            if verbose:
+                print("fastest_wins = %d" % fastest_wins)
+                print("fastest_winnings = %f" % fastest_winnings)
+                print("fastest_loss = %d" % fastest_loss)
+                for fastest_win in fastest_win_list:
+                    print (fastest_win)
+                print("predicted_wins = %d" % predicted_wins)
+                print("predicted_second = %d" % predicted_second)
+                print("predicted_winnings = %f" % predicted_winnings)
+                print("predicted_loss = %d" % predicted_loss)
+                #for predicted_win in predicted_win_list:
+                #    print (predicted_win)
+                print("topHorse_wins = %d" % topHorse_wins)
+                print("topHorse_winnings = %f" % topHorse_winnings)
+                print("topHorse_loss = %d" % topHorse_loss)
+                for topHorse_win in topHorse_win_list:
+                    print (topHorse_win)
+
+                #print(actual)
+    if verbose:
+        for predicted_win in predicted_win_list:
+            print (predicted_win)
+    print("predicted_wins = %d" % predicted_wins)
+    print("predicted_second = %d" % predicted_second)
+    print("predicted_third = %d" % predicted_third)
+    print("predicted_winnings = %f" % predicted_winnings)
+    print("predicted_secondings = %f" % predicted_secondings)
+    print("predicted_thirdings = %f" % predicted_thirdings)
+    print("predicted_loss = %d" % predicted_loss)
+
+    return predicted_wins
+
+
+def runToday(databases, myDict_net):
+    """ get todays test card and predict the result"""
+    todays_date = str(datetime.datetime.today().strftime('%Y-%m-%d'))
+    print ("todays date is %s" % todays_date) 
+
+    try:
+        horses, jockeys, lengths, ages, weights, goings, draws, trainers, odds, todaysRaceTimes, todaysRaceVenues=makea.makeATestcard(todays_date)
+    except Exception as e:
+        print ("soething went wrong trying to get todays testcard")
+        print(e)
+        raise Exception
+
+    # The inputs for todays races will need to be normalized.  At the moment this will be done
+    # using the values from the first 6 months of 2019 in DSDraw and DSNoDraw
+    print ("reading DSDraw from file DSDraw.pk ")
+    with open ("DSDraw.pk", 'rb') as fp:
+        DSDraw = pickle.load(fp)
+    print ("reading DSNoDraw from file DSNoDraw.pk ")
+    with open ("DSNoDraw.pk", 'rb') as fp:
+        DSNoDraw = pickle.load(fp)
+
+    DSDraw_norm_dict, DSNoDraw_norm_dict = makeNormalize_median_75_25([DSDraw, DSNoDraw])
+    return_list = []
+    for raceNo, race in enumerate(horses):
+        rows= []
+        for idx, horse in enumerate(race):
+            row = ["", horse, ages[raceNo][idx], weights[raceNo][idx], "", lengths[raceNo], len(race), jockeys[raceNo][idx], goings[raceNo], todays_date, todaysRaceTimes[raceNo], todaysRaceVenues[raceNo], draws[raceNo][idx], trainers[raceNo][idx], "", odds[raceNo][idx]]
+            rows.append(row)
+        myDict_predicted = get_predicted_result(rows, databases, myDict_net, DSDraw_norm_dict, DSNoDraw_norm_dict)
+        predicted = sorted(myDict_predicted.items(), key=operator.itemgetter(1))
+        for ii, entry in enumerate(predicted):
+            for row in rows:
+                if row[1] == entry[0]:
+                    row[4] = len(predicted)-ii
+                    return_list.append(row)
+        # append an empty row between races
+        return_list.append(["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""])
+    return return_list
+
+def makeTest_DS(databases): #
+    result = []
+    dates = []
+    horses = []
+    errors = []
+    
+    # for now specify the dates between which to
+    # get the data
+    date_start = "2020-02-01"
+    date_end = "2020-03-01"
+    dateStartSplit=date_start.split('-')
+    dateEndSplit=date_end.split('-')
+
+    if True:
+        rows = []
+        start_time = time.time()
+        for single_date in daterange(datetime.date(int(dateStartSplit[0]),int(dateStartSplit[1]),int(dateStartSplit[2])), datetime.date(int(dateEndSplit[0]),int(dateEndSplit[1]),int(dateEndSplit[2]))):
+
+            dateIn=time.strftime("%Y-%m-%d", single_date.timetuple())       
+            print (dateIn)
+
+            rows = rows + commands.viewMultiple(databases, raceDate=dateIn)
+
+        prev_raceVenue = 0
+        prev_raceTime = 0
+        prev_raceDate = 0
+
+        for ii, row in enumerate(rows):
+            if not ii%10:
+                now_time = time.time()
+                time_taken = now_time - start_time
+                time_taken_per_ii = time_taken/(ii+1)
+                eta = time_taken_per_ii * (len(rows)-ii)
+                print("row %d of %d on date %s.  Time left %s" % (ii, len(rows), row[9], str(eta)))
+            horseName_row = commands.viewMultiple(databases, horseName=row[1])
+            try:
+                ds_input, ds_result, draw = makeTraining_without_normalization(horseName_row, row, databases)
+            except Exception as e:
+                print (e)
+                continue
+            if draw:
+                try:
+                    DSDraw
+                except NameError:
+                    DSDraw = SupervisedDataSet(len(ds_input), len(ds_result))
+                    DSDraw_list = []
+                DSDraw.appendLinked(ds_input, ds_result)
+                DSDraw_list.append(row)
+
+            if not draw:
+                try:
+                    DSNoDraw
+                except NameError:
+                    DSNoDraw = SupervisedDataSet(len(ds_input), len(ds_result))
+                    DSNoDraw_list = []
+                DSNoDraw.appendLinked(ds_input, ds_result)
+                DSNoDraw_list.append(row)
+
+    DSDraw, DSNoDraw = makeNormalization([DSDraw, DSNoDraw])
+    if len(DSDraw_list) != DSDraw.getLength():
+        print("len(DSDraw_list) != DSDraw.getLength()")
+        sys.exit()
+    else:
+        DSDraw_save_list = []
+        for ii in range(0, DSDraw.getLength()):
+            ds_input = DSDraw.getSample(ii)[0].tolist() + list(DSDraw_list[ii])
+            DSDraw_save_list.append(ds_input)
+    with open("DSDraw_save_list.pk", 'wb') as fp:
+        pickle.dump(DSDraw_save_list, fp)
+
+    if len(DSNoDraw_list) != DSNoDraw.getLength():
+        print("len(DSNoDraw_list) != DSNoDraw.getLength()")
+        sys.exit()
+    else:
+        DSNoDraw_save_list = []
+        for ii in range(0, DSNoDraw.getLength()):
+            ds_input = DSNoDraw.getSample(ii)[0].tolist() + list(DSNoDraw_list[ii])
+            DSNoDraw_save_list.append(ds_input)
+
+    with open("DSNoDraw_save_list.pk", 'wb') as fp:
+        pickle.dump(DSNoDraw_save_list, fp)

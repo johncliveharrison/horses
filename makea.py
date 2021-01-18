@@ -157,6 +157,15 @@ def makeATestcardFromDatabase(date, databases):
     return myDict_card
             
     
+def makeATestcardFromDS(date, DS_list):
+    myDict_card = defaultdict(list)
+    rows = commands.viewMultiple(databases, raceDate=date)
+    for row in rows:
+        raceVenue = row[11]
+        raceTime = row[10]
+        raceName = "%s - %s" % (raceVenue, raceTime)
+        myDict_card[raceName].append(row)
+    return myDict_card
 
 
 
@@ -167,6 +176,7 @@ def makeATestcard(date):
     horseName=[]
     jockeyName=[]
     raceLength=[]
+    ages=[]
     weights=[]
     goings=[]
     draws=[]
@@ -183,9 +193,11 @@ def makeATestcard(date):
 
     raceToRemove=[]
     for ii, todaysRace in enumerate(todaysRaces):
+        #if not "wolverhampton" in todaysRace:
+        #    continue
         print ("gonna to the race " + str(todaysRace))
         try:
-            horse, jockey, length, weight, going, draw, trainer, odd=HrefStuffInst.getCardContents(todaysRace)
+            horse, jockey, length, age, weight, going, draw, trainer, odd=HrefStuffInst.getCardContents(todaysRace)
         except Exception as e:
             print (str(e))
             print ("There was an error with the race " + str(todaysRace))
@@ -197,17 +209,19 @@ def makeATestcard(date):
         horseName.append(horse)
         jockeyName.append(jockey)
         raceLength.append(length)
+        ages.append(age)
         weights.append(weight)
         goings.append(going)
         draws.append(draw)
         trainers.append(trainer)
         odds.append(odd)
+        #break
     for ii in reversed(raceToRemove):
         del todaysRaceVenues[ii]
         del todaysRaceTimes[ii]
         del todaysRaces[ii]
 
-    return (horseName, jockeyName, raceLength, weights, goings, draws, trainers, odds, todaysRaceTimes, todaysRaceVenues)    
+    return (horseName, jockeyName, raceLength, ages, weights, goings, draws, trainers, odds, todaysRaceTimes, todaysRaceVenues)    
 
 
 
