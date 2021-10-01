@@ -7,7 +7,7 @@ import sys
 
 databases = ["results_2012.db", "results_2013.db", "results_2014.db",
              "results_2015.db", "results_2016.db", "results_2017.db", 
-             "results_2018_2.db", "results_2019_2.db", "results_2020_2.db"]
+             "results_2018_2.db", "results_2019_2.db", "results_2020_2.db"]#, "results_2021.db"]
 
 myDict_net = {}
 

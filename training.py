@@ -702,11 +702,11 @@ def train_net(databases): #
     # for now specify the dates between which to
     # get the data
     date_start = "2019-01-01"
-    date_end = "2019-06-01"
+    date_end = "2019-12-31"
     dateStartSplit=date_start.split('-')
     dateEndSplit=date_end.split('-')
 
-    if os.path.exists("DSDraw.pk") and os.path.exists("DSNoDraw.pk"):
+    if False : #os.path.exists("DSDraw.pk") and os.path.exists("DSNoDraw.pk"):
         print ("reading DSDraw from file DSDraw.pk ")
         with open ("DSDraw.pk", 'rb') as fp:
             DSDraw = pickle.load(fp)
@@ -728,6 +728,14 @@ def train_net(databases): #
         prev_raceTime = 0
         prev_raceDate = 0
         for ii, row in enumerate(rows):
+            if not ii % 1000:
+                if ii != 0:
+                    with open("DSDraw_partial_" + str(ii) + ".pk", 'wb') as fp:
+                        pickle.dump(DSDraw, fp)
+
+                    with open("DSNoDraw_partial_" + str(ii) + ".pk", 'wb') as fp:
+                        pickle.dump(DSNoDraw, fp)
+
             if not ii%10:
                 now_time = time.time()
                 time_taken = now_time - start_time
